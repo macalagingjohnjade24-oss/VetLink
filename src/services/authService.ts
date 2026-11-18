@@ -15,7 +15,8 @@ import { DATABASE_SETUP_MESSAGE, isDatabaseSetupError } from '../utils/errors';
 import { storageService } from './storageService';
 
 // Required for the web build so the OAuth popup can post its result back.
-WebBrowser.maybeCompleteAuthSession();
+// The result also tells the popup whether it landed on the redirect we asked for.
+const webAuthSessionCompletion = WebBrowser.maybeCompleteAuthSession();
 
 export type AuthErrorCode =
   | 'not_configured'
@@ -26,6 +27,7 @@ export type AuthErrorCode =
   | 'invalid_code'
   | 'expired'
   | 'cancelled'
+  | 'redirect_mismatch'
   | 'network'
   | 'weak_password'
   | 'unknown';
@@ -162,6 +164,106 @@ function readParams(url: string): Record<string, string> {
 }
 
 const handledUrls = new Set<string>();
+
+/**
+ * On web the OAuth flow runs in a popup that loads this same bundle at
+ * /auth-callback. That window must only hand the URL back to its opener
+ * (`maybeCompleteAuthSession`); redeeming the code there would consume it
+ * before the window the user is actually looking at can.
+ */
+function isOAuthPopup(): boolean {
+  const scope = globalThis as { window?: { opener?: unknown } };
+  return Boolean(scope.window?.opener);
+}
+
+/** True while `signInWithGoogle` is awaiting the browser, so the URL listener stays out of the way. */
+let googleFlowInFlight = false;
+
+/** Where the web OAuth popup leaves the URL it actually landed on. */
+const REDIRECT_MISMATCH_KEY = 'vetlink.auth.redirect-mismatch.v1';
+
+type WebStorage = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+};
+
+function webScope(): { storage: WebStorage; href: string } | null {
+  const scope = globalThis as {
+    window?: { localStorage?: WebStorage; location?: { href?: string } };
+  };
+  const win = scope.window;
+  if (!win?.localStorage || !win.location?.href) return null;
+  return { storage: win.localStorage, href: win.location.href };
+}
+
+/**
+ * expo-web-browser only hands a popup URL back when it lands exactly on the
+ * allow-listed redirect. When Supabase rewrites the redirect (normally to the
+ * project's Site URL) the popup is left on a page that reports nothing, so it
+ * records where it landed and the waiting window turns that into an error.
+ */
+function recordWebRedirectMismatch(result: ReturnType<typeof WebBrowser.maybeCompleteAuthSession>) {
+  const scope = webScope();
+  if (result.type !== 'failed' || !scope || !isOAuthPopup()) return;
+  try {
+    scope.storage.setItem(REDIRECT_MISMATCH_KEY, scope.href);
+  } catch {
+    // Private browsing can refuse storage; the failure then stays a cancellation.
+  }
+}
+
+function readWebRedirectMismatch(): string | null {
+  const scope = webScope();
+  if (!scope) return null;
+  try {
+    const href = scope.storage.getItem(REDIRECT_MISMATCH_KEY);
+    if (href) scope.storage.removeItem(REDIRECT_MISMATCH_KEY);
+    return href || null;
+  } catch {
+    return null;
+  }
+}
+
+function clearWebRedirectMismatch(): void {
+  try {
+    webScope()?.storage.removeItem(REDIRECT_MISMATCH_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
+recordWebRedirectMismatch(webAuthSessionCompletion);
+
+/** Same scheme, host and path — the query string carries the code, so it is ignored. */
+function isSameRedirect(actual: string, expected: string): boolean {
+  try {
+    const a = new URL(actual);
+    const b = new URL(expected);
+    const path = (value: string) => value.replace(/\/+$/, '');
+    return a.protocol === b.protocol && a.host === b.host && path(a.pathname) === path(b.pathname);
+  } catch {
+    return actual.split(/[?#]/)[0] === expected.split(/[?#]/)[0];
+  }
+}
+
+/** Names the URL the app asked for and the URL the browser actually returned. */
+function redirectMismatchMessage(expected: string, actual: string): string {
+  // The allow-list entry is the origin the app asked for, not the whole callback.
+  let origin = expected;
+  try {
+    const parsed = new URL(expected);
+    origin = `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    // Fall back to the raw URL; the message still names both ends.
+  }
+  return (
+    `Google sign-in came back to ${actual} instead of ${expected}. ` +
+    `Supabase swaps in the project's Site URL whenever the requested redirect is not on its allow-list, ` +
+    `so add ${origin}/** under Authentication → URL Configuration → Redirect URLs and try again. ` +
+    `Setup notes: supabase/README.md section 4.`
+  );
+}
 
 export type AuthLinkResult =
   | { type: 'session'; account: UserAccount }
@@ -342,6 +444,7 @@ export const authService = {
   async signInWithGoogle(remember: boolean): Promise<UserAccount> {
     const client = requireClient();
     await sessionPersistence.setRemember(remember);
+    clearWebRedirectMismatch();
 
     const redirect = redirectTo(AUTH_REDIRECT.callbackPath);
     const { data, error } = await client.auth.signInWithOAuth({
@@ -355,12 +458,24 @@ export const authService = {
     if (error) throw toAuthError(error);
     if (!data.url) throw new AuthError('unknown', 'Google sign-in is unavailable right now. Please try again.');
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirect);
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      throw new AuthError('cancelled', 'Google sign-in was cancelled.');
-    }
+    googleFlowInFlight = true;
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirect).finally(() => {
+      googleFlowInFlight = false;
+    });
     if (result.type !== 'success') {
+      // A rewritten redirect never reaches this window, so the popup's note is
+      // the only record of where the browser actually ended up.
+      const landedOn = readWebRedirectMismatch();
+      if (landedOn) throw new AuthError('redirect_mismatch', redirectMismatchMessage(redirect, landedOn));
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        throw new AuthError('cancelled', 'Google sign-in was cancelled.');
+      }
       throw new AuthError('unknown', 'Google sign-in could not be completed. Please try again.');
+    }
+
+    // Supabase reports success for a redirect it quietly replaced with the Site URL.
+    if (!isSameRedirect(result.url, redirect)) {
+      throw new AuthError('redirect_mismatch', redirectMismatchMessage(redirect, result.url));
     }
 
     const params = readParams(result.url);
@@ -369,6 +484,9 @@ export const authService = {
     }
     if (!params.code) throw new AuthError('unknown', 'Google did not return a sign-in code. Please try again.');
 
+    // The deep link can also reach the Linking listener a moment later; this
+    // keeps the code single-use on that side too.
+    handledUrls.add(result.url);
     const { data: sessionData, error: exchangeError } = await client.auth.exchangeCodeForSession(params.code);
     if (exchangeError) throw toAuthError(exchangeError);
 
@@ -383,6 +501,9 @@ export const authService = {
    */
   async handleAuthUrl(url: string): Promise<AuthLinkResult | null> {
     if (!supabase) return null;
+    // The awaited Google flow (or the web popup) owns its own callback URL.
+    if (googleFlowInFlight) return null;
+    if (/auth-callback/.test(url) && !/reset-password/.test(url) && isOAuthPopup()) return null;
     if (!/(auth-callback|reset-password)/.test(url) && !/[#?&]code=/.test(url)) return null;
     if (handledUrls.has(url)) return null;
     handledUrls.add(url);

@@ -55,26 +55,73 @@ vetlink://auth-callback
 vetlink://reset-password
 exp://127.0.0.1:8081/--/auth-callback
 exp://127.0.0.1:8081/--/reset-password
+http://localhost:8081/auth-callback
+http://localhost:8081/reset-password
+http://127.0.0.1:8081/auth-callback
+http://127.0.0.1:8081/reset-password
 ```
 
 The app opens `/auth-callback` for Google sign-in and `/reset-password` for
-password recovery. In Expo Go the scheme is `exp://<host>:<port>/--/…`; add the
-exact URL shown by `makeRedirectUri` in your terminal if it differs from the
+password recovery. The three families above are the same two paths on the three
+ways the app can run:
+
+| Where the app runs | What `makeRedirectUri` returns |
+| --- | --- |
+| Development build / standalone (native) | `vetlink://auth-callback` — the `scheme` in `app.json` |
+| Expo Go (native) | `exp://127.0.0.1:8081/--/auth-callback` |
+| **Expo web (`npx expo start --web`)** | `http://localhost:8081/auth-callback` |
+
+On web the scheme argument is ignored: `expo-linking`'s web build of `createURL`
+returns `new URL(path, window.location.origin)`, so the redirect is always
+**the origin the browser is on plus the path** — port 8081 and the HTTP scheme,
+not `vetlink://` and not `https://`. That is why the `http://localhost:8081/…`
+entries above are required: without them Supabase rejects the redirect and the
+web build never receives the `?code=` back. Open the app on the same host you
+allow-listed (`localhost` and `127.0.0.1` are different origins), and add a
+matching entry if you serve the web build on another port or origin (for
+example `http://localhost:19006/…` for the older web default, or your deployed
+web URL).
+
+In Expo Go on a device the scheme is `exp://<host>:<port>/--/…`; add the exact
+URL shown by `makeRedirectUri` in your terminal if it differs from the
 Laragon/Expo default above (LAN IP instead of `127.0.0.1`, for example).
+
+### Custom SMTP comes first
+
+Since **3 June 2026** a new Free-plan project that sends through Supabase's
+default email provider **cannot edit auth email templates at all**, and the
+default provider only delivers to addresses on the project's organisation team
+(2 emails per hour). The app needs `{{ .Token }}` inside the Confirm signup
+email, so on a new project **enable custom SMTP before anything else**.
+
+Brevo works without owning a domain (verify a single sender address instead):
+
+| Supabase field | Value |
+| --- | --- |
+| Sender email address | the address you verified in Brevo |
+| Sender name | `VetLink` |
+| Host | `smtp-relay.brevo.com` |
+| Port | `587` |
+| Username | the **Login** shown on Brevo → Settings → SMTP & API → SMTP tab |
+| Password | a Brevo **SMTP key** (not an API key) |
+
+Resend, SendGrid, Postmark and Amazon SES all work too:
+`smtp.resend.com:465` (user `resend`, password = API key),
+`smtp.sendgrid.net:587` (user `apikey`, password = API key).
 
 ### Six-digit confirmation code
 
-The Email Verification screen accepts the 6-digit token. In
-**Authentication → Email Templates → Confirm signup**, include the token:
+Once custom SMTP is on, the Email Templates page becomes editable again. The
+Email Verification screen accepts the 6-digit token, so in
+**Authentication → Email Templates → Confirm signup** add the token:
 
 ```html
+<h2>Confirm your VetLink account</h2>
 <p>Your VetLink verification code is <strong>{{ .Token }}</strong></p>
 <p>Or confirm with this link: <a href="{{ .ConfirmationURL }}">Confirm email</a></p>
 ```
 
-`{{ .Token }}` is required; the link flow keeps working as well. Without a
-custom SMTP provider Supabase only sends a handful of emails per hour — that is
-fine for testing, but configure SMTP before showing this to real users.
+`{{ .Token }}` is required; the link flow keeps working as well.
 
 ### Password reset
 
@@ -92,11 +139,20 @@ expired or already-used links show an error instead of hanging.
    **Supabase → Authentication → Providers → Google**, enable the provider and save.
 4. Google's consent screen needs the `email`, `profile` and `openid` scopes
    (the defaults).
-5. Add the app redirect URLs from section 3 to **Authentication → URL Configuration**.
+5. Add the app redirect URLs from section 3 to **Authentication → URL Configuration**
+   — including `http://localhost:8081/auth-callback`, which is what the web build
+   sends. Nothing goes in the Google console except the Supabase callback from
+   step 2: Google only ever redirects to Supabase, and Supabase then redirects to
+   the app.
 
 The app uses the PKCE flow (`expo-auth-session` + `WebBrowser.openAuthSessionAsync`)
 and exchanges the returned code with `supabase.auth.exchangeCodeForSession`.
 No client secret is ever shipped in the app.
+
+**Web build:** the browser popup returns to `http://localhost:8081/auth-callback`
+(the page is served by the Expo dev server, and `openAuthSessionAsync` reads the
+`?code=` before the page has to render anything). That exact origin must be in
+Supabase's redirect allow-list — see section 3.
 
 **Expo Go limitation:** the browser returns to `exp://…/--/auth-callback` inside
 Expo Go. That URL must be in Supabase's redirect allow-list. A standalone
@@ -128,6 +184,6 @@ providers configured in the dashboard apply to both.
 ## 7. What still needs your action
 
 - Fill in `.env` (section 2).
-- Enable email confirmation and add `{{ .Token }}` (section 3).
+- Enable custom SMTP, then add `{{ .Token }}` to the Confirm signup template (section 3).
 - Create the Google OAuth client and enable the provider (section 4).
 - Optionally run `seed.dev.sql` in development.
