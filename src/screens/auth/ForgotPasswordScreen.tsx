@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
-import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { TextLink } from '../../components/TextLink';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
 import { isEmail } from '../../utils/validation';
@@ -67,7 +67,7 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
         <Button label="Continue to Reset Password" onPress={() => navigation.navigate('ResetPassword', { email })} />
       ) : null}
 
-      <LinkButton label="Back to Login" onPress={() => navigation.navigate('Login')} />
+      <TextLink label="Back to Login" align="center" onPress={() => navigation.navigate('Login')} />
 
       <HelpNote>For your privacy, a reset email is sent only if an account exists.</HelpNote>
     </Screen>

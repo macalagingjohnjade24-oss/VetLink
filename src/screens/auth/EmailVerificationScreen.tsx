@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
-import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { CodeInput } from '../../components/CodeInput';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
+import { TextLink } from '../../components/TextLink';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
 import type { ScreenProps } from '../../navigation/types';
@@ -69,9 +69,10 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
             {resendIn > 0 ? `Code expires in 00:${String(resendIn).padStart(2, '0')}` : 'The code has expired. Request a new one.'}
           </AppText>
           <Button label="Verify Account" onPress={onVerify} loading={checking} />
-          <LinkButton
+          <TextLink
             label={resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
             icon="mail-outline"
+            align="center"
             disabled={resendIn > 0}
             onPress={() => {
               setResendIn(RESEND_SECONDS);
@@ -86,11 +87,7 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
       )}
 
       <View style={styles.footerLinks}>
-        {verified ? (
-          <Button label="Back to Login" variant="secondary" onPress={() => navigation.navigate('Login')} />
-        ) : (
-          <LinkButton label="Back to Login" onPress={() => navigation.navigate('Login')} />
-        )}
+        <TextLink label="Back to Login" align="center" onPress={() => navigation.navigate('Login')} />
       </View>
     </Screen>
   );

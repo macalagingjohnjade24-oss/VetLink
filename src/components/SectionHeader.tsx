@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { spacing } from '../theme';
 import { AppText } from './AppText';
-import { LinkButton } from './LinkButton';
+import { TextLink } from './TextLink';
 
 type Props = {
   title: string;
@@ -15,7 +15,7 @@ export function SectionHeader({ title, actionLabel, onAction }: Props) {
     <View style={styles.row}>
       <AppText variant="title">{title}</AppText>
       {actionLabel && onAction ? (
-        <LinkButton label={actionLabel} fullWidth={false} onPress={onAction} />
+        <TextLink label={actionLabel} onPress={onAction} />
       ) : null}
     </View>
   );

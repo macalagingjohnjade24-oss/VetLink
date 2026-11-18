@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
-import { LinkButton } from '../../components/LinkButton';
+import { TextLink } from '../../components/TextLink';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
@@ -45,7 +45,10 @@ export function MyPetsScreen({ navigation }: PetsScreenProps<'MyPets'>) {
                 </AppText>
               </View>
             </View>
-            <LinkButton label={`View ${pet.name}’s Profile`} onPress={() => navigation.navigate('PetDetails', { petId: pet.id })} />
+            <TextLink
+              label={`View ${pet.name}’s Profile`}
+              onPress={() => navigation.navigate('PetDetails', { petId: pet.id })}
+            />
           </View>
         ))
       )}

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
-import { LinkButton } from '../../components/LinkButton';
+import { TextLink } from '../../components/TextLink';
 import { Button } from '../../components/Button';
 import { ClinicCard } from '../../components/ClinicCard';
 import { HelpNote } from '../../components/HelpNote';
@@ -129,7 +129,7 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
       </View>
 
       <HelpNote>Health reminder · Milo’s rabies booster is due Nov 24.</HelpNote>
-      <LinkButton
+      <TextLink
         label="View vaccination reminder"
         icon="notifications-outline"
         onPress={() => navigation.navigate('Notifications')}

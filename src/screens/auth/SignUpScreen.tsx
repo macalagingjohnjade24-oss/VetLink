@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
-import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { HelpNote } from '../../components/HelpNote';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { TextLink } from '../../components/TextLink';
 import { useAuth } from '../../context/AuthContext';
 import { AuthError } from '../../services/authService';
 import { colors, spacing } from '../../theme';
@@ -138,7 +138,7 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
 
       <Button label="Create Account" onPress={onSubmit} loading={submitting} />
 
-      <LinkButton label="Already have an account? Login" onPress={() => navigation.navigate('Login')} />
+      <TextLink label="Already have an account? Login" align="center" onPress={() => navigation.navigate('Login')} />
     </Screen>
   );
 }
