@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing } from '../theme';
 import { AppText } from './AppText';
+import { Logo } from './Logo';
 
 type Props = {
   title?: string;
@@ -28,7 +29,9 @@ export function AppHeader({ title, showBack = true, onBack, right }: Props) {
           <Ionicons name="chevron-back" size={24} color={colors.text.brand} />
         </Pressable>
       ) : (
-        <View style={styles.back} />
+        <View style={styles.back}>
+          <Logo size="sm" showWordmark={false} />
+        </View>
       )}
       {title ? <AppText variant="screenTitle">{title}</AppText> : null}
       <View style={styles.spacer}>{right}</View>
