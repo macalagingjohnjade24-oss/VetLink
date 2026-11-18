@@ -4,9 +4,9 @@ import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
-import { LinkButton } from '../../components/LinkButton';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
+import { TextLink } from '../../components/TextLink';
 import { usePets } from '../../context/PetContext';
 import { APPOINTMENTS } from '../../data/mockAppointments';
 import { CLINICS } from '../../data/mockClinics';
@@ -80,27 +80,27 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
       <Button label="View Health Records" onPress={() => navigation.navigate('HealthRecords', { petId })} />
 
       <View style={styles.links}>
-        <LinkButton
+        <TextLink
           label="Vaccination Records"
           icon="medkit-outline"
           onPress={() => navigation.navigate('VaccinationRecords', { petId })}
         />
-        <LinkButton
+        <TextLink
           label="Upcoming Vaccinations"
           icon="calendar-outline"
           onPress={() => navigation.navigate('UpcomingVaccinations', { petId })}
         />
-        <LinkButton
+        <TextLink
           label="Medical History"
           icon="document-text-outline"
           onPress={() => navigation.navigate('MedicalHistory', { petId })}
         />
-        <LinkButton
+        <TextLink
           label="Appointment History"
           icon="time-outline"
           onPress={() => navigation.navigate('AppointmentHistory', { petId })}
         />
-        <LinkButton
+        <TextLink
           label="Edit Pet Information"
           icon="create-outline"
           onPress={() => navigation.navigate('PetForm', { mode: 'edit', petId })}
@@ -133,5 +133,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.card,
   },
   lines: { lineHeight: 22 },
-  links: { gap: spacing.sm + 2, marginTop: spacing.xs },
+  links: { gap: spacing.xs, marginTop: spacing.xs },
 });
