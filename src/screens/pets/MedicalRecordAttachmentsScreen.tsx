@@ -98,7 +98,7 @@ export function MedicalRecordAttachmentsScreen({ route }: PetsScreenProps<'Medic
           })}
 
           <HelpNote>
-            Attachments are clinic-entered demo files. VetLink never edits or replaces clinical documents.
+            Attachments are clinic-entered files. VetLink never edits or replaces clinical documents.
           </HelpNote>
         </>
       )}

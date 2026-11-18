@@ -99,7 +99,7 @@ export type RootStackParamList = {
   SignUp: undefined;
   EmailVerification: { email: string };
   ForgotPassword: undefined;
-  ResetPassword: { email?: string } | undefined;
+  ResetPassword: { email?: string; error?: string } | undefined;
   Main: NavigatorScreenParams<TabParamList> | undefined;
   /** Full-screen assistant flow, shown above the tabs without a tab highlight. */
   AI: NavigatorScreenParams<AIStackParamList> | undefined;

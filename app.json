@@ -44,7 +44,8 @@
         {
           "photosPermission": "VetLink needs access to your photos so you can add a photo for your pet."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

@@ -1,23 +1,33 @@
-import { MEDICAL_RECORDS, type MedicalAttachment, type MedicalRecord } from '../data/mockMedicalRecords';
+import type { MedicalAttachment, MedicalRecord } from '../data/mockMedicalRecords';
+import { requireSupabase } from '../lib/supabase';
+import { offlineData, offlineMode } from '../offline/offlineBackend';
+import { mapMedicalRecord, type MedicalRecordRow } from '../types/backend';
 
-const wait = (ms = 160) => new Promise((resolve) => setTimeout(resolve, ms));
+const byNewest = (a: MedicalRecord, b: MedicalRecord) => b.dateISO.localeCompare(a.dateISO);
 
-const newestFirst = (a: MedicalRecord, b: MedicalRecord) => b.dateISO.localeCompare(a.dateISO);
-
+/** Records are entered by clinics; owners only ever read them (RLS enforces it). */
 export const medicalRecordService = {
   async forPet(petId: string): Promise<MedicalRecord[]> {
-    await wait();
-    return MEDICAL_RECORDS.filter((record) => record.petId === petId).sort(newestFirst);
+    if (offlineMode.isActive()) return offlineData.medicalRecordsFor(petId);
+    const { data, error } = await requireSupabase()
+      .from('medical_records')
+      .select('*')
+      .eq('pet_id', petId)
+      .order('record_date', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data as MedicalRecordRow[]).map(mapMedicalRecord).sort(byNewest);
   },
 
   async recent(petId: string, limit = 2): Promise<MedicalRecord[]> {
-    await wait(120);
-    return MEDICAL_RECORDS.filter((record) => record.petId === petId).sort(newestFirst).slice(0, limit);
+    const records = await this.forPet(petId);
+    return records.slice(0, limit);
   },
 
   async getById(id: string): Promise<MedicalRecord | null> {
-    await wait(100);
-    return MEDICAL_RECORDS.find((record) => record.id === id) ?? null;
+    if (offlineMode.isActive()) return offlineData.medicalRecordById(id);
+    const { data, error } = await requireSupabase().from('medical_records').select('*').eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapMedicalRecord(data as MedicalRecordRow) : null;
   },
 
   attachmentsFor(record: MedicalRecord | null): MedicalAttachment[] {

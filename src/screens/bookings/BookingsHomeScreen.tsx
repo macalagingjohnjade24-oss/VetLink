@@ -7,7 +7,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
-import { EmptyState } from '../../components/States';
+import { EmptyState, ErrorState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
 import type { Appointment } from '../../data/mockAppointments';
 import { CLINICS } from '../../data/mockClinics';
@@ -46,7 +46,7 @@ function AppointmentCard({ appointment, onPress }: { appointment: Appointment; o
 
 /** Bookings tab home — My Appointments list fed by booking state. */
 export function BookingsHomeScreen({ navigation }: BookingsScreenProps<'BookingsHome'>) {
-  const { appointments, startBooking } = useBooking();
+  const { appointments, startBooking, error, refreshAppointments } = useBooking();
 
   const { upcoming, past } = useMemo(() => {
     const todayISO = new Date().toISOString().slice(0, 10);
@@ -77,7 +77,13 @@ export function BookingsHomeScreen({ navigation }: BookingsScreenProps<'Bookings
       />
 
       <AppText variant="title">Upcoming</AppText>
-      {upcoming.length === 0 ? (
+      {error ? (
+        <ErrorState
+          title="We couldn’t load your appointments"
+          message={error}
+          onRetry={() => void refreshAppointments()}
+        />
+      ) : upcoming.length === 0 ? (
         <EmptyState
           icon="calendar-outline"
           title="No upcoming appointments"
@@ -94,7 +100,7 @@ export function BookingsHomeScreen({ navigation }: BookingsScreenProps<'Bookings
       )}
 
       <AppText variant="title">Past appointments</AppText>
-      {past.length === 0 ? (
+      {error ? null : past.length === 0 ? (
         <AppText variant="body" color={colors.text.secondary}>
           Completed visits will be listed here.
         </AppText>
@@ -115,7 +121,7 @@ export function BookingsHomeScreen({ navigation }: BookingsScreenProps<'Bookings
       />
 
       <AppText variant="caption">
-        Appointments stay on this device. Rescheduling and cancellation are requests until the clinic confirms them.
+        Rescheduling and cancellation are requests until the clinic confirms them.
       </AppText>
     </Screen>
   );

@@ -8,9 +8,10 @@ import { ClinicPhotoCard } from '../../components/ClinicPhotoCard';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { SearchField } from '../../components/SearchField';
-import { LoadingState } from '../../components/States';
+import { ErrorState, LoadingState } from '../../components/States';
 import type { Clinic } from '../../data/mockClinics';
 import { clinicService, emptyFilters, sortLabel, type ClinicFilters } from '../../services/clinicService';
+import { errorMessage } from '../../utils/errors';
 import { colors, spacing } from '../../theme';
 import type { ClinicsScreenProps } from '../../navigation/types';
 
@@ -20,6 +21,7 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
   const [filters, setFilters] = useState<ClinicFilters>(initial);
   const [results, setResults] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filters arrive back from the Filter & Sort screen through route params.
   useEffect(() => {
@@ -29,9 +31,15 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
 
   const load = useCallback(async (next: ClinicFilters) => {
     setLoading(true);
-    const found = await clinicService.discover(next);
-    setResults(found);
-    setLoading(false);
+    setError(null);
+    try {
+      setResults(await clinicService.discover(next));
+    } catch (err) {
+      setResults([]);
+      setError(errorMessage(err, 'We couldn’t search clinics.'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,7 +85,11 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
 
       {loading ? <LoadingState label="Searching clinics…" /> : null}
 
-      {!loading && results.length === 0 ? (
+      {!loading && error ? (
+        <ErrorState title="We couldn’t search clinics" message={error} onRetry={() => void load(filters)} />
+      ) : null}
+
+      {!loading && !error && results.length === 0 ? (
         <View style={styles.empty}>
           <HelpNote title="No clinics match your filters">
             Try a wider distance or remove a service filter.
@@ -86,7 +98,7 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
         </View>
       ) : null}
 
-      {!loading
+      {!loading && !error
         ? results.map((clinic) => (
             <ClinicPhotoCard
               key={clinic.id}

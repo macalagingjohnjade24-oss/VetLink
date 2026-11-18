@@ -7,11 +7,12 @@ import { Badge, type BadgeTone } from '../../components/Badge';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
-import { EmptyState, LoadingState } from '../../components/States';
+import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { usePets } from '../../context/PetContext';
 import type { Vaccination, VaccinationStatus } from '../../data/mockVaccinations';
 import { formatBirthDate } from '../../services/petService';
 import { vaccinationService, vaccinationStatus } from '../../services/vaccinationService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps } from '../../navigation/types';
 
@@ -28,18 +29,30 @@ export function VaccinationRecordsScreen({ navigation, route }: PetsScreenProps<
   const pet = getPet(petId);
   const [records, setRecords] = useState<Vaccination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    void vaccinationService.forPet(petId).then((entries) => {
-      if (!active) return;
-      setRecords(entries);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError(null);
+    void vaccinationService
+      .forPet(petId)
+      .then((entries) => {
+        if (active) setRecords(entries);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRecords([]);
+        setError(errorMessage(err, 'We couldn’t load these vaccination records.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [petId]);
+  }, [petId, reloadKey]);
 
   return (
     <Screen contentStyle={styles.content}>
@@ -64,6 +77,12 @@ export function VaccinationRecordsScreen({ navigation, route }: PetsScreenProps<
 
       {loading ? (
         <LoadingState />
+      ) : error ? (
+        <ErrorState
+          title="We couldn’t load these records"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
       ) : records.length === 0 ? (
         <EmptyState
           icon="shield-checkmark-outline"
@@ -101,7 +120,7 @@ export function VaccinationRecordsScreen({ navigation, route }: PetsScreenProps<
         onPress={() => navigation.navigate('UpcomingVaccinations', { petId })}
       />
 
-      <HelpNote>Demo vaccination entries. A veterinarian determines the appropriate vaccination schedule.</HelpNote>
+      <HelpNote>A veterinarian determines the appropriate vaccination schedule.</HelpNote>
     </Screen>
   );
 }

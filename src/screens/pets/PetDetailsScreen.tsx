@@ -6,10 +6,11 @@ import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
+import { ErrorState } from '../../components/States';
 import { TextLink } from '../../components/TextLink';
+import { useAuth } from '../../context/AuthContext';
+import { useBooking } from '../../context/BookingContext';
 import { usePets } from '../../context/PetContext';
-import { APPOINTMENTS } from '../../data/mockAppointments';
-import { CLINICS } from '../../data/mockClinics';
 import { formatBirthDate } from '../../services/petService';
 import { vaccinationService } from '../../services/vaccinationService';
 import { colors, radii, spacing } from '../../theme';
@@ -18,9 +19,14 @@ import type { PetsScreenProps } from '../../navigation/types';
 /** PO-33 Pet Profile Details */
 export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDetails'>) {
   const { petId } = route.params;
-  const { getPet } = usePets();
+  const { getPet, removePet, error: petsError, refresh: refreshPets } = usePets();
+  const { appointments } = useBooking();
+  const { user } = useAuth();
   const pet = getPet(petId);
   const [nextVaccination, setNextVaccination] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -36,15 +42,31 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
     return (
       <Screen contentStyle={styles.content}>
         <AppHeader title="Pet Profile Details" />
-        <AppText variant="title">This pet is no longer in your profile.</AppText>
+        {petsError ? (
+          <ErrorState title="We couldn’t load this pet" message={petsError} onRetry={() => void refreshPets()} />
+        ) : (
+          <AppText variant="title">This pet is no longer in your profile.</AppText>
+        )}
         <Button label="Back to My Pets" variant="secondary" onPress={() => navigation.navigate('MyPets')} />
       </Screen>
     );
   }
 
-  const lastVisit = APPOINTMENTS.filter(
-    (appointment) => appointment.petId === pet.id && appointment.status === 'Completed',
-  ).sort((a, b) => b.dateISO.localeCompare(a.dateISO))[0];
+  const lastVisit = appointments
+    .filter((appointment) => appointment.petId === pet.id && appointment.status === 'Completed')
+    .sort((a, b) => b.dateISO.localeCompare(a.dateISO))[0];
+
+  const remove = async () => {
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      await removePet(pet.id);
+      navigation.navigate('MyPets');
+    } catch (error) {
+      setRemoveError(error instanceof Error ? error.message : 'This pet could not be removed.');
+      setRemoving(false);
+    }
+  };
 
   return (
     <Screen contentStyle={styles.content}>
@@ -67,7 +89,7 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
           Born {formatBirthDate(pet.birthDate)} · {pet.ageLabel}
           {'\n'}Weight: {pet.weightKg} kg · Color: {pet.color || 'Not added'}
           {'\n'}Microchip: {pet.microchip || 'Not added'}
-          {'\n'}Owner: Alex Santos
+          {'\n'}Owner: {`${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'You'}
         </AppText>
       </View>
 
@@ -112,6 +134,24 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
         Records and visit notes are entered by your veterinary clinic. Contact the clinic if something looks
         incomplete.
       </HelpNote>
+
+      {removeError ? (
+        <AppText variant="caption" color={colors.status.danger}>
+          {removeError}
+        </AppText>
+      ) : null}
+
+      {confirmRemove ? (
+        <>
+          <HelpNote tone="danger" title="Remove this pet?">
+            {pet.name}’s profile will be removed from your account. Their clinic records stay with the clinic.
+          </HelpNote>
+          <Button label="Remove Pet" loading={removing} onPress={() => void remove()} />
+          <Button label="Keep Pet" variant="secondary" onPress={() => setConfirmRemove(false)} />
+        </>
+      ) : (
+        <TextLink label="Remove this pet" align="center" onPress={() => setConfirmRemove(true)} />
+      )}
     </Screen>
   );
 }

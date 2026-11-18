@@ -9,11 +9,12 @@ import { ClinicCard } from '../../components/ClinicCard';
 import { PetCard } from '../../components/PetCard';
 import { Screen } from '../../components/Screen';
 import { SearchField } from '../../components/SearchField';
-import { EmptyState, LoadingState } from '../../components/States';
+import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { useApp } from '../../context/AppContext';
 import type { Clinic } from '../../data/mockClinics';
 import { clinicService, type ServiceWithClinic } from '../../services/clinicService';
 import { searchService, type SearchResults } from '../../services/searchService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { HomeScreenProps, TabParamList } from '../../navigation/types';
 
@@ -25,18 +26,24 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
   const [searching, setSearching] = useState(false);
   const [popularServices, setPopularServices] = useState<ServiceWithClinic[]>([]);
   const [suggestedClinics, setSuggestedClinics] = useState<Clinic[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [services, clinics] = await Promise.all([clinicService.allServices(), clinicService.list()]);
-      if (!active) return;
-      const unique: ServiceWithClinic[] = [];
-      for (const service of services) {
-        if (!unique.some((item) => item.name === service.name)) unique.push(service);
+      try {
+        const [services, clinics] = await Promise.all([clinicService.allServices(), clinicService.list()]);
+        if (!active) return;
+        const unique: ServiceWithClinic[] = [];
+        for (const service of services) {
+          if (!unique.some((item) => item.name === service.name)) unique.push(service);
+        }
+        setPopularServices(unique.slice(0, 2));
+        setSuggestedClinics(clinics.slice(0, 2));
+      } catch {
+        // The empty suggestions are enough here; a failed search reports its own error.
       }
-      setPopularServices(unique.slice(0, 2));
-      setSuggestedClinics(clinics.slice(0, 2));
     })();
     return () => {
       active = false;
@@ -51,12 +58,18 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
         return;
       }
       setSearching(true);
-      const found = await searchService.search(query);
-      setResults(found);
-      setSearching(false);
+      setError(null);
+      try {
+        setResults(await searchService.search(query));
+      } catch (err) {
+        setResults(null);
+        setError(errorMessage(err, 'We couldn’t search VetLink.'));
+      } finally {
+        setSearching(false);
+      }
     }, 250);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, reloadKey]);
 
   const openTab = (tab: keyof TabParamList) =>
     navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate(tab);
@@ -78,7 +91,7 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
       ?.navigate('BookingsTab', { screen: 'AppointmentDetails', params: { appointmentId } });
 
   const hasQuery = query.trim().length > 0;
-  const showEmpty = hasQuery && !searching && results?.total === 0;
+  const showEmpty = hasQuery && !searching && !error && results?.total === 0;
 
   const runSearch = (term: string) => {
     setQuery(term);
@@ -168,6 +181,14 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
       ) : (
         <>
           {searching ? <LoadingState label="Searching VetLink…" /> : null}
+
+          {error && !searching ? (
+            <ErrorState
+              title="Search failed"
+              message={error}
+              onRetry={() => setReloadKey((key) => key + 1)}
+            />
+          ) : null}
 
           {showEmpty ? (
             <EmptyState

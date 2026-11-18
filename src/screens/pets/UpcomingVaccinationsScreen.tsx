@@ -6,11 +6,12 @@ import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
-import { EmptyState, LoadingState } from '../../components/States';
+import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { usePets } from '../../context/PetContext';
 import type { Vaccination } from '../../data/mockVaccinations';
 import { formatBirthDate } from '../../services/petService';
 import { vaccinationService, vaccinationStatus } from '../../services/vaccinationService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps, TabParamList } from '../../navigation/types';
 
@@ -20,18 +21,31 @@ export function UpcomingVaccinationsScreen({ navigation, route }: PetsScreenProp
   const { getPet } = usePets();
   const [records, setRecords] = useState<Vaccination[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    void vaccinationService.upcoming().then((entries) => {
-      if (!active) return;
-      setRecords(petId ? entries.filter((entry) => entry.petId === petId) : entries);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError(null);
+    void vaccinationService
+      .upcoming()
+      .then((entries) => {
+        if (!active) return;
+        setRecords(petId ? entries.filter((entry) => entry.petId === petId) : entries);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRecords([]);
+        setError(errorMessage(err, 'We couldn’t load upcoming vaccinations.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [petId]);
+  }, [petId, reloadKey]);
 
   const bookAppointment = () =>
     navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('BookingsTab', {
@@ -49,6 +63,12 @@ export function UpcomingVaccinationsScreen({ navigation, route }: PetsScreenProp
 
       {loading ? (
         <LoadingState />
+      ) : error ? (
+        <ErrorState
+          title="We couldn’t load upcoming vaccinations"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
       ) : records.length === 0 ? (
         <EmptyState
           icon="shield-checkmark-outline"

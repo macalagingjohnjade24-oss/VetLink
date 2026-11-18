@@ -7,7 +7,7 @@ import { LinkButton } from '../../components/LinkButton';
 import { AppointmentBadge } from '../../components/AppointmentBadge';
 import { PetSelector } from '../../components/PetSelector';
 import { Screen } from '../../components/Screen';
-import { EmptyState } from '../../components/States';
+import { EmptyState, ErrorState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
 import { usePets } from '../../context/PetContext';
 import { CLINICS } from '../../data/mockClinics';
@@ -19,7 +19,7 @@ import type { PetsScreenProps, TabParamList } from '../../navigation/types';
 /** PO-43 Appointment History */
 export function AppointmentHistoryScreen({ navigation, route }: PetsScreenProps<'AppointmentHistory'>) {
   const { pets } = usePets();
-  const { appointments } = useBooking();
+  const { appointments, error, refreshAppointments } = useBooking();
   const [petId, setPetId] = useState(route.params?.petId ?? pets[0]?.id);
   const history = useMemo(
     () => appointments.filter((item) => item.petId === petId).sort((a, b) => b.dateISO.localeCompare(a.dateISO)),
@@ -39,7 +39,13 @@ export function AppointmentHistoryScreen({ navigation, route }: PetsScreenProps<
         Past appointments for {pet?.name ?? 'your pet'}
       </AppText>
 
-      {history.length === 0 ? (
+      {error ? (
+        <ErrorState
+          title="We couldn’t load this history"
+          message={error}
+          onRetry={() => void refreshAppointments()}
+        />
+      ) : history.length === 0 ? (
         <EmptyState
           icon="calendar-outline"
           title="No appointments yet"

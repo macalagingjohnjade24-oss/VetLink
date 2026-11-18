@@ -8,9 +8,10 @@ import { Button } from '../../components/Button';
 import { ClinicPhotoCard } from '../../components/ClinicPhotoCard';
 import { Screen } from '../../components/Screen';
 import { SearchField } from '../../components/SearchField';
-import { LoadingState } from '../../components/States';
+import { ErrorState, LoadingState } from '../../components/States';
 import type { Clinic } from '../../data/mockClinics';
 import { clinicService } from '../../services/clinicService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { ClinicsScreenProps } from '../../navigation/types';
 
@@ -20,12 +21,22 @@ export function ClinicDiscoveryScreen({ navigation }: ClinicsScreenProps<'Clinic
   const [nearby, setNearby] = useState<Clinic[]>([]);
   const [featured, setFeatured] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [near, feat] = await Promise.all([clinicService.nearby(), clinicService.featured()]);
-    setNearby(near);
-    setFeatured(feat);
-    setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const [near, feat] = await Promise.all([clinicService.nearby(), clinicService.featured()]);
+      setNearby(near);
+      setFeatured(feat);
+    } catch (err) {
+      setNearby([]);
+      setFeatured([]);
+      setError(errorMessage(err, 'We couldn’t load the clinic list.'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -79,7 +90,11 @@ export function ClinicDiscoveryScreen({ navigation }: ClinicsScreenProps<'Clinic
 
       {loading ? <LoadingState label="Finding clinics near you…" /> : null}
 
-      {!loading ? (
+      {!loading && error ? (
+        <ErrorState title="We couldn’t load clinics" message={error} onRetry={() => void load()} />
+      ) : null}
+
+      {!loading && !error ? (
         <>
           <AppText variant="screenTitle">Nearby clinics</AppText>
           {nearby.map((clinic) => (

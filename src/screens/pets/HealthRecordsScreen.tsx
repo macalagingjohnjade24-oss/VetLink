@@ -8,6 +8,7 @@ import { LinkButton } from '../../components/LinkButton';
 import { PetAvatar } from '../../components/PetAvatar';
 import { PetSelector } from '../../components/PetSelector';
 import { Screen } from '../../components/Screen';
+import { ErrorState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
 import { usePets } from '../../context/PetContext';
 import { CLINICS } from '../../data/mockClinics';
@@ -16,6 +17,7 @@ import { shortClinicName } from '../../services/clinicService';
 import { formatBirthDate } from '../../services/petService';
 import { medicalRecordService } from '../../services/medicalRecordService';
 import { vaccinationService } from '../../services/vaccinationService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps } from '../../navigation/types';
 
@@ -26,21 +28,33 @@ export function HealthRecordsScreen({ navigation, route }: PetsScreenProps<'Heal
   const [petId, setPetId] = useState(route.params?.petId ?? pets[0]?.id);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [nextVaccination, setNextVaccination] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!petId) return;
     let active = true;
-    void Promise.all([medicalRecordService.recent(petId, 2), vaccinationService.nextDueFor(petId)]).then(
-      ([recent, vaccination]) => {
+    setError(null);
+    (async () => {
+      try {
+        const [recent, vaccination] = await Promise.all([
+          medicalRecordService.recent(petId, 2),
+          vaccinationService.nextDueFor(petId),
+        ]);
         if (!active) return;
         setRecords(recent);
         setNextVaccination(vaccination?.nextDueISO ?? null);
-      },
-    );
+      } catch (err) {
+        if (!active) return;
+        setRecords([]);
+        setNextVaccination(null);
+        setError(errorMessage(err, 'We couldn’t load these health records.'));
+      }
+    })();
     return () => {
       active = false;
     };
-  }, [petId]);
+  }, [petId, reloadKey]);
 
   const pet = pets.find((item) => item.id === petId) ?? pets[0];
 
@@ -67,11 +81,19 @@ export function HealthRecordsScreen({ navigation, route }: PetsScreenProps<'Heal
         </View>
       ) : null}
 
-      <HelpNote>
-        Vaccination reminder
-        {'\n'}
-        {nextVaccination ? `Next due ${formatBirthDate(nextVaccination)}` : 'No next date recorded'}
-      </HelpNote>
+      {error ? (
+        <ErrorState
+          title="We couldn’t load these health records"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
+      ) : (
+        <HelpNote>
+          Vaccination reminder
+          {'\n'}
+          {nextVaccination ? `Next due ${formatBirthDate(nextVaccination)}` : 'No next date recorded'}
+        </HelpNote>
+      )}
       {pet ? (
         <LinkButton
           label="View upcoming vaccinations"
@@ -81,7 +103,7 @@ export function HealthRecordsScreen({ navigation, route }: PetsScreenProps<'Heal
       ) : null}
 
       <AppText variant="title">Recent medical records</AppText>
-      {records.length === 0 ? (
+      {error ? null : records.length === 0 ? (
         <AppText variant="body" color={colors.text.secondary}>
           No clinic-entered records yet.
         </AppText>
@@ -122,7 +144,7 @@ export function HealthRecordsScreen({ navigation, route }: PetsScreenProps<'Heal
         </>
       ) : null}
 
-      <HelpNote>Demo records · Clinical information is entered and maintained by authorized veterinary personnel.</HelpNote>
+      <HelpNote>Clinical information is entered and maintained by authorized veterinary personnel.</HelpNote>
 
       {pet ? (
         <AppText variant="small" color={colors.text.subtle}>

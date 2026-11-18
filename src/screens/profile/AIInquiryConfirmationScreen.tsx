@@ -6,8 +6,9 @@ import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
-import { LoadingState } from '../../components/States';
+import { ErrorState, LoadingState } from '../../components/States';
 import { clinicInquiryService, type ClinicInquiry } from '../../services/clinicInquiryService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
 
@@ -15,20 +16,31 @@ import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
 export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps<'AIInquiryConfirmation'>) {
   const [inquiry, setInquiry] = useState<ClinicInquiry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void clinicInquiryService.getById(route.params.inquiryId).then((found) => {
-      if (!active) return;
-      setInquiry(found);
-      setLoading(false);
-    });
+    setError(null);
+    void clinicInquiryService
+      .getById(route.params.inquiryId)
+      .then((found) => {
+        if (active) setInquiry(found);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setInquiry(null);
+        setError(errorMessage(err, 'We couldn’t load this inquiry.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [route.params.inquiryId]);
+  }, [route.params.inquiryId, reloadKey]);
 
   // Wait for the lookup so a saved inquiry never flashes the missing-inquiry message first.
   if (loading) {
@@ -36,6 +48,24 @@ export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps
       <Screen contentStyle={styles.content}>
         <AppHeader title="Inquiry Submission Confirmation" />
         <LoadingState />
+      </Screen>
+    );
+  }
+
+  if (error) {
+    return (
+      <Screen contentStyle={styles.content}>
+        <AppHeader title="Inquiry Submission Confirmation" />
+        <ErrorState
+          title="We couldn’t load this inquiry"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
+        <Button
+          label="Back to Help & Support"
+          variant="secondary"
+          onPress={() => rootNavigation?.navigate('Main', { screen: 'ProfileTab', params: { screen: 'HelpSupport' } })}
+        />
       </Screen>
     );
   }

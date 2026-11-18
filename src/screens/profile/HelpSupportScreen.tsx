@@ -101,7 +101,7 @@ export function HelpSupportScreen({ navigation }: ProfileScreenProps<'HelpSuppor
 
       {inquiry ? (
         <HelpNote tone="success" title={`Inquiry ${inquiry.reference} sent`}>
-          We’ll reply to {inquiry.email}. This demo records the inquiry on your device only.
+          We’ll reply to {inquiry.email}. This inquiry is stored on your device only.
         </HelpNote>
       ) : null}
 

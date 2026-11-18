@@ -1,8 +1,8 @@
 /**
- * Mock user accounts.
- * NOTE: this is demonstration data only — there is no backend and no database yet.
- * Passwords live in plain text in memory/AsyncStorage purely so the mock auth flow can
- * be demonstrated. Replace `services/authService` with real API calls before shipping.
+ * Account domain types used by the app.
+ *
+ * Accounts themselves live in Supabase (`auth.users` + `public.profiles`);
+ * there is no seeded or hardcoded login in the app any more.
  */
 export type UserAccount = {
   id: string;
@@ -10,28 +10,10 @@ export type UserAccount = {
   lastName: string;
   email: string;
   mobile: string;
-  password: string;
+  /** True once Supabase has confirmed the email address. */
   verified: boolean;
   avatarUri?: string | null;
   address?: string;
-};
-
-export const DEMO_EMAIL = 'owner@vetlink.com';
-export const DEMO_PASSWORD = 'VetLink123!';
-
-/** The six-digit code the mock email-verification screen accepts. */
-export const DEMO_VERIFICATION_CODE = '482619';
-
-export const DEMO_ACCOUNT: UserAccount = {
-  id: 'usr_demo_owner',
-  firstName: 'Alex',
-  lastName: 'Santos',
-  email: DEMO_EMAIL,
-  mobile: '+63 917 555 0142',
-  password: DEMO_PASSWORD,
-  verified: true,
-  avatarUri: null,
-  address: 'Makati City, Metro Manila',
 };
 
 export type NewAccountInput = {

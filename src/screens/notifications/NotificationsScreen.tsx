@@ -5,7 +5,7 @@ import { AppText } from '../../components/AppText';
 import { LinkButton } from '../../components/LinkButton';
 import { NotificationRow } from '../../components/NotificationRow';
 import { Screen } from '../../components/Screen';
-import { EmptyState, LoadingState } from '../../components/States';
+import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import type { NotificationCategory } from '../../data/mockNotifications';
@@ -23,7 +23,8 @@ const FILTERS: { key: Filter; label: string }[] = [
 /** PO-12 Notifications */
 export function NotificationsScreen({ navigation }: HomeScreenProps<'Notifications'>) {
   const { user } = useAuth();
-  const { notifications, loadingNotifications, markAllRead, unreadCount } = useApp();
+  const { notifications, loadingNotifications, notificationsError, refreshNotifications, markAllRead, unreadCount } =
+    useApp();
   const [filter, setFilter] = useState<Filter>('all');
 
   const filtered = filter === 'all' ? notifications : notifications.filter((n) => n.category === filter);
@@ -63,7 +64,15 @@ export function NotificationsScreen({ navigation }: HomeScreenProps<'Notificatio
 
       {loadingNotifications ? <LoadingState label="Loading notifications…" /> : null}
 
-      {!loadingNotifications && filtered.length === 0 ? (
+      {!loadingNotifications && notificationsError ? (
+        <ErrorState
+          title="We couldn’t load your notifications"
+          message={notificationsError}
+          onRetry={() => void refreshNotifications()}
+        />
+      ) : null}
+
+      {!loadingNotifications && !notificationsError && filtered.length === 0 ? (
         <EmptyState
           icon="notifications-off-outline"
           title="Nothing here yet"

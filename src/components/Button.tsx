@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, spacing } from '../theme';
@@ -10,6 +11,8 @@ type Props = {
   variant?: ButtonVariant;
   size?: 'md' | 'sm';
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Custom leading graphic (e.g. a multicolour brand mark) instead of an Ionicons glyph. */
+  iconNode?: ReactNode;
   iconRight?: boolean;
   disabled?: boolean;
   loading?: boolean;
@@ -24,6 +27,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   icon,
+  iconNode,
   iconRight,
   disabled,
   loading,
@@ -60,8 +64,8 @@ export function Button({
       <View style={styles.content}>
         {loading ? (
           <ActivityIndicator color={palette.text} size="small" />
-        ) : icon && !iconRight ? (
-          <Ionicons name={icon} size={18} color={isDisabled ? colors.text.secondary : palette.text} />
+        ) : !iconRight ? (
+          iconNode ?? (icon ? <Ionicons name={icon} size={18} color={isDisabled ? colors.text.secondary : palette.text} /> : null)
         ) : null}
         <AppText
           variant="cardTitle"

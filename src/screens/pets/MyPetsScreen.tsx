@@ -6,14 +6,14 @@ import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
-import { EmptyState } from '../../components/States';
+import { EmptyState, ErrorState } from '../../components/States';
 import { usePets } from '../../context/PetContext';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps } from '../../navigation/types';
 
 /** PO-32 My Pets */
 export function MyPetsScreen({ navigation }: PetsScreenProps<'MyPets'>) {
-  const { pets } = usePets();
+  const { pets, error, refresh } = usePets();
   const count = pets.length;
 
   return (
@@ -27,7 +27,9 @@ export function MyPetsScreen({ navigation }: PetsScreenProps<'MyPets'>) {
           : `${count === 0 ? 'No' : count} companions. One place for their care.`}
       </AppText>
 
-      {count === 0 ? (
+      {error ? (
+        <ErrorState title="We couldn’t load your pets" message={error} onRetry={() => void refresh()} />
+      ) : count === 0 ? (
         <EmptyState
           icon="paw-outline"
           title="No pets yet"

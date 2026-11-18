@@ -9,18 +9,18 @@ import type { ScreenProps } from '../../navigation/types';
 
 /** PO-01 Splash Screen — brand moment, then the onboarding tour (or the app when already signed in). */
 export function SplashScreen({ navigation }: ScreenProps<'Splash'>) {
-  const { initializing, user } = useAuth();
+  const { initializing, user, recoveryPending } = useAuth();
 
   useEffect(() => {
     if (initializing) return;
     const timer = setTimeout(() => {
       navigation.reset({
         index: 0,
-        routes: [{ name: user ? 'Main' : 'Welcome' }],
+        routes: [{ name: recoveryPending ? 'ResetPassword' : user ? 'Main' : 'Welcome' }],
       });
     }, 1400);
     return () => clearTimeout(timer);
-  }, [initializing, navigation, user]);
+  }, [initializing, navigation, recoveryPending, user]);
 
   return (
     <Screen scroll={false} contentStyle={styles.content}>

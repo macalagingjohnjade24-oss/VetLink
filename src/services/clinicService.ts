@@ -1,6 +1,7 @@
-import { CLINICS, RECENTLY_VIEWED_CLINIC_IDS, type Clinic, type ClinicService } from '../data/mockClinics';
-
-const wait = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms));
+import { CLINICS, type Clinic, type ClinicService } from '../data/mockClinics';
+import { requireSupabase } from '../lib/supabase';
+import { offlineMode } from '../offline/offlineBackend';
+import { mapClinic, mapClinicService, withMapCoordinates, type ClinicRow, type ClinicServiceRow } from '../types/backend';
 
 export type ServiceWithClinic = ClinicService & { clinicId: string; clinicName: string };
 
@@ -56,46 +57,67 @@ export function applyFilters(clinics: Clinic[], filters: ClinicFilters): Clinic[
 export const sortLabel = (sort: SortKey) =>
   sort === 'nearest' ? 'Nearest first' : sort === 'name' ? 'Name (A–Z)' : 'Availability';
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /** "Paws & Care Veterinary Clinic" → "Paws & Care" for compact record lines. */
 export function shortClinicName(name: string): string {
   return name.replace(/\s+Veterinary Clinic$/, '').replace(/\s+Animal Clinic$/, '');
 }
 
+/** Keeps `data/mockClinics`' CLINICS array pointing at the live catalogue (screens read it synchronously). */
+function publish(clinics: Clinic[]) {
+  CLINICS.length = 0;
+  CLINICS.push(...clinics);
+  return clinics;
+}
+
+async function loadCatalogue(): Promise<Clinic[]> {
+  const client = requireSupabase();
+  const [{ data: clinicRows, error: clinicError }, { data: serviceRows, error: serviceError }] = await Promise.all([
+    client.from('clinics').select('*').eq('status', 'approved').order('clinic_name'),
+    client.from('clinic_services').select('*').eq('availability', 'available').order('price'),
+  ]);
+  if (clinicError) throw new Error(clinicError.message);
+  if (serviceError) throw new Error(serviceError.message);
+
+  const rows = (clinicRows ?? []) as ClinicRow[];
+  const services = (serviceRows ?? []) as ClinicServiceRow[];
+  const mapped = rows.map((row) => mapClinic(row, services));
+  return publish(withMapCoordinates(mapped, rows));
+}
+
 export const clinicService = {
   async list(): Promise<Clinic[]> {
-    await delay(180);
-    return CLINICS;
+    if (offlineMode.isActive()) return [...CLINICS];
+    return loadCatalogue();
   },
 
   async discover(filters: ClinicFilters): Promise<Clinic[]> {
-    await delay(220);
-    return applyFilters(CLINICS, filters);
+    if (offlineMode.isActive()) return applyFilters(CLINICS, filters);
+    return applyFilters(await loadCatalogue(), filters);
   },
 
   async getById(id: string): Promise<Clinic | null> {
-    await delay(120);
+    const cached = CLINICS.find((clinic) => clinic.id === id);
+    if (cached) return cached;
+    if (offlineMode.isActive()) return null;
+    await loadCatalogue();
     return CLINICS.find((clinic) => clinic.id === id) ?? null;
   },
 
   async getService(clinicId: string, serviceId: string): Promise<ClinicService | null> {
-    await delay(120);
-    return CLINICS.find((clinic) => clinic.id === clinicId)?.services.find((service) => service.id === serviceId) ?? null;
+    const clinic = await this.getById(clinicId);
+    return clinic?.services.find((service) => service.id === serviceId) ?? null;
   },
 
+  /** Discovery "recently viewed" has no server-side history table; nearest clinics stand in. */
   async recentlyViewed(): Promise<Clinic[]> {
-    await delay(120);
-    return RECENTLY_VIEWED_CLINIC_IDS.map((id) => CLINICS.find((c) => c.id === id)).filter(Boolean) as Clinic[];
+    return [...CLINICS].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 2);
   },
 
   async featured(): Promise<Clinic[]> {
-    await delay(120);
     return CLINICS.filter((clinic) => clinic.featured);
   },
 
   async allServices(): Promise<ServiceWithClinic[]> {
-    await delay(150);
     return CLINICS.flatMap((clinic) =>
       clinic.services.map((service) => ({ ...service, clinicId: clinic.id, clinicName: clinic.name })),
     );
@@ -103,9 +125,6 @@ export const clinicService = {
 
   /** Kept for the home dashboard / notifications callers. */
   async nearby(): Promise<Clinic[]> {
-    await delay(150);
     return [...CLINICS].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 3);
   },
 };
-
-export { wait };

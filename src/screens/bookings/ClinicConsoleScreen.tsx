@@ -6,7 +6,7 @@ import { AppointmentBadge, isAwaitingClinic, isClosedStatus } from '../../compon
 import { Card } from '../../components/Card';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
-import { EmptyState } from '../../components/States';
+import { EmptyState, ErrorState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
 import { usePets } from '../../context/PetContext';
 import { CLINICS } from '../../data/mockClinics';
@@ -46,7 +46,7 @@ function RequestCard({ appointment, onPress }: { appointment: Appointment; onPre
 
 /** Mock clinic console: the other side of the booking, where requests get answered. */
 export function ClinicConsoleScreen({ navigation }: BookingsScreenProps<'ClinicConsole'>) {
-  const { appointments } = useBooking();
+  const { appointments, error, refreshAppointments } = useBooking();
 
   const { waiting, confirmed, closed } = useMemo(
     () => ({
@@ -73,8 +73,16 @@ export function ClinicConsoleScreen({ navigation }: BookingsScreenProps<'ClinicC
         data as the owner app.
       </HelpNote>
 
+      {error ? (
+        <ErrorState
+          title="We couldn’t load clinic requests"
+          message={error}
+          onRetry={() => void refreshAppointments()}
+        />
+      ) : null}
+
       <AppText variant="title">Needs a decision</AppText>
-      {waiting.length === 0 ? (
+      {error ? null : waiting.length === 0 ? (
         <EmptyState
           icon="checkmark-done-outline"
           title="Nothing waiting"
@@ -91,7 +99,7 @@ export function ClinicConsoleScreen({ navigation }: BookingsScreenProps<'ClinicC
       )}
 
       <AppText variant="title">Confirmed visits</AppText>
-      {confirmed.length === 0 ? (
+      {error ? null : confirmed.length === 0 ? (
         <AppText variant="body" color={colors.text.secondary}>
           Accepted bookings appear here until the visit is completed.
         </AppText>
@@ -106,7 +114,7 @@ export function ClinicConsoleScreen({ navigation }: BookingsScreenProps<'ClinicC
       )}
 
       <AppText variant="title">Closed</AppText>
-      {closed.map((appointment) => (
+      {error ? null : closed.map((appointment) => (
         <RequestCard
           key={appointment.id}
           appointment={appointment}

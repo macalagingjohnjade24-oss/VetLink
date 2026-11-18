@@ -1,9 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, type ComponentRef } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 import { FieldFocusContext, type FieldRef } from '../hooks/fieldFocus';
 import { useKeyboardInset } from '../hooks/useKeyboardInset';
+import { navigationRef } from '../navigation/navigationRef';
 import { colors, spacing } from '../theme';
+import { AppText } from './AppText';
+import { TextLink } from './TextLink';
 
 type Props = {
   children: React.ReactNode;
@@ -18,6 +23,31 @@ type Props = {
 };
 
 const ReserveBottomContext = createContext(true);
+
+/**
+ * Always-on reminder that the data on screen is sample data. Rendered by every
+ * `Screen`, so offline mode can never be mistaken for a real account.
+ */
+function OfflineBanner() {
+  const { offline, exitOfflineMode } = useAuth();
+  if (!offline) return null;
+
+  const exit = () => {
+    void exitOfflineMode().then(() => {
+      if (navigationRef.isReady()) navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+    });
+  };
+
+  return (
+    <View style={styles.offlineBar}>
+      <Ionicons name="cloud-offline-outline" size={16} color={colors.status.warning} />
+      <AppText variant="small" color={colors.status.warning} style={styles.offlineText}>
+        Offline mode · sample data only. Nothing is sent to a clinic.
+      </AppText>
+      <TextLink label="Exit" onPress={exit} />
+    </View>
+  );
+}
 
 /**
  * Opts a subtree out of reserving the bottom safe area. Only the tab navigator
@@ -119,6 +149,7 @@ export function Screen({
       style={[styles.safe, style]}
       edges={reserveBottom ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}
     >
+      <OfflineBanner />
       {scroll ? <FieldFocusContext.Provider value={reportFocus}>{body}</FieldFocusContext.Provider> : body}
       {footer ? <View style={styles.footer}>{footer}</View> : null}
     </SafeAreaView>
@@ -138,4 +169,15 @@ const styles = StyleSheet.create({
     borderTopColor: colors.surface.border,
     backgroundColor: colors.surface.background,
   },
+  offlineBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.gutter,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.status.warningBg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.surface.border,
+  },
+  offlineText: { flex: 1 },
 });

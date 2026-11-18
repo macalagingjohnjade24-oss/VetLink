@@ -7,12 +7,13 @@ import { Badge, type BadgeTone } from '../../components/Badge';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
-import { LoadingState } from '../../components/States';
+import { ErrorState, LoadingState } from '../../components/States';
 import { usePets } from '../../context/PetContext';
 import { CLINICS } from '../../data/mockClinics';
 import type { Vaccination } from '../../data/mockVaccinations';
 import { formatBirthDate } from '../../services/petService';
 import { vaccinationService, vaccinationStatus } from '../../services/vaccinationService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps } from '../../navigation/types';
 
@@ -25,24 +26,49 @@ export function VaccinationDetailsScreen({ route }: PetsScreenProps<'Vaccination
   const [record, setRecord] = useState<Vaccination | null>(null);
   const [loading, setLoading] = useState(true);
   const [documentNote, setDocumentNote] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    void vaccinationService.getById(vaccinationId).then((entry) => {
-      if (!active) return;
-      setRecord(entry);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError(null);
+    void vaccinationService
+      .getById(vaccinationId)
+      .then((entry) => {
+        if (active) setRecord(entry);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRecord(null);
+        setError(errorMessage(err, 'We couldn’t load this vaccination record.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [vaccinationId]);
+  }, [vaccinationId, reloadKey]);
 
   if (loading) {
     return (
       <Screen contentStyle={styles.content}>
         <AppHeader title="Vaccination Details" />
         <LoadingState />
+      </Screen>
+    );
+  }
+
+  if (error) {
+    return (
+      <Screen contentStyle={styles.content}>
+        <AppHeader title="Vaccination Details" />
+        <ErrorState
+          title="We couldn’t load this record"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
       </Screen>
     );
   }
@@ -117,13 +143,13 @@ export function VaccinationDetailsScreen({ route }: PetsScreenProps<'Vaccination
       />
       {documentNote ? (
         <AppText variant="caption">
-          Supporting documents are added by the clinic. None is attached to this demo record — ask the clinic for the
+          Supporting documents are added by the clinic. None is attached to this record — ask the clinic for the
           certificate.
         </AppText>
       ) : null}
 
       <HelpNote>
-        Sample clinic-entered record. Contact the clinic to verify details before making care decisions.
+        Clinic-entered record. Contact the clinic to verify details before making care decisions.
       </HelpNote>
     </Screen>
   );

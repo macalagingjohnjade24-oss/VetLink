@@ -2,11 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { AppNotification } from '../data/mockNotifications';
 import { notificationService } from '../services/notificationService';
 import { STORAGE_KEYS, storage } from '../services/storage';
+import { errorMessage } from '../utils/errors';
+import { useAuth } from './AuthContext';
 
 type AppContextValue = {
   notifications: AppNotification[];
   unreadCount: number;
   loadingNotifications: boolean;
+  /** Set when the notifications query fails, so screens can show a retry state. */
+  notificationsError: string | null;
   refreshNotifications: () => Promise<void>;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
@@ -20,20 +24,38 @@ const AppContext = createContext<AppContextValue | null>(null);
 const MAX_RECENT_SEARCHES = 6;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const refreshNotifications = useCallback(async () => {
-    const list = await notificationService.list();
-    setNotifications(list);
-    setLoadingNotifications(false);
-  }, []);
+    if (!user) {
+      setNotifications([]);
+      setNotificationsError(null);
+      setLoadingNotifications(false);
+      return;
+    }
+    setNotificationsError(null);
+    try {
+      setNotifications(await notificationService.list());
+    } catch (err) {
+      setNotifications([]);
+      setNotificationsError(errorMessage(err, 'We couldn’t load your notifications.'));
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [user]);
 
   useEffect(() => {
+    setLoadingNotifications(true);
     void refreshNotifications();
-    void storage.get<string[]>(STORAGE_KEYS.recentSearches).then((saved) => setRecentSearches(saved ?? []));
   }, [refreshNotifications]);
+
+  useEffect(() => {
+    void storage.get<string[]>(STORAGE_KEYS.recentSearches).then((saved) => setRecentSearches(saved ?? []));
+  }, []);
 
   const markRead = useCallback(async (id: string) => {
     await notificationService.markRead(id);
@@ -70,6 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       notifications,
       unreadCount,
       loadingNotifications,
+      notificationsError,
       refreshNotifications,
       markRead,
       markAllRead,
@@ -81,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       notifications,
       unreadCount,
       loadingNotifications,
+      notificationsError,
       refreshNotifications,
       markRead,
       markAllRead,

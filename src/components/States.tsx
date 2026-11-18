@@ -21,6 +21,36 @@ type EmptyProps = {
   onAction?: () => void;
 };
 
+type ErrorProps = {
+  title?: string;
+  message: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+};
+
+/** Shown in place of data when a query fails, with a way to try again. */
+export function ErrorState({
+  title = 'We couldn’t load this',
+  message,
+  onRetry,
+  retryLabel = 'Try again',
+}: ErrorProps) {
+  return (
+    <View style={styles.center}>
+      <View style={[styles.iconWrap, styles.errorIconWrap]}>
+        <Ionicons name="alert-circle-outline" size={26} color={colors.status.danger} />
+      </View>
+      <AppText variant="cardTitle" center>
+        {title}
+      </AppText>
+      <AppText variant="caption" center>
+        {message}
+      </AppText>
+      {onRetry ? <Button label={retryLabel} onPress={onRetry} size="sm" fullWidth={false} /> : null}
+    </View>
+  );
+}
+
 export function EmptyState({ icon = 'paw-outline', title, message, actionLabel, onAction }: EmptyProps) {
   return (
     <View style={styles.center}>
@@ -51,4 +81,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
+  errorIconWrap: { backgroundColor: colors.status.dangerBg },
 });

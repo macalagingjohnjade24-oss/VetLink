@@ -3,11 +3,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
-import { Button } from '../../components/Button';
 import { LinkCard } from '../../components/Card';
 import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
-import { useDemo } from '../../context/DemoContext';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   NOTIFICATION_PREFERENCE_ROWS,
@@ -19,10 +17,7 @@ import type { ProfileScreenProps, TabParamList } from '../../navigation/types';
 
 /** PO-58 Account Settings */
 export function AccountSettingsScreen({ navigation }: ProfileScreenProps<'AccountSettings'>) {
-  const { resetDemoData } = useDemo();
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
-  const [confirmingReset, setConfirmingReset] = useState(false);
-  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -117,28 +112,6 @@ export function AccountSettingsScreen({ navigation }: ProfileScreenProps<'Accoun
         }
       />
       <LinkButton label="Log Out" icon="log-out-outline" onPress={() => navigation.navigate('Logout')} />
-
-      <View style={styles.demoSection}>
-        <AppText variant="title">Demo data</AppText>
-        <AppText variant="caption">
-          Restore the seeded pets, appointments, preferences and inquiries. Your sign-in is kept.
-        </AppText>
-        {confirmingReset ? (
-          <View style={styles.demoActions}>
-            <Button
-              label="Reset demo data"
-              loading={resetting}
-              onPress={() => {
-                setResetting(true);
-                void resetDemoData();
-              }}
-            />
-            <Button label="Keep my data" variant="ghost" onPress={() => setConfirmingReset(false)} />
-          </View>
-        ) : (
-          <Button label="Reset demo data" variant="secondary" onPress={() => setConfirmingReset(true)} />
-        )}
-      </View>
     </Screen>
   );
 }
@@ -157,12 +130,4 @@ const styles = StyleSheet.create({
   prefRowDivided: { borderTopWidth: 1, borderTopColor: colors.surface.border },
   prefLabel: { flex: 1 },
   prefRowPressed: { opacity: 0.7 },
-  demoSection: {
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.surface.border,
-  },
-  demoActions: { gap: spacing.sm },
 });

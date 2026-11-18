@@ -8,6 +8,7 @@ import { HelpNote } from '../../components/HelpNote';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
+import { AuthError } from '../../services/authService';
 import { colors, spacing } from '../../theme';
 import { passwordChecks } from '../../utils/validation';
 import type { ScreenProps } from '../../navigation/types';
@@ -19,6 +20,7 @@ export function ResetPasswordScreen({ navigation, route }: ScreenProps<'ResetPas
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [linkError, setLinkError] = useState<string | null>(route.params?.error ?? null);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,9 +34,19 @@ export function ResetPasswordScreen({ navigation, route }: ScreenProps<'ResetPas
     if (Object.keys(next).length) return;
 
     setSubmitting(true);
-    await resetPassword(email, password);
-    setSubmitting(false);
-    setDone(true);
+    setLinkError(null);
+    try {
+      await resetPassword(email, password);
+      setDone(true);
+    } catch (error) {
+      setLinkError(
+        error instanceof AuthError
+          ? error.message
+          : 'We could not reset your password. Please request a new reset link.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -45,6 +57,12 @@ export function ResetPasswordScreen({ navigation, route }: ScreenProps<'ResetPas
       <AppText variant="body" color={colors.text.secondary}>
         Choose a strong password you haven’t used before.
       </AppText>
+
+      {linkError ? (
+        <HelpNote tone="danger" title="Reset link problem">
+          {linkError}
+        </HelpNote>
+      ) : null}
 
       <Input
         label="New password"

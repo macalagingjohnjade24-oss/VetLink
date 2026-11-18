@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { APPOINTMENTS, type Appointment, type AppointmentStatus } from '../data/mockAppointments';
-import { usePets } from './PetContext';
+import type { Appointment, AppointmentStatus } from '../data/mockAppointments';
 import { CLINICS } from '../data/mockClinics';
+import { appointmentService } from '../services/appointmentService';
 import { bookingService } from '../services/bookingService';
-import { STORAGE_KEYS, storage } from '../services/storage';
+import { errorMessage } from '../utils/errors';
+import { useAuth } from './AuthContext';
+import { usePets } from './PetContext';
 
 export type BookingDraft = {
   clinicId: string | null;
@@ -25,8 +27,8 @@ export const emptyDraft: BookingDraft = {
   serviceId: null,
   dateISO: null,
   time: null,
-  ownerName: 'Alex Santos',
-  contact: '+63 917 555 0142',
+  ownerName: '',
+  contact: '',
   reason: '',
   symptoms: '',
   notes: '',
@@ -40,6 +42,10 @@ type BookingContextValue = {
   /** Starts a fresh request, optionally seeded with the clinic/service the owner tapped in the locator. */
   startBooking: (seed?: { clinicId?: string; petId?: string; serviceId?: string }) => void;
   appointments: Appointment[];
+  loadingAppointments: boolean;
+  /** Set when the appointments query fails, so screens can show a retry state. */
+  error: string | null;
+  refreshAppointments: () => Promise<void>;
   submitBooking: () => Promise<Appointment>;
   cancelAppointment: (id: string, reason: string, note?: string) => Promise<void>;
   rescheduleAppointment: (id: string, dateISO: string, time: string, reason?: string) => Promise<void>;
@@ -53,23 +59,43 @@ export type ClinicAction = 'accept' | 'decline' | 'complete';
 const BookingContext = createContext<BookingContextValue | null>(null);
 
 export function BookingProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const { pets } = usePets();
   const [draft, setDraft] = useState<BookingDraft>(emptyDraft);
-  const [created, setCreated] = useState<Appointment[]>([]);
-  const [overrides, setOverrides] = useState<Record<string, Partial<Appointment>>>({});
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadCreated = useCallback(async () => {
-    const [saved, savedOverrides] = await Promise.all([
-      storage.get<Appointment[]>(STORAGE_KEYS.createdAppointments),
-      storage.get<Record<string, Partial<Appointment>>>(STORAGE_KEYS.appointmentOverrides),
-    ]);
-    setCreated(saved ?? []);
-    setOverrides(savedOverrides ?? {});
-  }, []);
+  const refreshAppointments = useCallback(async () => {
+    if (!user) {
+      setAppointments([]);
+      setError(null);
+      setLoadingAppointments(false);
+      return;
+    }
+    setError(null);
+    try {
+      setAppointments(await appointmentService.list());
+    } catch (err) {
+      setAppointments([]);
+      setError(errorMessage(err, 'We couldn’t load your appointments.'));
+    } finally {
+      setLoadingAppointments(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    void loadCreated();
-  }, [loadCreated]);
+    setLoadingAppointments(true);
+    void refreshAppointments();
+  }, [refreshAppointments]);
+
+  const ownerDefaults = useCallback(
+    () => ({
+      ownerName: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim(),
+      contact: user?.mobile || user?.email || '',
+    }),
+    [user],
+  );
 
   const updateDraft = useCallback((patch: Partial<BookingDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
@@ -77,29 +103,21 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const resetDraft = useCallback(() => setDraft(emptyDraft), []);
 
-  const startBooking = useCallback((seed?: { clinicId?: string; petId?: string; serviceId?: string }) => {
-    setDraft({
-      ...emptyDraft,
-      clinicId: seed?.clinicId ?? null,
-      petId: seed?.petId ?? null,
-      serviceId: seed?.serviceId ?? null,
-    });
-  }, []);
-
-  /** Mock appointments are static, so status and reschedule changes live in an override map. */
-  const appointments = useMemo(() => {
-    const all = [...created, ...APPOINTMENTS].map((appointment) =>
-      overrides[appointment.id] ? { ...appointment, ...overrides[appointment.id] } : appointment,
-    );
-    return all.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-  }, [created, overrides]);
-
-  const persist = useCallback(async (next: Appointment[]) => {
-    setCreated(next);
-    await storage.set(STORAGE_KEYS.createdAppointments, next);
-  }, []);
+  const startBooking = useCallback(
+    (seed?: { clinicId?: string; petId?: string; serviceId?: string }) => {
+      setDraft({
+        ...emptyDraft,
+        ...ownerDefaults(),
+        clinicId: seed?.clinicId ?? null,
+        petId: seed?.petId ?? null,
+        serviceId: seed?.serviceId ?? null,
+      });
+    },
+    [ownerDefaults],
+  );
 
   const submitBooking = useCallback(async () => {
+    if (!user) throw new Error('Sign in again to book an appointment.');
     const clinic = CLINICS.find((item) => item.id === draft.clinicId);
     const pet = pets.find((item) => item.id === draft.petId);
     const service = clinic?.services.find((item) => item.id === draft.serviceId);
@@ -107,60 +125,40 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       throw new Error('The booking request is incomplete.');
     }
 
-    const reference = bookingService.buildReference(draft.dateISO, created.length + APPOINTMENTS.length);
-    const appointment: Appointment = {
-      id: `apt_${Date.now()}`,
-      reference,
+    const appointment = await appointmentService.create({
+      ownerId: user.id,
       clinicId: clinic.id,
       petId: pet.id,
       serviceId: service.id,
       serviceName: service.name,
+      price: service.price,
       dateISO: draft.dateISO,
       timeLabel: draft.time,
-      dateLabel: bookingService.formatShortDate(draft.dateISO),
-      status: 'Pending',
-      price: service.price,
-      notes: draft.notes,
       ownerName: draft.ownerName,
       contact: draft.contact,
       reason: draft.reason,
       symptoms: draft.symptoms,
+      notes: draft.notes,
       attachmentName: draft.attachmentName,
-      createdAt: new Date().toISOString(),
-    };
-
-    await persist([appointment, ...created]);
+    });
+    await refreshAppointments();
     return appointment;
-  }, [created, draft, persist, pets]);
-
-  const applyOverride = useCallback(async (id: string, patch: Partial<Appointment>) => {
-    const next = { ...overrides, [id]: { ...overrides[id], ...patch } };
-    setOverrides(next);
-    await storage.set(STORAGE_KEYS.appointmentOverrides, next);
-  }, [overrides]);
+  }, [draft, pets, refreshAppointments, user]);
 
   const cancelAppointment = useCallback(
     async (id: string, reason: string, note?: string) => {
-      await applyOverride(id, {
-        status: 'Cancellation requested' as AppointmentStatus,
-        cancellationReason: reason,
-        cancellationNote: note,
-        clinicNote: undefined,
-      });
+      await appointmentService.requestCancellation(id, reason, note);
+      await refreshAppointments();
     },
-    [applyOverride],
+    [refreshAppointments],
   );
 
   const rescheduleAppointment = useCallback(
     async (id: string, dateISO: string, time: string, reason?: string) => {
-      await applyOverride(id, {
-        status: 'Reschedule requested' as AppointmentStatus,
-        requestedDateISO: dateISO,
-        requestedTime: time,
-        rescheduleReason: reason,
-      });
+      await appointmentService.requestReschedule(id, dateISO, time, reason);
+      await refreshAppointments();
     },
-    [applyOverride],
+    [refreshAppointments],
   );
 
   const clinicUpdateAppointment = useCallback(
@@ -171,64 +169,66 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
       if (action === 'complete') {
         if (status !== 'Confirmed') return;
-        await applyOverride(id, {
-          status: 'Completed' as AppointmentStatus,
-          clinicNote: 'The clinic marked this visit as complete.',
+        await appointmentService.clinicUpdate(id, {
+          status: 'completed',
+          clinic_note: 'The clinic marked this visit as complete.',
         });
+        await refreshAppointments();
         return;
       }
 
       if (action === 'accept') {
         if (status === 'Pending') {
-          await applyOverride(id, {
-            status: 'Confirmed' as AppointmentStatus,
-            clinicNote: 'The clinic accepted your booking request.',
+          await appointmentService.clinicUpdate(id, {
+            status: 'confirmed',
+            clinic_note: 'The clinic accepted your booking request.',
           });
-          return;
-        }
-        if (status === 'Reschedule requested' && requestedDateISO && requestedTime) {
-          await applyOverride(id, {
-            status: 'Confirmed' as AppointmentStatus,
-            dateISO: requestedDateISO,
-            timeLabel: requestedTime,
-            dateLabel: bookingService.formatShortDate(requestedDateISO),
-            requestedDateISO: undefined,
-            requestedTime: undefined,
-            rescheduleReason: undefined,
-            clinicNote: `The clinic moved your visit to ${bookingService.formatShortDate(requestedDateISO)} at ${requestedTime}.`,
+        } else if (status === 'Reschedule requested' && requestedDateISO && requestedTime) {
+          await appointmentService.clinicUpdate(id, {
+            status: 'confirmed',
+            appointment_date: requestedDateISO.slice(0, 10),
+            appointment_time: requestedTime,
+            reschedule_requested: false,
+            requested_date: null,
+            requested_time: null,
+            reschedule_reason: null,
+            clinic_note: `The clinic moved your visit to ${bookingService.formatShortDate(requestedDateISO)} at ${requestedTime}.`,
           });
-          return;
-        }
-        if (status === 'Cancellation requested') {
-          await applyOverride(id, {
-            status: 'Cancelled' as AppointmentStatus,
-            clinicNote: 'The clinic confirmed the cancellation.',
+        } else if (status === 'Cancellation requested') {
+          await appointmentService.clinicUpdate(id, {
+            status: 'cancelled',
+            cancellation_requested: false,
+            clinic_note: 'The clinic confirmed the cancellation.',
           });
         }
+        await refreshAppointments();
         return;
       }
 
       if (status === 'Pending') {
-        await applyOverride(id, {
-          status: 'Rejected' as AppointmentStatus,
-          clinicNote: 'The clinic could not fit this request in. Please choose another time.',
+        await appointmentService.clinicUpdate(id, {
+          status: 'rejected',
+          clinic_note: 'The clinic could not fit this request in. Please choose another time.',
         });
       } else if (status === 'Reschedule requested') {
-        await applyOverride(id, {
-          status: 'Confirmed' as AppointmentStatus,
-          requestedDateISO: undefined,
-          requestedTime: undefined,
-          rescheduleReason: undefined,
-          clinicNote: 'The clinic declined the new time. Your original appointment still stands.',
+        await appointmentService.clinicUpdate(id, {
+          status: 'confirmed',
+          reschedule_requested: false,
+          requested_date: null,
+          requested_time: null,
+          reschedule_reason: null,
+          clinic_note: 'The clinic declined the new time. Your original appointment still stands.',
         });
       } else if (status === 'Cancellation requested') {
-        await applyOverride(id, {
-          status: 'Confirmed' as AppointmentStatus,
-          clinicNote: 'The clinic declined the cancellation and still expects you.',
+        await appointmentService.clinicUpdate(id, {
+          status: 'confirmed',
+          cancellation_requested: false,
+          clinic_note: 'The clinic declined the cancellation and still expects you.',
         });
       }
+      await refreshAppointments();
     },
-    [appointments, applyOverride],
+    [appointments, refreshAppointments],
   );
 
   const getAppointment = useCallback(
@@ -243,6 +243,9 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       resetDraft,
       startBooking,
       appointments,
+      loadingAppointments,
+      error,
+      refreshAppointments,
       submitBooking,
       cancelAppointment,
       rescheduleAppointment,
@@ -255,6 +258,9 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       resetDraft,
       startBooking,
       appointments,
+      loadingAppointments,
+      error,
+      refreshAppointments,
       submitBooking,
       cancelAppointment,
       rescheduleAppointment,

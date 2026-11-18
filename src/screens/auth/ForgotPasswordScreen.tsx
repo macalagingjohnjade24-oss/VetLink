@@ -8,6 +8,7 @@ import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
 import { TextLink } from '../../components/TextLink';
 import { useAuth } from '../../context/AuthContext';
+import { AuthError } from '../../services/authService';
 import { colors, spacing } from '../../theme';
 import { isEmail } from '../../utils/validation';
 import type { ScreenProps } from '../../navigation/types';
@@ -25,9 +26,18 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
     if (!isEmail(email)) return setError('Enter a valid email address.');
     setError(null);
     setSubmitting(true);
-    await requestPasswordReset(email);
-    setSubmitting(false);
-    setSent(true);
+    try {
+      await requestPasswordReset(email);
+      setSent(true);
+    } catch (submitError) {
+      setError(
+        submitError instanceof AuthError
+          ? submitError.message
+          : 'We could not send the reset email. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -41,8 +51,8 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
 
       {sent ? (
         <HelpNote tone="success" title="Reset link sent">
-          If an account exists for {email.trim()}, a password reset link has been sent. For this demo you can continue
-          straight to the reset screen.
+          If an account exists for {email.trim()}, a password reset link is on its way. Open the link on this device to
+          choose a new password.
         </HelpNote>
       ) : (
         <>
@@ -62,10 +72,6 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
           <Button label="Send Reset Link" onPress={onSubmit} loading={submitting} />
         </>
       )}
-
-      {sent ? (
-        <Button label="Continue to Reset Password" onPress={() => navigation.navigate('ResetPassword', { email })} />
-      ) : null}
 
       <TextLink label="Back to Login" align="center" onPress={() => navigation.navigate('Login')} />
 

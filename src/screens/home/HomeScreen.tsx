@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -12,13 +12,18 @@ import { Logo } from '../../components/Logo';
 import { PetCard } from '../../components/PetCard';
 import { Screen } from '../../components/Screen';
 import { SectionHeader } from '../../components/SectionHeader';
+import { ErrorState } from '../../components/States';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import type { Appointment } from '../../data/mockAppointments';
 import type { Clinic } from '../../data/mockClinics';
+import type { Vaccination } from '../../data/mockVaccinations';
 import { usePets } from '../../context/PetContext';
 import { appointmentService } from '../../services/appointmentService';
 import { clinicService } from '../../services/clinicService';
+import { vaccinationService, vaccinationStatus } from '../../services/vaccinationService';
+import { errorMessage } from '../../utils/errors';
+import { formatISODate } from '../../utils/petFormat';
 import { colors, radii, spacing } from '../../theme';
 import type { HomeScreenProps, RootStackParamList, TabParamList } from '../../navigation/types';
 
@@ -30,27 +35,45 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const { pets } = usePets();
   const [recentClinics, setRecentClinics] = useState<Clinic[]>([]);
+  const [reminder, setReminder] = useState<Vaccination | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const [upcoming, recent] = await Promise.all([appointmentService.upcoming(), clinicService.recentlyViewed()]);
-      if (!active) return;
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const [upcoming, recent, due] = await Promise.all([
+        appointmentService.upcoming(),
+        clinicService.recentlyViewed(),
+        // A vaccination failure shouldn’t blank the rest of the dashboard.
+        vaccinationService.upcoming().catch(() => [] as Vaccination[]),
+      ]);
       const next = upcoming[0] ?? null;
       setAppointment(next);
       setRecentClinics(recent);
+      setReminder(
+        due
+          .filter((entry) => entry.nextDueISO)
+          .sort((a, b) => (a.nextDueISO ?? '').localeCompare(b.nextDueISO ?? ''))[0] ?? null,
+      );
       if (next) setClinic(await clinicService.getById(next.clinicId));
-    })();
-    return () => {
-      active = false;
-    };
+    } catch (err) {
+      setAppointment(null);
+      setRecentClinics([]);
+      setReminder(null);
+      setError(errorMessage(err, 'We couldn’t load your dashboard.'));
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const openTab = (tab: keyof TabParamList) => {
     navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate(tab);
   };
 
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening';
+  const reminderPet = reminder ? pets.find((pet) => pet.id === reminder.petId) : undefined;
 
   return (
     <Screen contentStyle={styles.content}>
@@ -84,7 +107,9 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
       <Button label="Find a Veterinary Clinic" onPress={() => openTab('ClinicsTab')} />
 
       <SectionHeader title="Upcoming appointment" />
-      {appointment ? (
+      {error ? (
+        <ErrorState title="We couldn’t load your dashboard" message={error} onRetry={() => void load()} />
+      ) : appointment ? (
         <Pressable
           accessibilityRole="button"
           onPress={() =>
@@ -128,12 +153,19 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
         ))}
       </View>
 
-      <HelpNote>Health reminder · Milo’s rabies booster is due Nov 24.</HelpNote>
-      <TextLink
-        label="View vaccination reminder"
-        icon="notifications-outline"
-        onPress={() => navigation.navigate('Notifications')}
-      />
+      {reminder && reminderPet ? (
+        <>
+          <HelpNote>
+            Health reminder · {reminderPet.name}’s {reminder.vaccine.toLowerCase()}{' '}
+            {vaccinationStatus(reminder) === 'Overdue' ? 'was due' : 'is due'} {formatISODate(reminder.nextDueISO)}.
+          </HelpNote>
+          <TextLink
+            label="View vaccination reminder"
+            icon="notifications-outline"
+            onPress={() => navigation.navigate('Notifications')}
+          />
+        </>
+      ) : null}
 
       <SectionHeader title="Recently viewed clinics" />
       {recentClinics.map((recent) => (

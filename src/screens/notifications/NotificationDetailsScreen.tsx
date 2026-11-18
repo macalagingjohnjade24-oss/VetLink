@@ -8,13 +8,14 @@ import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
-import { LoadingState } from '../../components/States';
+import { ErrorState, LoadingState } from '../../components/States';
 import { useApp } from '../../context/AppContext';
 import type { Appointment } from '../../data/mockAppointments';
 import type { AppNotification } from '../../data/mockNotifications';
 import { appointmentService } from '../../services/appointmentService';
 import { notificationService } from '../../services/notificationService';
 import { petService } from '../../services/petService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { HomeScreenProps, TabParamList } from '../../navigation/types';
 
@@ -26,35 +27,58 @@ export function NotificationDetailsScreen({ navigation, route }: HomeScreenProps
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [petName, setPetName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError(null);
     (async () => {
-      const found = await notificationService.getById(id);
-      if (!active) return;
-      setNotification(found);
-      if (found?.appointmentId) {
-        const appointmentRecord = await appointmentService.getById(found.appointmentId);
+      try {
+        const found = await notificationService.getById(id);
         if (!active) return;
-        setAppointment(appointmentRecord);
-        if (appointmentRecord) {
-          const pet = await petService.getById(appointmentRecord.petId);
-          if (active) setPetName(pet?.name ?? null);
+        setNotification(found);
+        if (found?.appointmentId) {
+          const appointmentRecord = await appointmentService.getById(found.appointmentId);
+          if (!active) return;
+          setAppointment(appointmentRecord);
+          if (appointmentRecord) {
+            const pet = await petService.getById(appointmentRecord.petId);
+            if (active) setPetName(pet?.name ?? null);
+          }
         }
+      } catch (err) {
+        if (!active) return;
+        setError(errorMessage(err, 'We couldn’t load this notification.'));
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     })();
-    void markRead(id);
+    void markRead(id).catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [id, markRead]);
+  }, [id, markRead, reloadKey]);
 
   if (loading) {
     return (
       <Screen contentStyle={styles.content}>
         <AppHeader title="Notification Details" />
         <LoadingState />
+      </Screen>
+    );
+  }
+
+  if (error) {
+    return (
+      <Screen contentStyle={styles.content}>
+        <AppHeader title="Notification Details" />
+        <ErrorState
+          title="We couldn’t load this notification"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
       </Screen>
     );
   }

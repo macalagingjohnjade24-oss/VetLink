@@ -15,7 +15,7 @@ const RESEND_SECONDS = 30;
 
 /** PO-08 Email Verification — simulated code entry (no email is sent). */
 export function EmailVerificationScreen({ navigation, route }: ScreenProps<'EmailVerification'>) {
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, resendVerification } = useAuth();
   const { email } = route.params;
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,10 +37,30 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
     }
     setChecking(true);
     setError(null);
-    const ok = await verifyEmail(email, code);
-    setChecking(false);
-    if (ok) setVerified(true);
-    else setError('That code is incorrect. Check the email and try again.');
+    try {
+      const ok = await verifyEmail(email, code);
+      if (ok) setVerified(true);
+      else setError('That code is incorrect. Check the email and try again.');
+    } catch (verifyError) {
+      setError(
+        verifyError instanceof Error
+          ? verifyError.message
+          : 'That code is no longer valid. Request a new one and try again.',
+      );
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const resend = async () => {
+    setError(null);
+    try {
+      await resendVerification(email);
+      setResendIn(RESEND_SECONDS);
+      setResent(true);
+    } catch (resendError) {
+      setError(resendError instanceof Error ? resendError.message : 'We could not resend the code. Please try again.');
+    }
   };
 
   return (
@@ -74,15 +94,12 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
             icon="mail-outline"
             align="center"
             disabled={resendIn > 0}
-            onPress={() => {
-              setResendIn(RESEND_SECONDS);
-              setResent(true);
-            }}
+            onPress={() => void resend()}
           />
-          {resent && resendIn === RESEND_SECONDS ? (
-            <AppText variant="caption">A new demo code has been generated.</AppText>
-          ) : null}
-          <HelpNote>Demo code: 482619. No email is actually sent in this build.</HelpNote>
+          {resent ? <AppText variant="caption">A new verification code has been sent.</AppText> : null}
+          <HelpNote>
+            Can’t find the email? Check your spam folder, or open the confirmation link it contains.
+          </HelpNote>
         </>
       )}
 

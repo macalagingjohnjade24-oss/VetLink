@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -10,7 +10,7 @@ import { Logo } from '../../components/Logo';
 import { Screen } from '../../components/Screen';
 import { TextLink } from '../../components/TextLink';
 import { useAuth } from '../../context/AuthContext';
-import { DEMO_EMAIL, DEMO_PASSWORD } from '../../data/mockUsers';
+import { BACKEND_SETUP_MESSAGE } from '../../lib/supabase';
 import { AuthError } from '../../services/authService';
 import { colors, spacing } from '../../theme';
 import { isEmail } from '../../utils/validation';
@@ -18,12 +18,13 @@ import type { ScreenProps } from '../../navigation/types';
 
 /** PO-06 Login */
 export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, isConfigured, enterOfflineMode } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const onSubmit = async () => {
     const next: typeof errors = {};
@@ -38,17 +39,38 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
       await signIn(email, password, remember);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error) {
-      if (error instanceof AuthError) {
-        if (error.code === 'unverified') {
-          navigation.navigate('EmailVerification', { email: email.trim() });
-          return;
-        }
-        setErrors({ form: error.message });
-      } else {
-        setErrors({ form: 'Something went wrong. Please try again.' });
+      if (error instanceof AuthError && error.code === 'unverified') {
+        navigation.navigate('EmailVerification', { email: email.trim() });
+        return;
       }
+      setErrors({
+        form: error instanceof AuthError ? error.message : 'Something went wrong. Please try again.',
+      });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /** Opens the labelled offline demo so the app can be used without a backend. */
+  const onOffline = () => {
+    enterOfflineMode();
+    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+  };
+
+  /** Real Google OAuth through Supabase (PKCE). See supabase/README.md for provider setup. */
+  const onGoogle = async () => {
+    setErrors({});
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle(remember);
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (error) {
+      if (error instanceof AuthError && error.code === 'cancelled') return;
+      setErrors({
+        form: error instanceof AuthError ? error.message : 'Google sign-in is unavailable right now. Please try again.',
+      });
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -64,6 +86,12 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
       <AppText variant="body" color={colors.text.secondary}>
         Log in to keep your pet’s care connected.
       </AppText>
+
+      {!isConfigured ? (
+        <HelpNote tone="danger" title="Backend not configured">
+          {BACKEND_SETUP_MESSAGE}
+        </HelpNote>
+      ) : null}
 
       <View style={styles.form}>
         <Input
@@ -107,28 +135,31 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
         <Button label="Login" onPress={onSubmit} loading={submitting} />
 
-        <TextLink label="New to VetLink? Sign Up" align="center" onPress={() => navigation.navigate('SignUp')} />
-      </View>
-
-      <View style={styles.demoCard}>
-        <View style={styles.demoText}>
-          <AppText variant="bodyStrong">Demo account</AppText>
-          <AppText variant="caption">
-            {DEMO_EMAIL} · {DEMO_PASSWORD}
+        <View style={styles.divider}>
+          <View style={styles.rule} />
+          <AppText variant="caption" color={colors.text.secondary}>
+            or
           </AppText>
-          <AppText variant="small">Works offline — no database or backend required.</AppText>
+          <View style={styles.rule} />
         </View>
+
         <Button
-          label="Use demo account"
-          variant="ghost"
-          size="sm"
-          fullWidth={false}
-          onPress={() => {
-            setEmail(DEMO_EMAIL);
-            setPassword(DEMO_PASSWORD);
-            setErrors({});
-          }}
+          label="Continue with Google"
+          variant="secondary"
+          iconNode={googleMark}
+          onPress={onGoogle}
+          loading={googleLoading}
         />
+
+        <View style={styles.offlineBlock}>
+          <Button label="Continue in offline mode" variant="ghost" icon="cloud-offline-outline" onPress={onOffline} />
+          <AppText variant="caption" color={colors.text.secondary} center>
+            Offline mode opens VetLink with sample pets, appointments and clinics. Nothing is sent to a clinic and
+            changes last only for this session.
+          </AppText>
+        </View>
+
+        <TextLink label="New to VetLink? Sign Up" align="center" onPress={() => navigation.navigate('SignUp')} />
       </View>
 
       <HelpNote>Use a valid email address. Your password is kept private.</HelpNote>
@@ -136,18 +167,16 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
   );
 }
 
+const googleMark = (
+  <Image source={require('../../../assets/google-g.png')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+);
+
 const styles = StyleSheet.create({
   content: { gap: spacing.md, paddingBottom: spacing.xxxl },
   brandRow: { marginTop: spacing.sm },
   form: { gap: spacing.lg, marginTop: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  demoCard: {
-    borderWidth: 1,
-    borderColor: colors.surface.border,
-    borderRadius: 16,
-    padding: spacing.md,
-    gap: spacing.xs,
-    backgroundColor: colors.surface.card,
-  },
-  demoText: { gap: 2 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rule: { flex: 1, height: 1, backgroundColor: colors.surface.border },
+  offlineBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.surface.border, paddingTop: spacing.md },
 });

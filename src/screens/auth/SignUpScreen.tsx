@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -18,7 +18,7 @@ type FieldKey = 'firstName' | 'lastName' | 'email' | 'mobile' | 'password' | 'co
 
 /** PO-07 Create Account */
 export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
-  const { register } = useAuth();
+  const { register, signInWithGoogle } = useAuth();
   const [values, setValues] = useState<Record<FieldKey, string>>({
     firstName: '',
     lastName: '',
@@ -30,6 +30,7 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldKey | 'terms' | 'form', string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const setValue = (key: FieldKey, value: string) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -68,6 +69,23 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /** Google creates the account on first use (pet_owner profile) and signs in on repeat visits. */
+  const onGoogle = async () => {
+    setErrors({});
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle(true);
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (error) {
+      if (error instanceof AuthError && error.code === 'cancelled') return;
+      setErrors({
+        form: error instanceof AuthError ? error.message : 'Google sign-in is unavailable right now. Please try again.',
+      });
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -138,13 +156,35 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
 
       <Button label="Create Account" onPress={onSubmit} loading={submitting} />
 
+      <View style={styles.divider}>
+        <View style={styles.rule} />
+        <AppText variant="caption" color={colors.text.secondary}>
+          or
+        </AppText>
+        <View style={styles.rule} />
+      </View>
+
+      <Button
+        label="Continue with Google"
+        variant="secondary"
+        iconNode={googleMark}
+        onPress={onGoogle}
+        loading={googleLoading}
+      />
+
       <TextLink label="Already have an account? Login" align="center" onPress={() => navigation.navigate('Login')} />
     </Screen>
   );
 }
 
+const googleMark = (
+  <Image source={require('../../../assets/google-g.png')} style={{ width: 18, height: 18 }} resizeMode="contain" />
+);
+
 const styles = StyleSheet.create({
   content: { gap: spacing.md, paddingBottom: spacing.xxxl },
   form: { gap: spacing.lg, marginTop: spacing.sm },
   terms: { gap: spacing.xs },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rule: { flex: 1, height: 1, backgroundColor: colors.surface.border },
 });

@@ -5,12 +5,13 @@ import { AppText } from '../../components/AppText';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
-import { EmptyState, LoadingState } from '../../components/States';
+import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { usePets } from '../../context/PetContext';
 import { CLINICS } from '../../data/mockClinics';
 import type { MedicalRecord } from '../../data/mockMedicalRecords';
 import { shortClinicName } from '../../services/clinicService';
 import { medicalRecordService } from '../../services/medicalRecordService';
+import { errorMessage } from '../../utils/errors';
 import { colors, radii, spacing } from '../../theme';
 import type { PetsScreenProps } from '../../navigation/types';
 
@@ -21,18 +22,30 @@ export function MedicalHistoryScreen({ navigation, route }: PetsScreenProps<'Med
   const pet = getPet(petId);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    void medicalRecordService.forPet(petId).then((entries) => {
-      if (!active) return;
-      setRecords(entries);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError(null);
+    void medicalRecordService
+      .forPet(petId)
+      .then((entries) => {
+        if (active) setRecords(entries);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRecords([]);
+        setError(errorMessage(err, 'We couldn’t load this medical timeline.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
-  }, [petId]);
+  }, [petId, reloadKey]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, MedicalRecord[]>();
@@ -66,6 +79,12 @@ export function MedicalHistoryScreen({ navigation, route }: PetsScreenProps<'Med
 
       {loading ? (
         <LoadingState />
+      ) : error ? (
+        <ErrorState
+          title="We couldn’t load this timeline"
+          message={error}
+          onRetry={() => setReloadKey((key) => key + 1)}
+        />
       ) : grouped.length === 0 ? (
         <EmptyState
           icon="document-text-outline"
