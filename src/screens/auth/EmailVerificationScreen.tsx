@@ -43,7 +43,7 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeBottom contentStyle={styles.content}>
       <AppHeader title="Email Verification" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Verify Your Email</AppText>

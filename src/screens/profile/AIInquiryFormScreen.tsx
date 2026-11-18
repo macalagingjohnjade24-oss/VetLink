@@ -70,7 +70,7 @@ export function AIInquiryFormScreen({ navigation, route }: AIScreenProps<'AIInqu
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeBottom contentStyle={styles.content}>
       <AppHeader title="Preliminary Information" />
 
       <AppText variant="display">Leave your inquiry</AppText>

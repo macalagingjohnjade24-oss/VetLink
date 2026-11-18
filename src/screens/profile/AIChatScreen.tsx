@@ -50,6 +50,7 @@ export function AIChatScreen({ navigation, route }: AIScreenProps<'AIChat'>) {
 
   return (
     <Screen
+      safeBottom
       contentStyle={styles.content}
       scrollRef={scrollRef}
       onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}

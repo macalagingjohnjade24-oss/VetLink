@@ -12,7 +12,7 @@ import type { AIScreenProps } from '../../navigation/types';
 /** PO-51 AI Assistant Introduction */
 export function AIAssistantScreen({ navigation }: AIScreenProps<'AIAssistant'>) {
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeBottom contentStyle={styles.content}>
       <AppHeader title="AI Assistant Introduction" />
 
       <AppText variant="display">
