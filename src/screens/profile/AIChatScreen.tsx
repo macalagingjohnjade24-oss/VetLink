@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -11,12 +11,12 @@ import { useAuth } from '../../context/AuthContext';
 import { ASSISTANT_WELCOME } from '../../data/mockAssistant';
 import { aiAssistantService } from '../../services/aiAssistantService';
 import { colors, fontFamily, radii, spacing } from '../../theme';
-import type { ProfileScreenProps, TabParamList } from '../../navigation/types';
+import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
 
 type Message = { id: string; role: 'owner' | 'assistant'; text: string };
 
 /** PO-52 AI Chat Interface */
-export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>) {
+export function AIChatScreen({ navigation, route }: AIScreenProps<'AIChat'>) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     { id: 'welcome', role: 'assistant', text: ASSISTANT_WELCOME(user?.firstName ?? 'there') },
@@ -79,9 +79,9 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
         accessibilityRole="button"
         hitSlop={6}
         onPress={() =>
-          navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('ClinicsTab', {
-            screen: 'ClinicDiscovery',
-          })
+          navigation
+            .getParent<NativeStackNavigationProp<RootStackParamList>>()
+            ?.navigate('Main', { screen: 'ClinicsTab', params: { screen: 'ClinicDiscovery' } })
         }
       >
         <AppText variant="bodyStrong">Find a veterinary clinic</AppText>

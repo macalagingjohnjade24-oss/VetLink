@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -11,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { findFaqs, SUPPORT_EMAIL } from '../../data/mockSupport';
 import { supportService, type SupportInquiry } from '../../services/supportService';
 import { colors, radii, spacing } from '../../theme';
-import type { ProfileScreenProps } from '../../navigation/types';
+import type { ProfileScreenProps, RootStackParamList, TabParamList } from '../../navigation/types';
 
 /** PO-61 Help and Support */
 export function HelpSupportScreen({ navigation }: ProfileScreenProps<'HelpSupport'>) {
@@ -80,7 +82,12 @@ export function HelpSupportScreen({ navigation }: ProfileScreenProps<'HelpSuppor
         label="Ask the VetLink Assistant"
         variant="secondary"
         icon="chatbubble-ellipses-outline"
-        onPress={() => navigation.navigate('AIAssistant')}
+        onPress={() =>
+          navigation
+            .getParent<BottomTabNavigationProp<TabParamList>>()
+            ?.getParent<NativeStackNavigationProp<RootStackParamList>>()
+            ?.navigate('AI', { screen: 'AIAssistant' })
+        }
       />
 
       <HelpNote>

@@ -69,6 +69,10 @@ export type ProfileStackParamList = {
   HelpSupport: undefined;
   About: undefined;
   Logout: undefined;
+};
+
+/** Routes rendered inside the standalone AI assistant stack (no tab bar). */
+export type AIStackParamList = {
   AIAssistant: undefined;
   AISuggestedQuestions: undefined;
   AIChat: { question?: string } | undefined;
@@ -96,7 +100,9 @@ export type RootStackParamList = {
   EmailVerification: { email: string };
   ForgotPassword: undefined;
   ResetPassword: { email?: string } | undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<TabParamList> | undefined;
+  /** Full-screen assistant flow, shown above the tabs without a tab highlight. */
+  AI: NavigatorScreenParams<AIStackParamList> | undefined;
 };
 
 export type ScreenProps<Route extends keyof RootStackParamList> = NativeStackScreenProps<
@@ -128,3 +134,5 @@ export type ProfileScreenProps<Route extends keyof ProfileStackParamList> = Nati
   ProfileStackParamList,
   Route
 >;
+
+export type AIScreenProps<Route extends keyof AIStackParamList> = NativeStackScreenProps<AIStackParamList, Route>;

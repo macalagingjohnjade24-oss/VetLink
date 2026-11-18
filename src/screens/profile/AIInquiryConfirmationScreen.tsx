@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -8,11 +8,12 @@ import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { clinicInquiryService, type ClinicInquiry } from '../../services/clinicInquiryService';
 import { colors, radii, spacing } from '../../theme';
-import type { ProfileScreenProps, TabParamList } from '../../navigation/types';
+import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
 
 /** PO-55 Inquiry Submission Confirmation */
-export function AIInquiryConfirmationScreen({ navigation, route }: ProfileScreenProps<'AIInquiryConfirmation'>) {
+export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps<'AIInquiryConfirmation'>) {
   const [inquiry, setInquiry] = useState<ClinicInquiry | null>(null);
+  const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     let active = true;
@@ -29,7 +30,11 @@ export function AIInquiryConfirmationScreen({ navigation, route }: ProfileScreen
       <Screen contentStyle={styles.content}>
         <AppHeader title="Inquiry Submission Confirmation" />
         <AppText variant="title">This inquiry is no longer available.</AppText>
-        <Button label="Back to Help & Support" variant="secondary" onPress={() => navigation.navigate('HelpSupport')} />
+        <Button
+          label="Back to Help & Support"
+          variant="secondary"
+          onPress={() => rootNavigation?.navigate('Main', { screen: 'ProfileTab', params: { screen: 'HelpSupport' } })}
+        />
       </Screen>
     );
   }
@@ -70,9 +75,7 @@ export function AIInquiryConfirmationScreen({ navigation, route }: ProfileScreen
       <Button
         label="Return Home"
         variant="secondary"
-        onPress={() =>
-          navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('HomeTab', { screen: 'Home' })
-        }
+        onPress={() => rootNavigation?.navigate('Main', { screen: 'HomeTab', params: { screen: 'Home' } })}
       />
     </Screen>
   );

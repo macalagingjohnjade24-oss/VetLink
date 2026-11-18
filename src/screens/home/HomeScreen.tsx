@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { ClinicCard } from '../../components/ClinicCard';
@@ -18,7 +19,7 @@ import { usePets } from '../../context/PetContext';
 import { appointmentService } from '../../services/appointmentService';
 import { clinicService } from '../../services/clinicService';
 import { colors, radii, spacing } from '../../theme';
-import type { HomeScreenProps, TabParamList } from '../../navigation/types';
+import type { HomeScreenProps, RootStackParamList, TabParamList } from '../../navigation/types';
 
 /** PO-11 Home Dashboard */
 export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
@@ -151,7 +152,8 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
         onPress={() =>
           navigation
             .getParent<BottomTabNavigationProp<TabParamList>>()
-            ?.navigate('ProfileTab', { screen: 'AIAssistant' })
+            ?.getParent<NativeStackNavigationProp<RootStackParamList>>()
+            ?.navigate('AI', { screen: 'AIAssistant' })
         }
         style={styles.aiButton}
       />

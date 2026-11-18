@@ -6,10 +6,10 @@ import { LinkCard } from '../../components/Card';
 import { Screen } from '../../components/Screen';
 import { SUGGESTED_QUESTIONS } from '../../data/mockAssistant';
 import { colors, spacing } from '../../theme';
-import type { ProfileScreenProps } from '../../navigation/types';
+import type { AIScreenProps } from '../../navigation/types';
 
 /** PO-53 Suggested Questions */
-export function AISuggestedQuestionsScreen({ navigation }: ProfileScreenProps<'AISuggestedQuestions'>) {
+export function AISuggestedQuestionsScreen({ navigation }: AIScreenProps<'AISuggestedQuestions'>) {
   return (
     <Screen contentStyle={styles.content}>
       <AppHeader title="Suggested Questions" />

@@ -7,10 +7,10 @@ import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { INTRO_FEATURES, SUGGESTED_QUESTIONS } from '../../data/mockAssistant';
 import { colors, spacing } from '../../theme';
-import type { ProfileScreenProps } from '../../navigation/types';
+import type { AIScreenProps } from '../../navigation/types';
 
 /** PO-51 AI Assistant Introduction */
-export function AIAssistantScreen({ navigation }: ProfileScreenProps<'AIAssistant'>) {
+export function AIAssistantScreen({ navigation }: AIScreenProps<'AIAssistant'>) {
   return (
     <Screen contentStyle={styles.content}>
       <AppHeader title="AI Assistant Introduction" />

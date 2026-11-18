@@ -13,6 +13,7 @@ import { EmailVerificationScreen } from '../screens/auth/EmailVerificationScreen
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 import { MainTabs } from './MainTabs';
+import { AIStackNavigator } from './AIStack';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -50,6 +51,7 @@ export function RootNavigator() {
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
+        <Stack.Screen name="AI" component={AIStackNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );

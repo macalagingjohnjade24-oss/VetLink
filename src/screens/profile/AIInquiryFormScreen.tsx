@@ -13,13 +13,13 @@ import { INQUIRY_CATEGORIES, type InquiryCategory } from '../../data/mockAssista
 import { CLINICS } from '../../data/mockClinics';
 import { clinicInquiryService } from '../../services/clinicInquiryService';
 import { colors, spacing } from '../../theme';
-import type { ProfileScreenProps } from '../../navigation/types';
+import type { AIScreenProps } from '../../navigation/types';
 
 const CONSENT_COPY =
   'I consent to sharing this information with authorized veterinary personnel for inquiry review. This form is not monitored for emergencies.';
 
 /** PO-54 Preliminary Information */
-export function AIInquiryFormScreen({ navigation, route }: ProfileScreenProps<'AIInquiryForm'>) {
+export function AIInquiryFormScreen({ navigation, route }: AIScreenProps<'AIInquiryForm'>) {
   const { user } = useAuth();
   const { pets } = usePets();
   const firstPet = pets[0];
