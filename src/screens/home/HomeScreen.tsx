@@ -74,6 +74,8 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
 
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening';
   const reminderPet = reminder ? pets.find((pet) => pet.id === reminder.petId) : undefined;
+  // Keep acronyms like "DHPP booster" intact; lower only a leading normal word.
+  const reminderLabel = reminder ? reminder.vaccine.replace(/^([A-Z])(?=[a-z])/, (first) => first.toLowerCase()) : '';
 
   return (
     <Screen contentStyle={styles.content}>
@@ -156,7 +158,7 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
       {reminder && reminderPet ? (
         <>
           <HelpNote>
-            Health reminder · {reminderPet.name}’s {reminder.vaccine.toLowerCase()}{' '}
+            Health reminder · {reminderPet.name}’s {reminderLabel}{' '}
             {vaccinationStatus(reminder) === 'Overdue' ? 'was due' : 'is due'} {formatISODate(reminder.nextDueISO)}.
           </HelpNote>
           <TextLink
