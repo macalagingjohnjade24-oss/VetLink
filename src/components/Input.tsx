@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type ComponentRef } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFieldFocus } from '../hooks/fieldFocus';
 import { colors, fontFamily, radii, spacing } from '../theme';
 import { AppText } from './AppText';
 
@@ -23,10 +24,12 @@ type Props = TextInputProps & {
 export function Input({ label, error, helper, containerStyle, style, secureTextEntry, multiline, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const wrapperRef = useRef<ComponentRef<typeof View>>(null);
+  const reportFocus = useFieldFocus();
   const isPassword = !!secureTextEntry;
 
   return (
-    <View style={[styles.wrapper, containerStyle]}>
+    <View ref={wrapperRef} style={[styles.wrapper, containerStyle]}>
       {label ? (
         <AppText variant="label" style={styles.label}>
           {label}
@@ -47,6 +50,7 @@ export function Input({ label, error, helper, containerStyle, style, secureTextE
           placeholderTextColor={colors.text.subtle}
           onFocus={(e) => {
             setFocused(true);
+            reportFocus?.(wrapperRef);
             rest.onFocus?.(e);
           }}
           onBlur={(e) => {

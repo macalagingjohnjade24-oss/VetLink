@@ -9,7 +9,6 @@ import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { ASSISTANT_WELCOME } from '../../data/mockAssistant';
-import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { aiAssistantService } from '../../services/aiAssistantService';
 import { colors, fontFamily, radii, spacing } from '../../theme';
 import type { ProfileScreenProps, TabParamList } from '../../navigation/types';
@@ -26,9 +25,6 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
   const [pending, setPending] = useState(false);
   const asked = useRef(false);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const keyboardInset = useKeyboardInset(scrollRef, {
-    onShow: () => scrollRef.current?.scrollToEnd({ animated: true }),
-  });
 
   const ask = async (text: string) => {
     const trimmed = text.trim();
@@ -54,7 +50,7 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
 
   return (
     <Screen
-      contentStyle={[styles.content, { paddingBottom: spacing.xxxl + keyboardInset }]}
+      contentStyle={styles.content}
       scrollRef={scrollRef}
       onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
     >

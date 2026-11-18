@@ -56,7 +56,7 @@ export function ChangePasswordScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Change Password" />
 
       <AppText variant="display">Keep your account secure</AppText>

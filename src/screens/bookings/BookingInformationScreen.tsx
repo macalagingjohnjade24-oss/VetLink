@@ -42,7 +42,7 @@ export function BookingInformationScreen({ navigation }: BookingsScreenProps<'Bo
   const complete = draft.ownerName.trim() && draft.contact.trim() && draft.reason.trim() && draft.symptoms.trim();
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Appointment Information" />
 
       <BookingStep step={5} />

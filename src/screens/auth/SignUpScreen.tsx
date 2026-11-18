@@ -71,7 +71,7 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
   };
 
   return (
-    <Screen keyboard contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Create Account" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Create your VetLink account</AppText>

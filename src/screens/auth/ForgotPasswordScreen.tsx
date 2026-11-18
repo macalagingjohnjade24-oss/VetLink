@@ -30,7 +30,7 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
   };
 
   return (
-    <Screen keyboard contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Forgot Password" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Forgot Password</AppText>

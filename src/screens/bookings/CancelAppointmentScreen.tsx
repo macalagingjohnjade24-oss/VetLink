@@ -54,7 +54,7 @@ export function CancelAppointmentScreen({ navigation, route }: BookingsScreenPro
   };
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Cancel Appointment" />
 
       <AppText variant="display">Cancel this visit?</AppText>

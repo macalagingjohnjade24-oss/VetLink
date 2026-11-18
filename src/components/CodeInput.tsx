@@ -1,5 +1,6 @@
 import { useRef, type ComponentRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useFieldFocus } from '../hooks/fieldFocus';
 import { colors, fontFamily, radii, spacing } from '../theme';
 
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
 /** Six-digit code entry, styled like the Figma verification card. */
 export function CodeInput({ value, onChange, length = 6, error }: Props) {
   const inputs = useRef<Array<ComponentRef<typeof TextInput> | null>>([]);
+  const containerRef = useRef<ComponentRef<typeof View>>(null);
+  const reportFocus = useFieldFocus();
   const digits = value.padEnd(length, ' ').slice(0, length).split('');
 
   const setDigit = (index: number, digit: string) => {
@@ -22,7 +25,7 @@ export function CodeInput({ value, onChange, length = 6, error }: Props) {
   };
 
   return (
-    <View style={[styles.container, error && styles.containerError]}>
+    <View ref={containerRef} style={[styles.container, error && styles.containerError]}>
       {digits.map((digit, index) => (
         <Pressable key={index} onPress={() => inputs.current[index]?.focus()} style={styles.cell}>
           <TextInput
@@ -52,6 +55,7 @@ export function CodeInput({ value, onChange, length = 6, error }: Props) {
                 inputs.current[index - 1]?.focus();
               }
             }}
+            onFocus={() => reportFocus?.(containerRef)}
             keyboardType="number-pad"
             maxLength={1}
             style={styles.input}

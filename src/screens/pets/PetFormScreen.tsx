@@ -78,7 +78,7 @@ export function PetFormScreen({ navigation, route }: PetsScreenProps<'PetForm'>)
   };
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title={isEdit ? 'Edit Pet Information' : 'Add New Pet'} />
 
       <AppText variant="display">

@@ -83,7 +83,7 @@ export function EditProfileScreen({ navigation }: ProfileScreenProps<'EditProfil
   };
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Edit Personal Information" />
 
       <AppText variant="display">Your personal information</AppText>

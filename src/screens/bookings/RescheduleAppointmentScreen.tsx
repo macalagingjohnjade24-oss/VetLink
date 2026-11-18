@@ -48,7 +48,7 @@ export function RescheduleAppointmentScreen({ navigation, route }: BookingsScree
   };
 
   return (
-    <Screen contentStyle={styles.content} keyboard>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Reschedule Appointment" />
 
       <AppText variant="display">Need another time?</AppText>

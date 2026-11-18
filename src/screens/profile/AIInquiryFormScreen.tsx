@@ -1,5 +1,5 @@
-import { useRef, useState, type ComponentRef } from 'react';
-import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -9,7 +9,6 @@ import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { usePets } from '../../context/PetContext';
-import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { INQUIRY_CATEGORIES, type InquiryCategory } from '../../data/mockAssistant';
 import { CLINICS } from '../../data/mockClinics';
 import { clinicInquiryService } from '../../services/clinicInquiryService';
@@ -18,11 +17,6 @@ import type { ProfileScreenProps } from '../../navigation/types';
 
 const CONSENT_COPY =
   'I consent to sharing this information with authorized veterinary personnel for inquiry review. This form is not monitored for emergencies.';
-
-/** Records where a field sits in the scroll content so focus can bring it into view. */
-function Field({ onMeasure, children }: { onMeasure: (y: number) => void; children: React.ReactNode }) {
-  return <View onLayout={(event) => onMeasure(event.nativeEvent.layout.y)}>{children}</View>;
-}
 
 /** PO-54 Preliminary Information */
 export function AIInquiryFormScreen({ navigation, route }: ProfileScreenProps<'AIInquiryForm'>) {
@@ -40,28 +34,6 @@ export function AIInquiryFormScreen({ navigation, route }: ProfileScreenProps<'A
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const fieldY = useRef<Record<string, number>>({});
-  const pendingField = useRef<string | null>(null);
-
-  const scrollToField = (key: string) => {
-    const y = fieldY.current[key];
-    if (y == null) return;
-    scrollRef.current?.scrollTo({ y: Math.max(y - 96, 0), animated: true });
-  };
-
-  const keyboardInset = useKeyboardInset(scrollRef, {
-    onShow: () => {
-      if (pendingField.current) scrollToField(pendingField.current);
-    },
-  });
-
-  const focusField = (key: string) => () => {
-    pendingField.current = key;
-    // The keyboard is already up, so no show event will fire for this field.
-    if (Keyboard.isVisible()) scrollToField(key);
-  };
 
   const submit = async () => {
     setError(null);
@@ -98,10 +70,7 @@ export function AIInquiryFormScreen({ navigation, route }: ProfileScreenProps<'A
   };
 
   return (
-    <Screen
-      contentStyle={[styles.content, { paddingBottom: spacing.xxxl + keyboardInset }]}
-      scrollRef={scrollRef}
-    >
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Preliminary Information" />
 
       <AppText variant="display">Leave your inquiry</AppText>
@@ -109,46 +78,17 @@ export function AIInquiryFormScreen({ navigation, route }: ProfileScreenProps<'A
         Clinic staff are unavailable right now. Share the details for their review.
       </AppText>
 
-      <Field onMeasure={(y) => (fieldY.current.owner = y)}>
-        <Input
-          label="Owner name"
-          value={ownerName}
-          onChangeText={setOwnerName}
-          autoCapitalize="words"
-          onFocus={focusField('owner')}
-        />
-      </Field>
-      <Field onMeasure={(y) => (fieldY.current.contact = y)}>
-        <Input
-          label="Contact information"
-          value={contact}
-          onChangeText={setContact}
-          autoCapitalize="none"
-          onFocus={focusField('contact')}
-        />
-      </Field>
-      <Field onMeasure={(y) => (fieldY.current.pet = y)}>
-        <Input
-          label="Pet name"
-          value={petName}
-          onChangeText={setPetName}
-          autoCapitalize="words"
-          onFocus={focusField('pet')}
-        />
-      </Field>
-      <Field onMeasure={(y) => (fieldY.current.species = y)}>
-        <Input label="Pet species" value={petSpecies} onChangeText={setPetSpecies} onFocus={focusField('species')} />
-      </Field>
-      <Field onMeasure={(y) => (fieldY.current.details = y)}>
-        <Input
-          label="Inquiry details"
-          value={details}
-          onChangeText={setDetails}
-          multiline
-          placeholder="I would like to ask about wellness appointment availability."
-          onFocus={focusField('details')}
-        />
-      </Field>
+      <Input label="Owner name" value={ownerName} onChangeText={setOwnerName} autoCapitalize="words" />
+      <Input label="Contact information" value={contact} onChangeText={setContact} autoCapitalize="none" />
+      <Input label="Pet name" value={petName} onChangeText={setPetName} autoCapitalize="words" />
+      <Input label="Pet species" value={petSpecies} onChangeText={setPetSpecies} />
+      <Input
+        label="Inquiry details"
+        value={details}
+        onChangeText={setDetails}
+        multiline
+        placeholder="I would like to ask about wellness appointment availability."
+      />
 
       <AppText variant="label">Inquiry category</AppText>
       <View style={styles.options}>

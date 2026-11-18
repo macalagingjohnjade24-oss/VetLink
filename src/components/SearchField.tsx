@@ -1,5 +1,7 @@
+import { useRef, type ComponentRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFieldFocus } from '../hooks/fieldFocus';
 import { colors, fontFamily, radii, spacing } from '../theme';
 
 type Props = {
@@ -12,8 +14,11 @@ type Props = {
 
 /** Search input matching the Figma 350x52 field with a leading icon. */
 export function SearchField({ value, onChangeText, placeholder, autoFocus, onSubmit }: Props) {
+  const fieldRef = useRef<ComponentRef<typeof View>>(null);
+  const reportFocus = useFieldFocus();
+
   return (
-    <View style={styles.field}>
+    <View ref={fieldRef} style={styles.field}>
       <Ionicons name="search-outline" size={18} color={colors.text.secondary} />
       <TextInput
         value={value}
@@ -21,6 +26,7 @@ export function SearchField({ value, onChangeText, placeholder, autoFocus, onSub
         placeholder={placeholder}
         placeholderTextColor={colors.text.subtle}
         autoFocus={autoFocus}
+        onFocus={() => reportFocus?.(fieldRef)}
         returnKeyType="search"
         onSubmitEditing={onSubmit}
         accessibilityLabel="Search VetLink"
