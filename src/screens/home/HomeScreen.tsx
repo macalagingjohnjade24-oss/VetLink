@@ -85,7 +85,11 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
       {appointment ? (
         <Pressable
           accessibilityRole="button"
-          onPress={() => openTab('BookingsTab')}
+          onPress={() =>
+            navigation
+              .getParent<BottomTabNavigationProp<TabParamList>>()
+              ?.navigate('BookingsTab', { screen: 'AppointmentDetails', params: { appointmentId: appointment.id } })
+          }
           style={({ pressed }) => [styles.appointmentCard, pressed && styles.pressed]}
         >
           <View style={styles.appointmentIcon}>
@@ -129,7 +133,15 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
 
       <SectionHeader title="Recently viewed clinics" />
       {recentClinics.map((recent) => (
-        <ClinicCard key={recent.id} clinic={recent} onPress={() => openTab('ClinicsTab')} />
+        <ClinicCard
+          key={recent.id}
+          clinic={recent}
+          onPress={() =>
+            navigation
+              .getParent<BottomTabNavigationProp<TabParamList>>()
+              ?.navigate('ClinicsTab', { screen: 'ClinicDetails', params: { clinicId: recent.id } })
+          }
+        />
       ))}
 
       <Button

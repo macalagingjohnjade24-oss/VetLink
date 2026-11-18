@@ -64,7 +64,10 @@ export function BookingConfirmationScreen({ navigation, route }: BookingsScreenP
         Waiting for clinic approval. You’ll receive a notification when the status changes.
       </HelpNote>
 
-      <Button label="View Appointment" onPress={() => navigation.navigate('BookingsHome')} />
+      <Button
+        label="View Appointment"
+        onPress={() => navigation.navigate('AppointmentDetails', { appointmentId })}
+      />
       <Button label="Return Home" variant="secondary" onPress={goHome} />
 
       <AppText variant="small" color={colors.text.subtle}>

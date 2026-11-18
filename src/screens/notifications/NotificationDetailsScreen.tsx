@@ -98,7 +98,14 @@ export function NotificationDetailsScreen({ navigation, route }: HomeScreenProps
       {appointment ? (
         <Button
           label="View Appointment"
-          onPress={() => navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('BookingsTab')}
+          onPress={() =>
+            navigation
+              .getParent<BottomTabNavigationProp<TabParamList>>()
+              ?.navigate('BookingsTab', {
+                screen: 'AppointmentDetails',
+                params: { appointmentId: appointment.id },
+              })
+          }
         />
       ) : null}
       <Button label="Back to Notifications" variant="secondary" onPress={() => navigation.goBack()} />

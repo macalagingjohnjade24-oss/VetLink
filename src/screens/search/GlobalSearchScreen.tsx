@@ -59,6 +59,22 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
 
   const openTab = (tab: keyof TabParamList) =>
     navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate(tab);
+  const openClinic = (clinicId: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<TabParamList>>()
+      ?.navigate('ClinicsTab', { screen: 'ClinicDetails', params: { clinicId } });
+  const openService = (clinicId: string, serviceId: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<TabParamList>>()
+      ?.navigate('ClinicsTab', { screen: 'ServiceDetails', params: { clinicId, serviceId } });
+  const openPet = (petId: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<TabParamList>>()
+      ?.navigate('PetsTab', { screen: 'PetDetails', params: { petId } });
+  const openAppointment = (appointmentId: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<TabParamList>>()
+      ?.navigate('BookingsTab', { screen: 'AppointmentDetails', params: { appointmentId } });
 
   const hasQuery = query.trim().length > 0;
   const showEmpty = hasQuery && !searching && results?.total === 0;
@@ -146,7 +162,7 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
           <View style={styles.block}>
             <AppText variant="title">Suggested clinics</AppText>
             {suggestedClinics.map((clinic) => (
-              <ClinicCard key={clinic.id} clinic={clinic} onPress={() => openTab('ClinicsTab')} />
+              <ClinicCard key={clinic.id} clinic={clinic} onPress={() => openClinic(clinic.id)} />
             ))}
           </View>
         </>
@@ -171,7 +187,7 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
 
                   {section.key === 'clinics'
                     ? results.clinics.map((clinic) => (
-                        <ClinicCard key={clinic.id} clinic={clinic} onPress={() => openTab('ClinicsTab')} />
+                        <ClinicCard key={clinic.id} clinic={clinic} onPress={() => openClinic(clinic.id)} />
                       ))
                     : null}
 
@@ -179,7 +195,7 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
                     ? results.services.map((service) => (
                         <Pressable
                           key={`${service.clinicId}-${service.id}`}
-                          onPress={() => openTab('ClinicsTab')}
+                          onPress={() => openService(service.clinicId, service.id)}
                           style={({ pressed }) => [styles.serviceRow, pressed && styles.pressed]}
                         >
                           <View style={styles.serviceIcon}>
@@ -197,14 +213,14 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
                     : null}
 
                   {section.key === 'pets'
-                    ? results.pets.map((pet) => <PetCard key={pet.id} pet={pet} onPress={() => openTab('PetsTab')} />)
+                    ? results.pets.map((pet) => <PetCard key={pet.id} pet={pet} onPress={() => openPet(pet.id)} />)
                     : null}
 
                   {section.key === 'appointments'
                     ? results.appointments.map((appointment) => (
                         <Pressable
                           key={appointment.id}
-                          onPress={() => openTab('BookingsTab')}
+                          onPress={() => openAppointment(appointment.id)}
                           style={({ pressed }) => [styles.serviceRow, pressed && styles.pressed]}
                         >
                           <View style={styles.serviceIcon}>
