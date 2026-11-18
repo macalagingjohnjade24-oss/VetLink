@@ -1,4 +1,3 @@
-import { useMemo, useRef } from 'react';
 import { Image, PanResponder, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { colors, radii, spacing } from '../../theme';
 import { AppText } from '../../components/AppText';
@@ -43,28 +42,17 @@ export function OnboardingLayout({
   onSwipeNext,
   onSwipePrev,
 }: Props) {
-  // The handlers live in a ref so the responder below is created once and still
-  // calls the current screen's navigation callbacks.
-  const swipeHandlers = useRef({ onSwipeNext, onSwipePrev });
-  swipeHandlers.current = { onSwipeNext, onSwipePrev };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        // Only take over gestures that are clearly horizontal, so the vertical
-        // scroll and the buttons keep working normally.
-        onMoveShouldSetPanResponder: (_event, gesture) =>
-          Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
-        onPanResponderRelease: (_event, gesture) => {
-          if (gesture.dx <= -SWIPE_DISTANCE || gesture.vx <= -SWIPE_VELOCITY) {
-            swipeHandlers.current.onSwipeNext?.();
-          } else if (gesture.dx >= SWIPE_DISTANCE || gesture.vx >= SWIPE_VELOCITY) {
-            swipeHandlers.current.onSwipePrev?.();
-          }
-        },
-      }),
-    [],
-  );
+  // Slides never re-render mid-gesture, so the responder can close over the props.
+  const panResponder = PanResponder.create({
+    // Only take over gestures that are clearly horizontal, so the vertical
+    // scroll and the buttons keep working normally.
+    onMoveShouldSetPanResponder: (_event, gesture) =>
+      Math.abs(gesture.dx) > 16 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+    onPanResponderRelease: (_event, gesture) => {
+      if (gesture.dx <= -SWIPE_DISTANCE || gesture.vx <= -SWIPE_VELOCITY) onSwipeNext?.();
+      else if (gesture.dx >= SWIPE_DISTANCE || gesture.vx >= SWIPE_VELOCITY) onSwipePrev?.();
+    },
+  });
 
   return (
     <View style={styles.flex} {...panResponder.panHandlers}>
