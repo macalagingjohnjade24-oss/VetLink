@@ -5,7 +5,6 @@ import { authService } from '../services/authService';
 type AuthContextValue = {
   user: UserAccount | null;
   initializing: boolean;
-  onboardingSeen: boolean;
   signIn: (email: string, password: string, remember: boolean) => Promise<UserAccount>;
   register: (input: NewAccountInput) => Promise<UserAccount>;
   verifyEmail: (email: string, code: string) => Promise<boolean>;
@@ -16,7 +15,6 @@ type AuthContextValue = {
     patch: Partial<Pick<UserAccount, 'firstName' | 'lastName' | 'mobile' | 'avatarUri' | 'address'>>,
   ) => Promise<void>;
   signOut: () => Promise<void>;
-  finishOnboarding: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -24,15 +22,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserAccount | null>(null);
   const [initializing, setInitializing] = useState(true);
-  const [onboardingSeen, setOnboardingSeen] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [restored, seen] = await Promise.all([authService.restoreSession(), authService.hasSeenOnboarding()]);
+      const restored = await authService.restoreSession();
       if (!active) return;
       setUser(restored);
-      setOnboardingSeen(seen);
       setInitializing(false);
     })();
     return () => {
@@ -81,16 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const finishOnboarding = useCallback(async () => {
-    await authService.markOnboardingSeen();
-    setOnboardingSeen(true);
-  }, []);
-
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       initializing,
-      onboardingSeen,
       signIn,
       register,
       verifyEmail,
@@ -99,12 +89,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       changePassword,
       updateProfile,
       signOut,
-      finishOnboarding,
     }),
     [
       user,
       initializing,
-      onboardingSeen,
       signIn,
       register,
       verifyEmail,
@@ -113,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       changePassword,
       updateProfile,
       signOut,
-      finishOnboarding,
     ],
   );
 

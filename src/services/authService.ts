@@ -161,12 +161,4 @@ export const authService = {
   async signOut(): Promise<void> {
     await storage.remove(STORAGE_KEYS.session);
   },
-
-  async hasSeenOnboarding(): Promise<boolean> {
-    return (await storage.get<boolean>(STORAGE_KEYS.onboardingSeen)) ?? false;
-  },
-
-  async markOnboardingSeen(): Promise<void> {
-    await storage.set(STORAGE_KEYS.onboardingSeen, true);
-  },
 };

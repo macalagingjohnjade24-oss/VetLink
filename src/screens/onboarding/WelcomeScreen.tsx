@@ -1,10 +1,8 @@
 import { OnboardingLayout } from './OnboardingLayout';
-import { useAuth } from '../../context/AuthContext';
 import type { ScreenProps } from '../../navigation/types';
 
 /** PO-02 Onboarding Welcome */
 export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
-  const { finishOnboarding } = useAuth();
   const goNext = () => navigation.navigate('FindClinics');
 
   return (
@@ -18,10 +16,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
       onSwipeNext={goNext}
       secondaryLabel="I Already Have an Account"
       secondaryVariant="outline"
-      onSecondary={() => {
-        void finishOnboarding();
-        navigation.navigate('Login');
-      }}
+      onSecondary={() => navigation.navigate('Login')}
     />
   );
 }

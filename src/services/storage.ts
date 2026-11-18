@@ -29,7 +29,6 @@ export const storage = {
 export const STORAGE_KEYS = {
   accounts: 'vetlink.accounts.v1',
   session: 'vetlink.session.v1',
-  onboardingSeen: 'vetlink.onboarding.v1',
   notificationReads: 'vetlink.notifications.read.v1',
   recentSearches: 'vetlink.search.recent.v1',
   savedClinics: 'vetlink.clinics.saved.v1',
