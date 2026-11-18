@@ -4,6 +4,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { PetAvatar } from '../../components/PetAvatar';
 import { PetSelector } from '../../components/PetSelector';
 import { Screen } from '../../components/Screen';
@@ -72,9 +73,11 @@ export function HealthRecordsScreen({ navigation, route }: PetsScreenProps<'Heal
         {nextVaccination ? `Next due ${formatBirthDate(nextVaccination)}` : 'No next date recorded'}
       </HelpNote>
       {pet ? (
-        <Pressable onPress={() => navigation.navigate('UpcomingVaccinations', { petId: pet.id })} hitSlop={6}>
-          <AppText variant="link">View upcoming vaccinations</AppText>
-        </Pressable>
+        <LinkButton
+          label="View upcoming vaccinations"
+          icon="calendar-outline"
+          onPress={() => navigation.navigate('UpcomingVaccinations', { petId: pet.id })}
+        />
       ) : null}
 
       <AppText variant="title">Recent medical records</AppText>

@@ -11,7 +11,7 @@ import type { AIScreenProps } from '../../navigation/types';
 /** PO-53 Suggested Questions */
 export function AISuggestedQuestionsScreen({ navigation }: AIScreenProps<'AISuggestedQuestions'>) {
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Suggested Questions" />
 
       <AppText variant="display">What can I help with?</AppText>

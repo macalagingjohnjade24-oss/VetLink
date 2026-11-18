@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { LoadingState } from '../../components/States';
@@ -57,12 +58,11 @@ export function ClinicServicesScreen({ navigation, route }: ClinicsScreenProps<'
                 <AppText variant="caption">
                   ₱{service.price} · {service.durationMinutes} min
                 </AppText>
-                <Pressable
+                <LinkButton
+                  label="Select Service"
+                  fullWidth={false}
                   onPress={() => navigation.navigate('ServiceDetails', { clinicId, serviceId: service.id })}
-                  hitSlop={6}
-                >
-                  <AppText variant="bodyStrong">Select Service</AppText>
-                </Pressable>
+                />
               </View>
             </View>
           ))

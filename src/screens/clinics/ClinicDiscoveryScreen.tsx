@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { ClinicPhotoCard } from '../../components/ClinicPhotoCard';
 import { Screen } from '../../components/Screen';
@@ -60,12 +61,13 @@ export function ClinicDiscoveryScreen({ navigation }: ClinicsScreenProps<'Clinic
 
       <View style={styles.viewRow}>
         <AppText variant="bodyStrong">List view</AppText>
-        <Pressable onPress={() => navigation.navigate('MapView')} hitSlop={6}>
-          <AppText variant="bodyStrong">Map view</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('FilterSort', { returnTo: 'ClinicSearchResults' })} hitSlop={6}>
-          <AppText variant="bodyStrong">Filters</AppText>
-        </Pressable>
+        <LinkButton label="Map view" icon="map-outline" fullWidth={false} onPress={() => navigation.navigate('MapView')} />
+        <LinkButton
+          label="Filters"
+          icon="options-outline"
+          fullWidth={false}
+          onPress={() => navigation.navigate('FilterSort', { returnTo: 'ClinicSearchResults' })}
+        />
       </View>
 
       <Button

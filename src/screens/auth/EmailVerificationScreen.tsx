@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { CodeInput } from '../../components/CodeInput';
 import { HelpNote } from '../../components/HelpNote';
@@ -43,7 +44,7 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
   };
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Email Verification" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Verify Your Email</AppText>
@@ -68,18 +69,15 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
             {resendIn > 0 ? `Code expires in 00:${String(resendIn).padStart(2, '0')}` : 'The code has expired. Request a new one.'}
           </AppText>
           <Button label="Verify Account" onPress={onVerify} loading={checking} />
-          <Pressable
+          <LinkButton
+            label={resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+            icon="mail-outline"
             disabled={resendIn > 0}
             onPress={() => {
               setResendIn(RESEND_SECONDS);
               setResent(true);
             }}
-            hitSlop={6}
-          >
-            <AppText variant="bodyStrong" color={resendIn > 0 ? colors.text.subtle : colors.text.brand}>
-              {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
-            </AppText>
-          </Pressable>
+          />
           {resent && resendIn === RESEND_SECONDS ? (
             <AppText variant="caption">A new demo code has been generated.</AppText>
           ) : null}
@@ -91,9 +89,7 @@ export function EmailVerificationScreen({ navigation, route }: ScreenProps<'Emai
         {verified ? (
           <Button label="Back to Login" variant="secondary" onPress={() => navigation.navigate('Login')} />
         ) : (
-          <Pressable onPress={() => navigation.navigate('Login')} hitSlop={6}>
-            <AppText variant="bodyStrong">Back to Login</AppText>
-          </Pressable>
+          <LinkButton label="Back to Login" onPress={() => navigation.navigate('Login')} />
         )}
       </View>
     </Screen>

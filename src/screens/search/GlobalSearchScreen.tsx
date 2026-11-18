@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { ClinicCard } from '../../components/ClinicCard';
 import { PetCard } from '../../components/PetCard';
 import { Screen } from '../../components/Screen';
@@ -107,9 +108,7 @@ export function GlobalSearchScreen({ navigation }: HomeScreenProps<'GlobalSearch
       />
 
       {hasQuery ? (
-        <Pressable onPress={() => setQuery('')} hitSlop={6}>
-          <AppText variant="bodyStrong">Clear search</AppText>
-        </Pressable>
+        <LinkButton label="Clear search" icon="close-outline" fullWidth={false} onPress={() => setQuery('')} />
       ) : null}
 
       {!hasQuery ? (

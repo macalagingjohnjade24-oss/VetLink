@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Input } from '../../components/Input';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { colors, radii, spacing } from '../../theme';
@@ -92,9 +93,7 @@ export function EditProfileScreen({ navigation }: ProfileScreenProps<'EditProfil
       </AppText>
 
       <Image source={photo} style={styles.photo} resizeMode="cover" accessibilityLabel="Your profile photo" />
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => void changePhoto()}>
-        <AppText variant="bodyStrong">Change profile photo</AppText>
-      </Pressable>
+      <LinkButton label="Change profile photo" icon="camera-outline" onPress={() => void changePhoto()} />
       {photoError ? (
         <AppText variant="caption" color={colors.status.danger}>
           {photoError}
@@ -120,9 +119,7 @@ export function EditProfileScreen({ navigation }: ProfileScreenProps<'EditProfil
       )}
 
       <Button label="Save Changes" loading={saving} onPress={() => void save()} />
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.goBack()} style={styles.cancel}>
-        <AppText variant="link">Cancel</AppText>
-      </Pressable>
+      <Button label="Cancel" variant="secondary" onPress={() => navigation.goBack()} />
     </Screen>
   );
 }
@@ -135,5 +132,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     backgroundColor: colors.surface.subtle,
   },
-  cancel: { alignItems: 'center', paddingVertical: spacing.sm },
 });

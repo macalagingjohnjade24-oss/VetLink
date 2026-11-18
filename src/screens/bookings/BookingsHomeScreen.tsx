@@ -5,6 +5,7 @@ import { AppText } from '../../components/AppText';
 import { AppointmentBadge, isClosedStatus } from '../../components/AppointmentBadge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { EmptyState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
@@ -107,9 +108,11 @@ export function BookingsHomeScreen({ navigation }: BookingsScreenProps<'Bookings
         ))
       )}
 
-      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ClinicConsole')} hitSlop={6}>
-        <AppText variant="link">Open clinic console (demo)</AppText>
-      </Pressable>
+      <LinkButton
+        label="Open clinic console (demo)"
+        icon="desktop-outline"
+        onPress={() => navigation.navigate('ClinicConsole')}
+      />
 
       <AppText variant="caption">
         Appointments stay on this device. Rescheduling and cancellation are requests until the clinic confirms them.

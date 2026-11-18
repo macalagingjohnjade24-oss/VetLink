@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Input } from '../../components/Input';
@@ -30,7 +31,7 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
   };
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Forgot Password" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Forgot Password</AppText>
@@ -66,9 +67,7 @@ export function ForgotPasswordScreen({ navigation }: ScreenProps<'ForgotPassword
         <Button label="Continue to Reset Password" onPress={() => navigation.navigate('ResetPassword', { email })} />
       ) : null}
 
-      <Pressable onPress={() => navigation.navigate('Login')} hitSlop={6}>
-        <AppText variant="bodyStrong">Back to Login</AppText>
-      </Pressable>
+      <LinkButton label="Back to Login" onPress={() => navigation.navigate('Login')} />
 
       <HelpNote>For your privacy, a reset email is sent only if an account exists.</HelpNote>
     </Screen>

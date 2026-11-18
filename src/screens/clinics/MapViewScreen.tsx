@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { MapCanvas } from '../../components/MapCanvas';
@@ -54,15 +55,19 @@ export function MapViewScreen({ navigation, route }: ClinicsScreenProps<'MapView
           <AppText variant="small">© OpenStreetMap contributors · Sample clinic pins</AppText>
 
           <View style={styles.controls}>
-            <Pressable onPress={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))} hitSlop={8}>
-              <AppText variant="bodyStrong">＋ Zoom in</AppText>
-            </Pressable>
-            <Pressable onPress={() => setZoom((z) => Math.max(0.8, +(z - 0.1).toFixed(2)))} hitSlop={8}>
-              <AppText variant="bodyStrong">− Zoom out</AppText>
-            </Pressable>
-            <Pressable onPress={() => setSelected(clinics[0] ?? null)} hitSlop={8}>
-              <AppText variant="bodyStrong">⌖ Locate</AppText>
-            </Pressable>
+            <LinkButton
+              label="Zoom in"
+              icon="add-outline"
+              fullWidth={false}
+              onPress={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))}
+            />
+            <LinkButton
+              label="Zoom out"
+              icon="remove-outline"
+              fullWidth={false}
+              onPress={() => setZoom((z) => Math.max(0.8, +(z - 0.1).toFixed(2)))}
+            />
+            <LinkButton label="Locate" icon="locate-outline" fullWidth={false} onPress={() => setSelected(clinics[0] ?? null)} />
           </View>
 
           {selected ? (

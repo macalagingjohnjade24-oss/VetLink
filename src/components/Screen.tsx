@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ComponentRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, type ComponentRef } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FieldFocusContext, type FieldRef } from '../hooks/fieldFocus';
@@ -12,16 +12,21 @@ type Props = {
   contentStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   footer?: React.ReactNode;
-  /**
-   * Reserves the bottom safe area for screens that sit directly on the window,
-   * such as onboarding and the auth flow. Screens inside the tabs leave it off
-   * because the tab bar already keeps the system bar clear.
-   */
-  safeBottom?: boolean;
   /** Lets a screen scroll its own content, e.g. a chat following the newest message. */
   scrollRef?: React.RefObject<React.ComponentRef<typeof ScrollView> | null>;
   onContentSizeChange?: () => void;
 };
+
+const ReserveBottomContext = createContext(true);
+
+/**
+ * Opts a subtree out of reserving the bottom safe area. Only the tab navigator
+ * does this: its screens sit above the tab bar, which already clears the system
+ * bar, so reserving the inset again would only add a second gap.
+ */
+export function WithoutBottomInset({ children }: { children: React.ReactNode }) {
+  return <ReserveBottomContext.Provider value={false}>{children}</ReserveBottomContext.Provider>;
+}
 
 /**
  * White screen shell with safe areas, scrolling and keyboard handling.
@@ -38,10 +43,10 @@ export function Screen({
   contentStyle,
   style,
   footer,
-  safeBottom = false,
   scrollRef,
   onContentSizeChange,
 }: Props) {
+  const reserveBottom = useContext(ReserveBottomContext);
   const innerRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const ref = scrollRef ?? innerRef;
   const offsetY = useRef(0);
@@ -112,7 +117,7 @@ export function Screen({
   return (
     <SafeAreaView
       style={[styles.safe, style]}
-      edges={safeBottom ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}
+      edges={reserveBottom ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}
     >
       {scroll ? <FieldFocusContext.Provider value={reportFocus}>{body}</FieldFocusContext.Provider> : body}
       {footer ? <View style={styles.footer}>{footer}</View> : null}

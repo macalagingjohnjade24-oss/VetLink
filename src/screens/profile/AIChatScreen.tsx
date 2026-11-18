@@ -6,6 +6,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { ASSISTANT_WELCOME } from '../../data/mockAssistant';
@@ -50,7 +51,6 @@ export function AIChatScreen({ navigation, route }: AIScreenProps<'AIChat'>) {
 
   return (
     <Screen
-      safeBottom
       contentStyle={styles.content}
       scrollRef={scrollRef}
       onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
@@ -76,20 +76,20 @@ export function AIChatScreen({ navigation, route }: AIScreenProps<'AIChat'>) {
 
       {pending ? <AppText variant="caption">● ● ● Preparing a response…</AppText> : null}
 
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={6}
+      <LinkButton
+        label="Find a veterinary clinic"
+        icon="location-outline"
         onPress={() =>
           navigation
             .getParent<NativeStackNavigationProp<RootStackParamList>>()
             ?.navigate('Main', { screen: 'ClinicsTab', params: { screen: 'ClinicDiscovery' } })
         }
-      >
-        <AppText variant="bodyStrong">Find a veterinary clinic</AppText>
-      </Pressable>
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('AISuggestedQuestions')}>
-        <AppText variant="bodyStrong">More suggested questions</AppText>
-      </Pressable>
+      />
+      <LinkButton
+        label="More suggested questions"
+        icon="help-circle-outline"
+        onPress={() => navigation.navigate('AISuggestedQuestions')}
+      />
 
       <Button
         label="Leave an Inquiry for Clinic Staff"

@@ -33,7 +33,7 @@ export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps
   // Wait for the lookup so a saved inquiry never flashes the missing-inquiry message first.
   if (loading) {
     return (
-      <Screen safeBottom contentStyle={styles.content}>
+      <Screen contentStyle={styles.content}>
         <AppHeader title="Inquiry Submission Confirmation" />
         <LoadingState />
       </Screen>
@@ -42,7 +42,7 @@ export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps
 
   if (!inquiry) {
     return (
-      <Screen safeBottom contentStyle={styles.content}>
+      <Screen contentStyle={styles.content}>
         <AppHeader title="Inquiry Submission Confirmation" />
         <AppText variant="title">This inquiry is no longer available.</AppText>
         <Button
@@ -55,7 +55,7 @@ export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps
   }
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Inquiry Submission Confirmation" />
 
       <AppText variant="display">Your inquiry is on its way</AppText>

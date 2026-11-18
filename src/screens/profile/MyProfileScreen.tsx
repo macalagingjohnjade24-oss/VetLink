@@ -1,8 +1,9 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { LinkCard } from '../../components/Card';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { usePets } from '../../context/PetContext';
@@ -69,9 +70,7 @@ export function MyProfileScreen({ navigation }: ProfileScreenProps<'MyProfile'>)
         onPress={() => navigation.navigate('HelpSupport')}
       />
 
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('Logout')} style={styles.logout}>
-        <AppText variant="link">Log Out</AppText>
-      </Pressable>
+      <LinkButton label="Log Out" icon="log-out-outline" onPress={() => navigation.navigate('Logout')} />
     </Screen>
   );
 }
@@ -86,5 +85,4 @@ const styles = StyleSheet.create({
   },
   contact: { gap: spacing.xs, marginTop: spacing.sm },
   contactLine: { lineHeight: 22 },
-  logout: { paddingVertical: spacing.sm },
 });

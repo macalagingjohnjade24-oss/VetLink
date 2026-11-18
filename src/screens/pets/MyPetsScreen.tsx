@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
@@ -44,13 +45,7 @@ export function MyPetsScreen({ navigation }: PetsScreenProps<'MyPets'>) {
                 </AppText>
               </View>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => navigation.navigate('PetDetails', { petId: pet.id })}
-              hitSlop={6}
-            >
-              <AppText variant="bodyStrong">View {pet.name}’s Profile</AppText>
-            </Pressable>
+            <LinkButton label={`View ${pet.name}’s Profile`} onPress={() => navigation.navigate('PetDetails', { petId: pet.id })} />
           </View>
         ))
       )}

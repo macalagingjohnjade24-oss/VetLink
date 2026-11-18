@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WithoutBottomInset } from '../components/Screen';
 import { colors, fontFamily } from '../theme';
 import type { TabParamList } from './types';
 import { HomeStackNavigator } from './HomeStack';
@@ -29,31 +30,34 @@ const iconFor = (route: keyof TabParamList): { active: keyof typeof Ionicons.gly
 export function MainTabs() {
   const insets = useSafeAreaInsets();
 
+  // The tab bar below covers the system bar for every screen in these stacks.
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.text.brand,
-        tabBarInactiveTintColor: colors.text.secondary,
-        tabBarLabelStyle: { fontFamily: fontFamily.medium, fontSize: 10, marginTop: 2 },
-        tabBarStyle: {
-          backgroundColor: colors.surface.background,
-          borderTopColor: colors.surface.border,
-          paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 6),
-          height: 64 + insets.bottom,
-        },
-        tabBarIcon: ({ focused, color }) => {
-          const icons = iconFor(route.name);
-          return <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen name="HomeTab" component={HomeStackNavigator} options={{ tabBarLabel: 'Home' }} />
-      <Tab.Screen name="ClinicsTab" component={ClinicsStackNavigator} options={{ tabBarLabel: 'Clinics' }} />
-      <Tab.Screen name="BookingsTab" component={BookingsStackNavigator} options={{ tabBarLabel: 'Bookings' }} />
-      <Tab.Screen name="PetsTab" component={PetsStackNavigator} options={{ tabBarLabel: 'My Pets' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ tabBarLabel: 'Profile' }} />
-    </Tab.Navigator>
+    <WithoutBottomInset>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarActiveTintColor: colors.text.brand,
+          tabBarInactiveTintColor: colors.text.secondary,
+          tabBarLabelStyle: { fontFamily: fontFamily.medium, fontSize: 10, marginTop: 2 },
+          tabBarStyle: {
+            backgroundColor: colors.surface.background,
+            borderTopColor: colors.surface.border,
+            paddingTop: 6,
+            paddingBottom: Math.max(insets.bottom, 6),
+            height: 64 + insets.bottom,
+          },
+          tabBarIcon: ({ focused, color }) => {
+            const icons = iconFor(route.name);
+            return <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />;
+          },
+        })}
+      >
+        <Tab.Screen name="HomeTab" component={HomeStackNavigator} options={{ tabBarLabel: 'Home' }} />
+        <Tab.Screen name="ClinicsTab" component={ClinicsStackNavigator} options={{ tabBarLabel: 'Clinics' }} />
+        <Tab.Screen name="BookingsTab" component={BookingsStackNavigator} options={{ tabBarLabel: 'Bookings' }} />
+        <Tab.Screen name="PetsTab" component={PetsStackNavigator} options={{ tabBarLabel: 'My Pets' }} />
+        <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ tabBarLabel: 'Profile' }} />
+      </Tab.Navigator>
+    </WithoutBottomInset>
   );
 }

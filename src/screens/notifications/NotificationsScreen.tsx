@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { NotificationRow } from '../../components/NotificationRow';
 import { Screen } from '../../components/Screen';
 import { EmptyState, LoadingState } from '../../components/States';
@@ -53,15 +54,12 @@ export function NotificationsScreen({ navigation }: HomeScreenProps<'Notificatio
         })}
       </View>
 
-      <Pressable
-        onPress={() => void markAllRead()}
+      <LinkButton
+        label={unreadCount === 0 ? 'All notifications read' : `Mark all as read (${unreadCount})`}
+        icon="checkmark-done-outline"
         disabled={unreadCount === 0}
-        hitSlop={6}
-      >
-        <AppText variant="bodyStrong" color={unreadCount === 0 ? colors.text.subtle : colors.text.brand}>
-          {unreadCount === 0 ? 'All notifications read' : `Mark all as read (${unreadCount})`}
-        </AppText>
-      </Pressable>
+        onPress={() => void markAllRead()}
+      />
 
       {loadingNotifications ? <LoadingState label="Loading notifications…" /> : null}
 

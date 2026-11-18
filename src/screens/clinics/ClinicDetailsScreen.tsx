@@ -6,6 +6,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { LoadingState } from '../../components/States';
 import type { Clinic } from '../../data/mockClinics';
@@ -76,12 +77,18 @@ export function ClinicDetailsScreen({ navigation, route }: ClinicsScreenProps<'C
       </AppText>
 
       <View style={styles.actionsRow}>
-        <Pressable onPress={() => void toggleSave()} hitSlop={6} accessibilityState={{ selected: saved }}>
-          <AppText variant="bodyStrong">{saved ? '♥ Saved' : '♡ Save clinic'}</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('ClinicContact', { clinicId })} hitSlop={6}>
-          <AppText variant="bodyStrong">Contact clinic</AppText>
-        </Pressable>
+        <LinkButton
+          label={saved ? 'Saved' : 'Save clinic'}
+          icon={saved ? 'heart' : 'heart-outline'}
+          fullWidth={false}
+          onPress={() => void toggleSave()}
+        />
+        <LinkButton
+          label="Contact clinic"
+          icon="call-outline"
+          fullWidth={false}
+          onPress={() => navigation.navigate('ClinicContact', { clinicId })}
+        />
       </View>
 
       <HelpNote>
@@ -128,9 +135,11 @@ export function ClinicDetailsScreen({ navigation, route }: ClinicsScreenProps<'C
         variant="secondary"
         onPress={() => navigation.navigate('ClinicServices', { clinicId })}
       />
-      <Pressable onPress={() => navigation.navigate('ClinicContact', { clinicId })} hitSlop={6}>
-        <AppText variant="bodyStrong">Location, hours &amp; contact information</AppText>
-      </Pressable>
+      <LinkButton
+        label="Location, hours & contact information"
+        icon="location-outline"
+        onPress={() => navigation.navigate('ClinicContact', { clinicId })}
+      />
     </Screen>
   );
 }

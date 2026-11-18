@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { ClinicPhotoCard } from '../../components/ClinicPhotoCard';
 import { HelpNote } from '../../components/HelpNote';
@@ -51,9 +52,12 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
         placeholder="Veterinary clinics in Makati"
       />
       {filters.query ? (
-        <Pressable onPress={() => setFilters((current) => ({ ...current, query: '' }))} hitSlop={6}>
-          <AppText variant="bodyStrong">Clear search</AppText>
-        </Pressable>
+        <LinkButton
+          label="Clear search"
+          icon="close-outline"
+          fullWidth={false}
+          onPress={() => setFilters((current) => ({ ...current, query: '' }))}
+        />
       ) : null}
 
       <AppText variant="display">Care that fits your search</AppText>
@@ -63,12 +67,12 @@ export function ClinicSearchResultsScreen({ navigation, route }: ClinicsScreenPr
 
       <View style={styles.sortRow}>
         <AppText variant="bodyStrong">{sortLabel(filters.sort)}</AppText>
-        <Pressable
+        <LinkButton
+          label="Filter & sort"
+          icon="options-outline"
+          fullWidth={false}
           onPress={() => navigation.navigate('FilterSort', { filters, returnTo: 'ClinicSearchResults' })}
-          hitSlop={6}
-        >
-          <AppText variant="bodyStrong">Filter &amp; sort</AppText>
-        </Pressable>
+        />
       </View>
 
       {loading ? <LoadingState label="Searching clinics…" /> : null}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -102,9 +102,7 @@ export function CancelAppointmentScreen({ navigation, route }: BookingsScreenPro
         disabled={!reason}
         onPress={() => void confirm()}
       />
-      <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={6} style={styles.link}>
-        <AppText variant="link">Keep Appointment</AppText>
-      </Pressable>
+      <Button label="Keep Appointment" variant="secondary" onPress={() => navigation.goBack()} />
     </Screen>
   );
 }
@@ -119,5 +117,4 @@ const styles = StyleSheet.create({
     borderColor: colors.surface.border,
     backgroundColor: colors.surface.card,
   },
-  link: { alignItems: 'center', paddingVertical: spacing.sm },
 });

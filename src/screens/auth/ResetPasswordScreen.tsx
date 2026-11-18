@@ -38,7 +38,7 @@ export function ResetPasswordScreen({ navigation, route }: ScreenProps<'ResetPas
   };
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Reset Password" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Reset Password</AppText>

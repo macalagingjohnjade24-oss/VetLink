@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { ClinicCard } from '../../components/ClinicCard';
 import { HelpNote } from '../../components/HelpNote';
@@ -128,9 +129,11 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
       </View>
 
       <HelpNote>Health reminder · Milo’s rabies booster is due Nov 24.</HelpNote>
-      <Pressable onPress={() => navigation.navigate('Notifications')} hitSlop={6}>
-        <AppText variant="bodyStrong">View vaccination reminder</AppText>
-      </Pressable>
+      <LinkButton
+        label="View vaccination reminder"
+        icon="notifications-outline"
+        onPress={() => navigation.navigate('Notifications')}
+      />
 
       <SectionHeader title="Recently viewed clinics" />
       {recentClinics.map((recent) => (

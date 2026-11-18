@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { AppointmentBadge } from '../../components/AppointmentBadge';
 import { PetSelector } from '../../components/PetSelector';
 import { Screen } from '../../components/Screen';
@@ -64,15 +65,11 @@ export function AppointmentHistoryScreen({ navigation, route }: PetsScreenProps<
         ))
       )}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() =>
-          navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('BookingsTab')
-        }
-        hitSlop={6}
-      >
-        <AppText variant="link">View all appointments</AppText>
-      </Pressable>
+      <LinkButton
+        label="View all appointments"
+        icon="calendar-outline"
+        onPress={() => navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('BookingsTab')}
+      />
     </Screen>
   );
 }

@@ -116,9 +116,7 @@ export function RescheduleAppointmentScreen({ navigation, route }: BookingsScree
         disabled={!dateISO || !time}
         onPress={() => void submit()}
       />
-      <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={6} style={styles.link}>
-        <AppText variant="link">Keep Current Appointment</AppText>
-      </Pressable>
+      <Button label="Keep Current Appointment" variant="secondary" onPress={() => navigation.goBack()} />
     </Screen>
   );
 }
@@ -138,5 +136,4 @@ const styles = StyleSheet.create({
   },
   slotSelected: { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary },
   slotUnavailable: { backgroundColor: colors.surface.disabled, borderColor: colors.surface.border },
-  link: { alignItems: 'center', paddingVertical: spacing.sm },
 });

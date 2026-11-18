@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { colors, radii, spacing } from '../../theme';
 import type { ProfileScreenProps } from '../../navigation/types';
@@ -45,9 +46,11 @@ export function PrivacySecurityScreen({ navigation }: ProfileScreenProps<'Privac
         Contact support to request a copy of your data, correct account information or discuss account deletion.
       </AppText>
 
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('HelpSupport')}>
-        <AppText variant="bodyStrong">Request help with my data</AppText>
-      </Pressable>
+      <LinkButton
+        label="Request help with my data"
+        icon="help-circle-outline"
+        onPress={() => navigation.navigate('HelpSupport')}
+      />
 
       <AppText variant="screenTitle" style={styles.policyTitle}>
         Privacy Policy

@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { LinkCard } from '../../components/Card';
 import { HelpNote } from '../../components/HelpNote';
@@ -12,7 +13,7 @@ import type { AIScreenProps } from '../../navigation/types';
 /** PO-51 AI Assistant Introduction */
 export function AIAssistantScreen({ navigation }: AIScreenProps<'AIAssistant'>) {
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="AI Assistant Introduction" />
 
       <AppText variant="display">
@@ -42,13 +43,11 @@ export function AIAssistantScreen({ navigation }: AIScreenProps<'AIAssistant'>) 
         );
       })}
 
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={6}
+      <LinkButton
+        label="Explore all suggested questions"
+        icon="help-circle-outline"
         onPress={() => navigation.navigate('AISuggestedQuestions')}
-      >
-        <AppText variant="bodyStrong">Explore all suggested questions</AppText>
-      </Pressable>
+      />
 
       <Button label="Start Conversation" onPress={() => navigation.navigate('AIChat')} />
 

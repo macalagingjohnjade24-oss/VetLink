@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Badge, type BadgeTone } from '../../components/Badge';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
@@ -94,13 +95,11 @@ export function VaccinationRecordsScreen({ navigation, route }: PetsScreenProps<
         })
       )}
 
-      <Pressable
-        accessibilityRole="button"
+      <LinkButton
+        label="Upcoming Vaccinations"
+        icon="calendar-outline"
         onPress={() => navigation.navigate('UpcomingVaccinations', { petId })}
-        hitSlop={6}
-      >
-        <AppText variant="link">Upcoming Vaccinations</AppText>
-      </Pressable>
+      />
 
       <HelpNote>Demo vaccination entries. A veterinarian determines the appropriate vaccination schedule.</HelpNote>
     </Screen>

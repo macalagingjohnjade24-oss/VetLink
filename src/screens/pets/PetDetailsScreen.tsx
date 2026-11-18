@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { PetAvatar } from '../../components/PetAvatar';
 import { Screen } from '../../components/Screen';
 import { usePets } from '../../context/PetContext';
@@ -79,21 +80,31 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
       <Button label="View Health Records" onPress={() => navigation.navigate('HealthRecords', { petId })} />
 
       <View style={styles.links}>
-        <Pressable onPress={() => navigation.navigate('VaccinationRecords', { petId })} hitSlop={6}>
-          <AppText variant="link">Vaccination Records</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('UpcomingVaccinations', { petId })} hitSlop={6}>
-          <AppText variant="link">Upcoming Vaccinations</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('MedicalHistory', { petId })} hitSlop={6}>
-          <AppText variant="link">Medical History</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('AppointmentHistory', { petId })} hitSlop={6}>
-          <AppText variant="link">Appointment History</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('PetForm', { mode: 'edit', petId })} hitSlop={6}>
-          <AppText variant="link">Edit Pet Information</AppText>
-        </Pressable>
+        <LinkButton
+          label="Vaccination Records"
+          icon="medkit-outline"
+          onPress={() => navigation.navigate('VaccinationRecords', { petId })}
+        />
+        <LinkButton
+          label="Upcoming Vaccinations"
+          icon="calendar-outline"
+          onPress={() => navigation.navigate('UpcomingVaccinations', { petId })}
+        />
+        <LinkButton
+          label="Medical History"
+          icon="document-text-outline"
+          onPress={() => navigation.navigate('MedicalHistory', { petId })}
+        />
+        <LinkButton
+          label="Appointment History"
+          icon="time-outline"
+          onPress={() => navigation.navigate('AppointmentHistory', { petId })}
+        />
+        <LinkButton
+          label="Edit Pet Information"
+          icon="create-outline"
+          onPress={() => navigation.navigate('PetForm', { mode: 'edit', petId })}
+        />
       </View>
 
       <Button

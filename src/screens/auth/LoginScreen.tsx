@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { HelpNote } from '../../components/HelpNote';
@@ -52,7 +53,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
   };
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Login" onBack={() => navigation.navigate('Welcome')} />
 
       <View style={styles.brandRow}>
@@ -95,9 +96,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
         <View style={styles.row}>
           <Checkbox checked={remember} onChange={setRemember} label="Remember me" />
-          <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={6}>
-            <AppText variant="link">Forgot Password?</AppText>
-          </Pressable>
+          <LinkButton label="Forgot Password?" fullWidth={false} onPress={() => navigation.navigate('ForgotPassword')} />
         </View>
 
         {errors.form ? (
@@ -108,9 +107,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
 
         <Button label="Login" onPress={onSubmit} loading={submitting} />
 
-        <Pressable onPress={() => navigation.navigate('SignUp')} hitSlop={6}>
-          <AppText variant="bodyStrong">New to VetLink? Sign Up</AppText>
-        </Pressable>
+        <LinkButton label="New to VetLink? Sign Up" onPress={() => navigation.navigate('SignUp')} />
       </View>
 
       <View style={styles.demoCard}>

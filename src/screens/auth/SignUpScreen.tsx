@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { HelpNote } from '../../components/HelpNote';
@@ -71,7 +72,7 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
   };
 
   return (
-    <Screen safeBottom contentStyle={styles.content}>
+    <Screen contentStyle={styles.content}>
       <AppHeader title="Create Account" onBack={() => navigation.goBack()} />
 
       <AppText variant="display">Create your VetLink account</AppText>
@@ -137,9 +138,7 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
 
       <Button label="Create Account" onPress={onSubmit} loading={submitting} />
 
-      <Pressable onPress={() => navigation.navigate('Login')} hitSlop={6}>
-        <AppText variant="bodyStrong">Already have an account? Login</AppText>
-      </Pressable>
+      <LinkButton label="Already have an account? Login" onPress={() => navigation.navigate('Login')} />
     </Screen>
   );
 }

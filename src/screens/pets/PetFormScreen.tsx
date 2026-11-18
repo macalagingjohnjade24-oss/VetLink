@@ -184,17 +184,14 @@ export function PetFormScreen({ navigation, route }: PetsScreenProps<'PetForm'>)
         disabled={!complete}
         onPress={() => void save()}
       />
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        label="Cancel"
+        variant="secondary"
         onPress={() => {
           setPendingPhoto(null);
           navigation.goBack();
         }}
-        hitSlop={6}
-        style={styles.cancel}
-      >
-        <AppText variant="link">Cancel</AppText>
-      </Pressable>
+      />
     </Screen>
   );
 }
@@ -224,5 +221,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.card,
   },
   choiceSelected: { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary },
-  cancel: { alignItems: 'center', paddingVertical: spacing.sm },
 });

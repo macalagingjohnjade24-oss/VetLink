@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { BookingStep } from '../../components/BookingStep';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
@@ -72,15 +73,17 @@ export function BookingReviewScreen({ navigation }: BookingsScreenProps<'Booking
       </View>
 
       <View style={styles.links}>
-        <Pressable onPress={() => navigation.navigate('BookingSelectClinic')} hitSlop={6}>
-          <AppText variant="link">Edit clinic, pet or service</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('BookingSelectDate')} hitSlop={6}>
-          <AppText variant="link">Edit date &amp; time</AppText>
-        </Pressable>
-        <Pressable onPress={() => navigation.navigate('BookingInformation')} hitSlop={6}>
-          <AppText variant="link">Edit appointment information</AppText>
-        </Pressable>
+        <LinkButton
+          label="Edit clinic, pet or service"
+          icon="create-outline"
+          onPress={() => navigation.navigate('BookingSelectClinic')}
+        />
+        <LinkButton label="Edit date & time" icon="calendar-outline" onPress={() => navigation.navigate('BookingSelectDate')} />
+        <LinkButton
+          label="Edit appointment information"
+          icon="document-text-outline"
+          onPress={() => navigation.navigate('BookingInformation')}
+        />
       </View>
 
       <HelpNote>

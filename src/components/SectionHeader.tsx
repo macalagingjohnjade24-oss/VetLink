@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { spacing } from '../theme';
 import { AppText } from './AppText';
+import { LinkButton } from './LinkButton';
 
 type Props = {
   title: string;
@@ -14,9 +15,7 @@ export function SectionHeader({ title, actionLabel, onAction }: Props) {
     <View style={styles.row}>
       <AppText variant="title">{title}</AppText>
       {actionLabel && onAction ? (
-        <Pressable onPress={onAction} hitSlop={8}>
-          <AppText variant="bodyStrong">{actionLabel}</AppText>
-        </Pressable>
+        <LinkButton label={actionLabel} fullWidth={false} onPress={onAction} />
       ) : null}
     </View>
   );

@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppHeader } from '../../components/AppHeader';
 import { AppointmentBadge, isClosedStatus } from '../../components/AppointmentBadge';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { useBooking } from '../../context/BookingContext';
 import { usePets } from '../../context/PetContext';
@@ -96,17 +97,15 @@ export function AppointmentDetailsScreen({ navigation, route }: BookingsScreenPr
         ))}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
+      <LinkButton
+        label="Clinic contact & location"
+        icon="location-outline"
         onPress={() =>
           navigation
             .getParent<BottomTabNavigationProp<TabParamList>>()
             ?.navigate('ClinicsTab', { screen: 'ClinicContact', params: { clinicId: appointment.clinicId } })
         }
-        hitSlop={6}
-      >
-        <AppText variant="link">Clinic contact &amp; location</AppText>
-      </Pressable>
+      />
 
       {appointment.status === 'Rejected' ? (
         <>
@@ -130,25 +129,20 @@ export function AppointmentDetailsScreen({ navigation, route }: BookingsScreenPr
             label="Reschedule Appointment"
             onPress={() => navigation.navigate('RescheduleAppointment', { appointmentId })}
           />
-          <Pressable
-            accessibilityRole="button"
+          <LinkButton
+            label="Cancel Appointment"
+            icon="close-circle-outline"
+            tone="danger"
             onPress={() => navigation.navigate('CancelAppointment', { appointmentId })}
-            hitSlop={6}
-          >
-            <AppText variant="link" color={colors.status.danger}>
-              Cancel Appointment
-            </AppText>
-          </Pressable>
+          />
         </>
       )}
 
-      <Pressable
-        accessibilityRole="button"
+      <LinkButton
+        label="Track appointment status"
+        icon="pulse-outline"
         onPress={() => navigation.navigate('AppointmentStatus', { appointmentId })}
-        hitSlop={6}
-      >
-        <AppText variant="link">Track appointment status</AppText>
-      </Pressable>
+      />
 
       <HelpNote>
         Changes are subject to clinic policy and approval. Contact the clinic for urgent schedule changes.

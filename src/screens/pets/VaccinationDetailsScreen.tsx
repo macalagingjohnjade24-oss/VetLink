@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Badge, type BadgeTone } from '../../components/Badge';
 import { HelpNote } from '../../components/HelpNote';
 import { PetAvatar } from '../../components/PetAvatar';
@@ -109,9 +110,11 @@ export function VaccinationDetailsScreen({ route }: PetsScreenProps<'Vaccination
         ))}
       </View>
 
-      <Pressable accessibilityRole="button" onPress={() => setDocumentNote(true)} hitSlop={6}>
-        <AppText variant="link">View supporting document</AppText>
-      </Pressable>
+      <LinkButton
+        label="View supporting document"
+        icon="document-attach-outline"
+        onPress={() => setDocumentNote(true)}
+      />
       {documentNote ? (
         <AppText variant="caption">
           Supporting documents are added by the clinic. None is attached to this demo record — ask the clinic for the

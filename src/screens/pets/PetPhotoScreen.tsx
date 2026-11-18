@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/AppHeader';
@@ -107,9 +107,7 @@ export function PetPhotoScreen({ navigation, route }: PetsScreenProps<'PetPhoto'
       </HelpNote>
 
       <Button label="Save Photo" disabled={!picked} onPress={() => void save()} />
-      <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={6} style={styles.cancel}>
-        <AppText variant="link">Cancel</AppText>
-      </Pressable>
+      <Button label="Cancel" variant="secondary" onPress={() => navigation.goBack()} />
     </Screen>
   );
 }
@@ -127,5 +125,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   previewImage: { width: '100%', height: '100%' },
-  cancel: { alignItems: 'center', paddingVertical: spacing.sm },
 });

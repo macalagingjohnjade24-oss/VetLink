@@ -56,7 +56,7 @@ export function OnboardingLayout({
 
   return (
     <View style={styles.flex} {...panResponder.panHandlers}>
-      <Screen safeBottom contentStyle={styles.content}>
+      <Screen contentStyle={styles.content}>
         <View style={styles.logoRow}>
           <Logo size="md" />
         </View>

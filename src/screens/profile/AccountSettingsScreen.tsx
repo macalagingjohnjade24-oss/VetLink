@@ -5,6 +5,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { LinkCard } from '../../components/Card';
+import { LinkButton } from '../../components/LinkButton';
 import { Screen } from '../../components/Screen';
 import { useDemo } from '../../context/DemoContext';
 import {
@@ -108,19 +109,14 @@ export function AccountSettingsScreen({ navigation }: ProfileScreenProps<'Accoun
         })}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={6}
+      <LinkButton
+        label="View notifications"
+        icon="notifications-outline"
         onPress={() =>
           navigation.getParent<BottomTabNavigationProp<TabParamList>>()?.navigate('HomeTab', { screen: 'Notifications' })
         }
-      >
-        <AppText variant="bodyStrong">View notifications</AppText>
-      </Pressable>
-
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('Logout')}>
-        <AppText variant="bodyStrong">Log Out</AppText>
-      </Pressable>
+      />
+      <LinkButton label="Log Out" icon="log-out-outline" onPress={() => navigation.navigate('Logout')} />
 
       <View style={styles.demoSection}>
         <AppText variant="title">Demo data</AppText>

@@ -1,6 +1,7 @@
-import { Image, Pressable, StyleSheet } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
+import { LinkButton } from '../../components/LinkButton';
 import { Logo } from '../../components/Logo';
 import { Screen } from '../../components/Screen';
 import { colors, radii, spacing } from '../../theme';
@@ -39,12 +40,16 @@ export function AboutScreen({ navigation }: ProfileScreenProps<'About'>) {
         To make it simpler for families and veterinary teams to stay connected through every stage of a pet’s life.
       </AppText>
 
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('PrivacySecurity')}>
-        <AppText variant="bodyStrong">Privacy Policy</AppText>
-      </Pressable>
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('PrivacySecurity')}>
-        <AppText variant="bodyStrong">Terms and Conditions</AppText>
-      </Pressable>
+      <LinkButton
+        label="Privacy Policy"
+        icon="shield-checkmark-outline"
+        onPress={() => navigation.navigate('PrivacySecurity')}
+      />
+      <LinkButton
+        label="Terms and Conditions"
+        icon="document-text-outline"
+        onPress={() => navigation.navigate('PrivacySecurity')}
+      />
 
       <AppText variant="small" style={styles.copyright}>
         © 2026 VetLink. All rights reserved.
