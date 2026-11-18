@@ -1,15 +1,23 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { backendConfigProblem, normalizeSupabaseKey, normalizeSupabaseUrl } from './supabaseConfig';
 
-const url = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
-const anonKey = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+export { normalizeSupabaseKey, normalizeSupabaseUrl } from './supabaseConfig';
 
-/** True once both EXPO_PUBLIC_SUPABASE_* variables are present. */
-export const isSupabaseConfigured = Boolean(url && anonKey) && !url.includes('your-project-ref') && !anonKey.startsWith('your-');
+const url = normalizeSupabaseUrl(process.env.EXPO_PUBLIC_SUPABASE_URL ?? '');
+const anonKey = normalizeSupabaseKey(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '');
 
-export const BACKEND_SETUP_MESSAGE =
-  'VetLink is not connected to Supabase yet. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to the project .env file, then restart Expo. Setup steps: supabase/README.md.';
+/** A present-but-malformed value would 401 or crash, so it is reported instead. */
+const configProblem = backendConfigProblem(url, anonKey);
+
+/** True once both EXPO_PUBLIC_SUPABASE_* variables are present and plausible. */
+export const isSupabaseConfigured =
+  Boolean(url && anonKey) && !url.includes('your-project-ref') && !anonKey.startsWith('your-') && !configProblem;
+
+export const BACKEND_SETUP_MESSAGE = configProblem
+  ? `${configProblem} VetLink stays in offline mode until this is fixed. Setup steps: supabase/README.md.`
+  : 'VetLink is not connected to Supabase yet. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to the project .env file, then restart Expo. Setup steps: supabase/README.md.';
 
 /** Paths the Supabase auth redirects land on (app scheme is `vetlink` in app.json). */
 export const AUTH_REDIRECT = {

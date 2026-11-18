@@ -11,6 +11,7 @@ import {
   supabase,
 } from '../lib/supabase';
 import { mapProfile, type ProfileRow } from '../types/backend';
+import { DATABASE_SETUP_MESSAGE, isDatabaseSetupError } from '../utils/errors';
 import { storageService } from './storageService';
 
 // Required for the web build so the OAuth popup can post its result back.
@@ -56,6 +57,9 @@ function toAuthError(error: unknown): AuthError {
   const source = error as { message?: string; code?: string; status?: number; error_description?: string } | null;
   const message = source?.message ?? source?.error_description ?? '';
   const code = source?.code ?? '';
+
+  // Signing in reads the profile row, so an unmigrated project fails here first.
+  if (isDatabaseSetupError(error)) return new AuthError('unknown', DATABASE_SETUP_MESSAGE);
 
   if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) {
     return new AuthError('not_found', 'We could not find an account with those details. Check your email and password.');

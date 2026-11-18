@@ -14,6 +14,7 @@ import { usePets } from '../../context/PetContext';
 import { formatBirthDate } from '../../services/petService';
 import { vaccinationService } from '../../services/vaccinationService';
 import { colors, radii, spacing } from '../../theme';
+import { errorMessage } from '../../utils/errors';
 import type { PetsScreenProps } from '../../navigation/types';
 
 /** PO-33 Pet Profile Details */
@@ -63,7 +64,7 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
       await removePet(pet.id);
       navigation.navigate('MyPets');
     } catch (error) {
-      setRemoveError(error instanceof Error ? error.message : 'This pet could not be removed.');
+      setRemoveError(errorMessage(error, 'This pet could not be removed.'));
       setRemoving(false);
     }
   };
