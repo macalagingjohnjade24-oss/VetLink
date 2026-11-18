@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
@@ -76,6 +76,13 @@ export function HelpSupportScreen({ navigation }: ProfileScreenProps<'HelpSuppor
         ))
       )}
 
+      <Button
+        label="Ask the VetLink Assistant"
+        variant="secondary"
+        icon="chatbubble-ellipses-outline"
+        onPress={() => navigation.navigate('AIAssistant')}
+      />
+
       <HelpNote>
         Contact support
         {'\n'}
@@ -92,10 +99,6 @@ export function HelpSupportScreen({ navigation }: ProfileScreenProps<'HelpSuppor
       ) : null}
 
       {error ? <HelpNote tone="danger">{error}</HelpNote> : null}
-
-      <Pressable accessibilityRole="button" hitSlop={6} onPress={() => navigation.navigate('AIAssistant')}>
-        <AppText variant="bodyStrong">Ask the VetLink Assistant</AppText>
-      </Pressable>
     </Screen>
   );
 }

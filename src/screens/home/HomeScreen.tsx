@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppText } from '../../components/AppText';
@@ -137,7 +137,9 @@ export function HomeScreen({ navigation }: HomeScreenProps<'Home'>) {
         variant="secondary"
         icon="sparkles-outline"
         onPress={() =>
-          Alert.alert('AI Assistant', 'The AI-assisted inquiry module arrives in Phase 9 of this build.')
+          navigation
+            .getParent<BottomTabNavigationProp<TabParamList>>()
+            ?.navigate('ProfileTab', { screen: 'AIAssistant' })
         }
         style={styles.aiButton}
       />
