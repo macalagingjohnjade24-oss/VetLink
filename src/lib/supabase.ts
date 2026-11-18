@@ -1,15 +1,13 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { backendConfigProblem, normalizeSupabaseKey, normalizeSupabaseUrl } from './supabaseConfig';
-
-export { normalizeSupabaseKey, normalizeSupabaseUrl } from './supabaseConfig';
+import { normalizeSupabaseKey, normalizeSupabaseUrl, supabaseKeyProblem, supabaseUrlProblem } from './supabaseConfig';
 
 const url = normalizeSupabaseUrl(process.env.EXPO_PUBLIC_SUPABASE_URL ?? '');
 const anonKey = normalizeSupabaseKey(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '');
 
 /** A present-but-malformed value would 401 or crash, so it is reported instead. */
-const configProblem = backendConfigProblem(url, anonKey);
+const configProblem = supabaseUrlProblem(url) ?? supabaseKeyProblem(anonKey);
 
 /** True once both EXPO_PUBLIC_SUPABASE_* variables are present and plausible. */
 export const isSupabaseConfigured =
