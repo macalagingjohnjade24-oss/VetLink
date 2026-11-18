@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useBottomTabBarHeight, type BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { AppHeader } from '../../components/AppHeader';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -9,6 +9,7 @@ import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../context/AuthContext';
 import { ASSISTANT_WELCOME } from '../../data/mockAssistant';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { aiAssistantService } from '../../services/aiAssistantService';
 import { colors, fontFamily, radii, spacing } from '../../theme';
 import type { ProfileScreenProps, TabParamList } from '../../navigation/types';
@@ -25,8 +26,9 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
   const [pending, setPending] = useState(false);
   const asked = useRef(false);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const tabBarHeight = useBottomTabBarHeight();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardInset = useKeyboardInset(scrollRef, {
+    onShow: () => scrollRef.current?.scrollToEnd({ animated: true }),
+  });
 
   const ask = async (text: string) => {
     const trimmed = text.trim();
@@ -38,21 +40,6 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
     setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: 'assistant', text: reply }]);
     setPending(false);
   };
-
-  // Keep the composer above the keyboard by reserving the space it covers.
-  // The scroll view stops at the tab bar, so only the overlap needs padding.
-  useEffect(() => {
-    const ios = Platform.OS === 'ios';
-    const shown = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
-    const hidden = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardHeight(0));
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
 
   useEffect(() => {
     const question = route.params?.question;
@@ -67,7 +54,7 @@ export function AIChatScreen({ navigation, route }: ProfileScreenProps<'AIChat'>
 
   return (
     <Screen
-      contentStyle={[styles.content, { paddingBottom: spacing.xxxl + Math.max(keyboardHeight - tabBarHeight, 0) }]}
+      contentStyle={[styles.content, { paddingBottom: spacing.xxxl + keyboardInset }]}
       scrollRef={scrollRef}
       onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
     >
