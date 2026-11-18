@@ -52,7 +52,7 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeBottom contentStyle={styles.content}>
       <AppHeader title="Login" onBack={() => navigation.navigate('Welcome')} />
 
       <View style={styles.brandRow}>

@@ -12,6 +12,12 @@ type Props = {
   contentStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   footer?: React.ReactNode;
+  /**
+   * Reserves the bottom safe area for screens that sit directly on the window,
+   * such as onboarding and the auth flow. Screens inside the tabs leave it off
+   * because the tab bar already keeps the system bar clear.
+   */
+  safeBottom?: boolean;
   /** Lets a screen scroll its own content, e.g. a chat following the newest message. */
   scrollRef?: React.RefObject<React.ComponentRef<typeof ScrollView> | null>;
   onContentSizeChange?: () => void;
@@ -32,6 +38,7 @@ export function Screen({
   contentStyle,
   style,
   footer,
+  safeBottom = false,
   scrollRef,
   onContentSizeChange,
 }: Props) {
@@ -103,7 +110,10 @@ export function Screen({
   );
 
   return (
-    <SafeAreaView style={[styles.safe, style]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safe, style]}
+      edges={safeBottom ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}
+    >
       {scroll ? <FieldFocusContext.Provider value={reportFocus}>{body}</FieldFocusContext.Provider> : body}
       {footer ? <View style={styles.footer}>{footer}</View> : null}
     </SafeAreaView>
