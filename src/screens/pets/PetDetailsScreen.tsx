@@ -100,11 +100,6 @@ export function PetDetailsScreen({ navigation, route }: PetsScreenProps<'PetDeta
           icon="time-outline"
           onPress={() => navigation.navigate('AppointmentHistory', { petId })}
         />
-        <TextLink
-          label="Edit Pet Information"
-          icon="create-outline"
-          onPress={() => navigation.navigate('PetForm', { mode: 'edit', petId })}
-        />
       </View>
 
       <Button
