@@ -13,6 +13,8 @@ export function FindClinicsScreen({ navigation }: ScreenProps<'FindClinics'>) {
       onPrimary={() => navigation.navigate('Appointments')}
       secondaryLabel="Skip to create account"
       onSecondary={() => navigation.navigate('SignUp')}
+      onSwipeNext={() => navigation.navigate('Appointments')}
+      onSwipePrev={() => navigation.navigate('Welcome')}
     />
   );
 }

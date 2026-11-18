@@ -21,6 +21,7 @@ export function HealthRecordsScreen({ navigation }: ScreenProps<'HealthRecords'>
       onPrimary={() => goToAuth('SignUp')}
       secondaryLabel="Skip to create account"
       onSecondary={() => goToAuth('SignUp')}
+      onSwipePrev={() => navigation.navigate('Appointments')}
     />
   );
 }

@@ -14,6 +14,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
       body="Find trusted care, keep every record organized, and make more time for happy moments together."
       primaryLabel="Get Started"
       onPrimary={() => navigation.navigate('FindClinics')}
+      onSwipeNext={() => navigation.navigate('FindClinics')}
       secondaryLabel="I Already Have an Account"
       secondaryVariant="outline"
       onSecondary={() => {
