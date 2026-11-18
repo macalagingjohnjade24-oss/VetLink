@@ -123,7 +123,14 @@ const styles = StyleSheet.create({
   },
   mapWrap: { borderRadius: radii.card, overflow: 'hidden', marginTop: spacing.xs },
   mapScale: { width: '100%' },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginVertical: spacing.xs },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    columnGap: spacing.md,
+    rowGap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
   selectedCard: {
     flexDirection: 'row',
     alignItems: 'center',

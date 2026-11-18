@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   full: { minHeight: 48 },
-  hug: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: spacing.md },
+  hug: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: spacing.sm },
   label: { flexShrink: 1, textAlign: 'center' },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.85 },

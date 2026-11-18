@@ -119,6 +119,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   label: { marginTop: spacing.sm },
-  viewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginVertical: spacing.xs },
+  viewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    columnGap: spacing.lg,
+    rowGap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
   sectionGap: { marginTop: spacing.md },
 });

@@ -147,7 +147,14 @@ export function ClinicDetailsScreen({ navigation, route }: ClinicsScreenProps<'C
 const styles = StyleSheet.create({
   content: { gap: spacing.md, paddingBottom: spacing.xxxl },
   hero: { width: '100%', height: 204, borderRadius: radii.card, backgroundColor: colors.surface.subtle },
-  actionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    columnGap: spacing.md,
+    rowGap: spacing.sm,
+  },
   serviceCard: {
     flexDirection: 'row',
     alignItems: 'center',
