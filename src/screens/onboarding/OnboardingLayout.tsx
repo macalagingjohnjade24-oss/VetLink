@@ -1,4 +1,5 @@
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '../../theme';
 import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
@@ -31,8 +32,12 @@ export function OnboardingLayout({
   onSecondary,
   secondaryVariant = 'link',
 }: Props) {
+  // `Screen` reserves the top, left and right safe areas only, so the slide has
+  // to keep its own gap above the home indicator / system navigation bar.
+  const { bottom } = useSafeAreaInsets();
+
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen contentStyle={[styles.content, { paddingBottom: spacing.xxl + bottom }]}>
       <View style={styles.logoRow}>
         <Logo size="md" />
       </View>
