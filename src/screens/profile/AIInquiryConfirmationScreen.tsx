@@ -6,6 +6,7 @@ import { AppText } from '../../components/AppText';
 import { Button } from '../../components/Button';
 import { HelpNote } from '../../components/HelpNote';
 import { Screen } from '../../components/Screen';
+import { LoadingState } from '../../components/States';
 import { clinicInquiryService, type ClinicInquiry } from '../../services/clinicInquiryService';
 import { colors, radii, spacing } from '../../theme';
 import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
@@ -13,17 +14,31 @@ import type { AIScreenProps, RootStackParamList } from '../../navigation/types';
 /** PO-55 Inquiry Submission Confirmation */
 export function AIInquiryConfirmationScreen({ navigation, route }: AIScreenProps<'AIInquiryConfirmation'>) {
   const [inquiry, setInquiry] = useState<ClinicInquiry | null>(null);
+  const [loading, setLoading] = useState(true);
   const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
     void clinicInquiryService.getById(route.params.inquiryId).then((found) => {
-      if (active) setInquiry(found);
+      if (!active) return;
+      setInquiry(found);
+      setLoading(false);
     });
     return () => {
       active = false;
     };
   }, [route.params.inquiryId]);
+
+  // Wait for the lookup so a saved inquiry never flashes the missing-inquiry message first.
+  if (loading) {
+    return (
+      <Screen contentStyle={styles.content}>
+        <AppHeader title="Inquiry Submission Confirmation" />
+        <LoadingState />
+      </Screen>
+    );
+  }
 
   if (!inquiry) {
     return (
