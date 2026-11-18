@@ -42,9 +42,9 @@ export function RootNavigator() {
       >
         <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="FindClinics" component={FindClinicsScreen} />
-        <Stack.Screen name="Appointments" component={AppointmentsScreen} />
-        <Stack.Screen name="HealthRecords" component={HealthRecordsScreen} />
+        <Stack.Screen name="FindClinics" component={FindClinicsScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="Appointments" component={AppointmentsScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="HealthRecords" component={HealthRecordsScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
