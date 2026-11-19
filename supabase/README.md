@@ -51,15 +51,25 @@ In **Authentication → URL Configuration** add these redirect URLs (keep your
 production URL too):
 
 ```
-vetlink://auth-callback
-vetlink://reset-password
-exp://127.0.0.1:8081/--/auth-callback
-exp://127.0.0.1:8081/--/reset-password
+# Expo web on this machine
 http://localhost:8081/auth-callback
 http://localhost:8081/reset-password
 http://127.0.0.1:8081/auth-callback
 http://127.0.0.1:8081/reset-password
+
+# Expo Go on a phone — use the host `npx expo start` prints
+# (for example exp://192.168.254.158:8081/--/auth-callback)
+exp://<dev-server-host>:8081/--/auth-callback
+exp://<dev-server-host>:8081/--/reset-password
+
+# Development build / APK
+vetlink://auth-callback
+vetlink://reset-password
 ```
+
+Keep **Site URL** pointing at a real page as well: any redirect that is not on
+this list is silently replaced by the Site URL, and the app then reports the
+mismatch instead of signing in.
 
 The app opens `/auth-callback` for Google sign-in and `/reset-password` for
 password recovery. The three families above are the same two paths on the three
@@ -68,7 +78,7 @@ ways the app can run:
 | Where the app runs | What `makeRedirectUri` returns |
 | --- | --- |
 | Development build / standalone (native) | `vetlink://auth-callback` — the `scheme` in `app.json` |
-| Expo Go (native) | `exp://127.0.0.1:8081/--/auth-callback` |
+| Expo Go (native) | `exp://<dev-server-host>:8081/--/auth-callback`
 | **Expo web (`npx expo start --web`)** | `http://localhost:8081/auth-callback` |
 
 On web the scheme argument is ignored: `expo-linking`'s web build of `createURL`
@@ -154,11 +164,30 @@ No client secret is ever shipped in the app.
 `?code=` before the page has to render anything). That exact origin must be in
 Supabase's redirect allow-list — see section 3.
 
-**Expo Go limitation:** the browser returns to `exp://…/--/auth-callback` inside
-Expo Go. That URL must be in Supabase's redirect allow-list. A standalone
-development/production build returns to `vetlink://auth-callback`, which behaves
-consistently and is the recommended way to demo Google sign-in. Variables and
-providers configured in the dashboard apply to both.
+**Expo Go:** the redirect is `exp://<dev-server-host>:8081/--/auth-callback`.
+`scheme: 'vetlink'` is ignored there — Expo Go only registers `exp` — so that
+exact host must be in the allow-list. Android's Custom Tab cannot hand an
+`exp://` URL back to `WebBrowser.openAuthSessionAsync`: it stops at the hand-off
+and the call resolves as dismissed. The app therefore treats the incoming deep
+link as the callback — `Linking` delivers it to `handleAuthUrl`, which exchanges
+the code and hands the signed-in account back to the screen that started the
+flow. A genuine dismissal still cancels silently.
+
+**Development build / APK:** the redirect becomes `vetlink://auth-callback` (the
+`scheme` in `app.json`), which is stable and is the recommended way to demo or
+ship Google sign-in — Expo's own docs advise a build for auth callbacks. Add
+`vetlink://auth-callback` and `vetlink://reset-password` to the allow-list, then:
+
+```
+npx expo install expo-dev-client
+npx expo start --dev-client        # launch the dev client, then open the project
+# or a shareable APK:
+eas build --profile development --platform android
+```
+
+A development build launched from the dev server can report
+`vetlink://<dev-server-host>/auth-callback`; add `vetlink://**` if you want one
+entry to cover both that form and the standalone `vetlink://auth-callback`.
 
 ## 5. Storage buckets
 

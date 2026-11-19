@@ -166,6 +166,28 @@ function readParams(url: string): Record<string, string> {
 const handledUrls = new Set<string>();
 
 /**
+ * Exchanges a callback URL once. A Supabase code is single-use, and on a device
+ * the same URL can be delivered twice (the browser window and the deep link),
+ * so both paths share one result.
+ */
+const redemptions = new Map<string, Promise<UserAccount>>();
+
+function exchangeCallback(url: string, code: string): Promise<UserAccount> {
+  const existing = redemptions.get(url);
+  if (existing) return existing;
+  const pending = (async () => {
+    const client = requireClient();
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    if (error) throw toAuthError(error);
+    const user = data.user ?? data.session?.user;
+    if (!user) throw new AuthError('unknown', 'Google sign-in did not return an account.');
+    return profileFor(user);
+  })();
+  redemptions.set(url, pending);
+  return pending;
+}
+
+/**
  * On web the OAuth flow runs in a popup that loads this same bundle at
  * /auth-callback. That window must only hand the URL back to its opener
  * (`maybeCompleteAuthSession`); redeeming the code there would consume it
@@ -176,8 +198,29 @@ function isOAuthPopup(): boolean {
   return Boolean(scope.window?.opener);
 }
 
-/** True while `signInWithGoogle` is awaiting the browser, so the URL listener stays out of the way. */
-let googleFlowInFlight = false;
+/**
+ * A device cannot get its OAuth callback back from the browser window: Android's
+ * Custom Tab stops at the `exp://` / `vetlink://` hand-off and
+ * `openAuthSessionAsync` resolves as dismissed instead of returning the URL.
+ * The deep link is the real callback there, so while a Google flow is open the
+ * URL listener hands its result to the waiting `signInWithGoogle` through this
+ * hook rather than dropping the code.
+ */
+type GoogleHandoff = { account: UserAccount } | { error: AuthError };
+
+type GoogleOutcome =
+  | { kind: 'browser'; result: Awaited<ReturnType<typeof WebBrowser.openAuthSessionAsync>> }
+  | { kind: 'link'; handoff: GoogleHandoff }
+  | { kind: 'timeout' };
+
+/**
+ * Stops a browser call that never settles from leaving the sign-in button
+ * waiting forever. A callback that arrives after this still signs in through
+ * `handleAuthUrl`; this only bounds the wait.
+ */
+const GOOGLE_FLOW_TIMEOUT_MS = 3 * 60 * 1000;
+
+let settleGoogleFlow: ((outcome: GoogleHandoff) => void) | null = null;
 
 /** Where the web OAuth popup leaves the URL it actually landed on. */
 const REDIRECT_MISMATCH_KEY = 'vetlink.auth.redirect-mismatch.v1';
@@ -458,10 +501,33 @@ export const authService = {
     if (error) throw toAuthError(error);
     if (!data.url) throw new AuthError('unknown', 'Google sign-in is unavailable right now. Please try again.');
 
-    googleFlowInFlight = true;
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirect).finally(() => {
-      googleFlowInFlight = false;
-    });
+    // The browser window and the deep link are two ways to receive the same
+    // callback; whichever lands first wins and the other is ignored.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let outcome: GoogleOutcome;
+    try {
+      outcome = await Promise.race<GoogleOutcome>([
+        WebBrowser.openAuthSessionAsync(data.url, redirect).then((result): GoogleOutcome => ({ kind: 'browser', result })),
+        new Promise<GoogleOutcome>((resolve) => {
+          settleGoogleFlow = (handoff) => resolve({ kind: 'link', handoff });
+        }),
+        new Promise<GoogleOutcome>((resolve) => {
+          timer = setTimeout(() => resolve({ kind: 'timeout' }), GOOGLE_FLOW_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      settleGoogleFlow = null;
+    }
+
+    // A browser that never settles is indistinguishable from a dismissal.
+    if (outcome.kind === 'timeout') throw new AuthError('cancelled', 'Google sign-in was cancelled.');
+    if (outcome.kind === 'link') {
+      if ('error' in outcome.handoff) throw outcome.handoff.error;
+      return outcome.handoff.account;
+    }
+
+    const result = outcome.result;
     if (result.type !== 'success') {
       // A rewritten redirect never reaches this window, so the popup's note is
       // the only record of where the browser actually ended up.
@@ -487,12 +553,7 @@ export const authService = {
     // The deep link can also reach the Linking listener a moment later; this
     // keeps the code single-use on that side too.
     handledUrls.add(result.url);
-    const { data: sessionData, error: exchangeError } = await client.auth.exchangeCodeForSession(params.code);
-    if (exchangeError) throw toAuthError(exchangeError);
-
-    const user = sessionData.user ?? sessionData.session?.user;
-    if (!user) throw new AuthError('unknown', 'Google sign-in did not return an account.');
-    return profileFor(user);
+    return exchangeCallback(result.url, params.code);
   },
 
   /**
@@ -501,28 +562,44 @@ export const authService = {
    */
   async handleAuthUrl(url: string): Promise<AuthLinkResult | null> {
     if (!supabase) return null;
-    // The awaited Google flow (or the web popup) owns its own callback URL.
-    if (googleFlowInFlight) return null;
+    // Only the web popup stays out of the way: it must hand its URL back to the
+    // opener instead of redeeming it. On a device this listener *is* the way the
+    // callback arrives, so it must run even while the browser window is open.
     if (/auth-callback/.test(url) && !/reset-password/.test(url) && isOAuthPopup()) return null;
     if (!/(auth-callback|reset-password)/.test(url) && !/[#?&]code=/.test(url)) return null;
     if (handledUrls.has(url)) return null;
     handledUrls.add(url);
 
     const params = readParams(url);
-    if (params.error) {
-      return { type: 'error', message: params.error_description || 'That link is no longer valid.' };
-    }
     const isRecovery = /reset-password/.test(url) || params.type === 'recovery';
+
+    if (params.error) {
+      const message = params.error_description || 'That link is no longer valid.';
+      // The Google screen that is still waiting shows this itself.
+      if (!isRecovery && settleGoogleFlow) {
+        settleGoogleFlow({ error: new AuthError('unknown', message) });
+        return null;
+      }
+      return { type: 'error', message };
+    }
     if (!params.code) return isRecovery ? { type: 'error', message: 'That reset link has expired.' } : null;
 
-    const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
-    if (error) {
-      return { type: 'error', message: toAuthError(error).message };
+    let account: UserAccount;
+    try {
+      account = await exchangeCallback(url, params.code);
+    } catch (error) {
+      const failure = toAuthError(error);
+      if (!isRecovery && settleGoogleFlow) {
+        settleGoogleFlow({ error: failure });
+        return null;
+      }
+      return { type: 'error', message: failure.message };
     }
-    const user = data.user ?? data.session?.user;
+
     if (isRecovery) return { type: 'recovery', account: null };
-    if (!user) return null;
-    return { type: 'session', account: await profileFor(user) };
+    // The awaiting sign-in, if any, gets the same answer instead of hanging.
+    settleGoogleFlow?.({ account });
+    return { type: 'session', account };
   },
 
   /** Keeps AuthContext in sync with token refreshes and sign-outs from Supabase. */
