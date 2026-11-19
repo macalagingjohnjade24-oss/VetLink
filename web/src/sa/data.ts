@@ -169,15 +169,23 @@ export type ProvisionResult = {
 
 const message = (error: { message: string } | null) => (error ? new Error(error.message) : null);
 
-async function selectAll<T>(table: string, order: string): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select('*').order(order, { ascending: true });
+export async function fetchClinics(): Promise<Clinic[]> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .select('*')
+    .order('created_at', { ascending: true });
   const failure = message(error);
   if (failure) throw failure;
-  return (data ?? []) as T[];
+  return (data ?? []) as Clinic[];
 }
 
-export function fetchClinics() {
-  return selectAll<Clinic>('clinics', 'created_at');
+export async function fetchClinicsByIds(ids: string[]): Promise<Clinic[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return [];
+  const { data, error } = await supabase.from('clinics').select('*').in('id', unique);
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as Clinic[];
 }
 
 export async function fetchClinic(id: string): Promise<Clinic | null> {
@@ -187,8 +195,41 @@ export async function fetchClinic(id: string): Promise<Clinic | null> {
   return (data ?? null) as Clinic | null;
 }
 
-export function fetchProfiles() {
-  return selectAll<Profile>('profiles', 'created_at');
+/**
+ * One page of accounts. SA-08 lists users, so the page is cut in the database
+ * instead of downloading the table and slicing it in the browser.
+ */
+export async function fetchProfilesPage({
+  page,
+  pageSize,
+  search,
+  role,
+}: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  role?: string;
+}): Promise<{ rows: Profile[]; total: number }> {
+  const from = (page - 1) * pageSize;
+  let query = supabase.from('profiles').select('*', { count: 'exact' });
+
+  if (role && role !== 'all') query = query.eq('role', role);
+  if (search?.trim()) {
+    const term = search.trim().replace(/[,()*%]/g, ' ').trim();
+    if (term) {
+      query = query.or(
+        `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`,
+      );
+    }
+  }
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: true })
+    .range(from, from + pageSize - 1);
+
+  const failure = message(error);
+  if (failure) throw failure;
+  return { rows: (data ?? []) as Profile[], total: count ?? 0 };
 }
 
 /** Detail screens name a handful of accounts; they never download the directory. */
@@ -230,8 +271,30 @@ export async function fetchProfile(id: string): Promise<Profile | null> {
   return (data ?? null) as Profile | null;
 }
 
-export function fetchMemberships() {
-  return selectAll<Membership>('clinic_memberships', 'created_at');
+/** One row per clinic that has an administrator — not the whole staff table. */
+export async function fetchClinicAdministrators(): Promise<Membership[]> {
+  const { data, error } = await supabase
+    .from('clinic_memberships')
+    .select('*')
+    .eq('staff_role', 'clinic_administrator')
+    .neq('status', 'revoked')
+    .order('created_at', { ascending: true });
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as Membership[];
+}
+
+export async function fetchMembershipsForUsers(ids: string[]): Promise<Membership[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return [];
+  const { data, error } = await supabase
+    .from('clinic_memberships')
+    .select('*')
+    .in('user_id', unique)
+    .order('created_at', { ascending: true });
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as Membership[];
 }
 
 export async function fetchMembershipsForUser(userId: string): Promise<Membership[]> {

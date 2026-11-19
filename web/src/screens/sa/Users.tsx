@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatDate, formatDateTime, fullName, humaniseAction, label } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   fetchAuditForActor,
   fetchClinics,
-  fetchMemberships,
+  fetchClinicsByIds,
   fetchMembershipsForUser,
+  fetchMembershipsForUsers,
   fetchProfile,
-  fetchProfiles,
+  fetchProfilesPage,
   type Membership,
   type Profile,
 } from '@/sa/data';
@@ -60,49 +61,48 @@ function accountState(profile: Profile, membership: Membership | null): Pick<Row
 /** SA-08 — every account on the platform, clinic-scoped or not. */
 export function PlatformUsers() {
   const [search, setSearch] = useState('');
+  const [term, setTerm] = useState('');
   const [role, setRole] = useState('all');
-  const [account, setAccount] = useState('all');
   const [page, setPage] = useState(1);
 
-  const state = useAsync(
-    () =>
-      Promise.all([fetchProfiles(), fetchMemberships(), fetchClinics()]).then(
-        ([profiles, memberships, clinics]) => ({ profiles, memberships, clinics }),
-      ),
-    [],
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTerm(search);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const rows = useMemo<Row[]>(() => {
-    if (!state.data) return [];
-    const { profiles, memberships, clinics } = state.data;
-    return profiles.map((profile) => {
-      const membership =
-        memberships.find((row) => row.user_id === profile.id && row.status !== 'revoked') ?? null;
-      const clinic = membership ? clinics.find((row) => row.id === membership.clinic_id) : null;
-      return {
-        profile,
-        membership,
-        clinicName: clinic?.clinic_name ?? '—',
-        ...accountState(profile, membership),
-      };
+  // Postgres picks the page of accounts; only those rows' memberships and
+  // clinics are fetched afterwards.
+  const state = useAsync(async () => {
+    const { rows: profiles, total } = await fetchProfilesPage({
+      page,
+      pageSize: PAGE_SIZE,
+      search: term,
+      role,
     });
-  }, [state.data]);
+    const memberships = await fetchMembershipsForUsers(profiles.map((profile) => profile.id));
+    const clinics = await fetchClinicsByIds(memberships.map((row) => row.clinic_id));
+    return { profiles, total, memberships, clinics };
+  }, [page, term, role]);
 
-  const term = search.trim().toLowerCase();
-  const filtered = rows.filter((row) => {
-    if (role !== 'all' && row.profile.role !== role) return false;
-    if (account === 'active' && row.status !== 'active') return false;
-    if (account === 'invited' && row.status !== 'invited') return false;
-    if (account === 'none' && row.membership) return false;
-    if (!term) return true;
-    return [fullName(row.profile), row.profile.email, row.clinicName]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(term));
+  const rows: Row[] = (state.data?.profiles ?? []).map((profile) => {
+    const membership =
+      state.data?.memberships.find(
+        (row) => row.user_id === profile.id && row.status !== 'revoked',
+      ) ?? null;
+    const clinic = membership
+      ? state.data?.clinics.find((row) => row.id === membership.clinic_id)
+      : null;
+    return {
+      profile,
+      membership,
+      clinicName: clinic?.clinic_name ?? '—',
+      ...accountState(profile, membership),
+    };
   });
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount);
-  const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const total = state.data?.total ?? 0;
 
   return (
     <div className="page">
@@ -118,7 +118,7 @@ export function PlatformUsers() {
       </Notice>
 
       <Panel
-        title={`${filtered.length} user${filtered.length === 1 ? '' : 's'}`}
+        title={`${total} user${total === 1 ? '' : 's'}`}
         subtitle="Open an account for its clinic access and administrative history."
         actions={
           <div className="toolbar__group">
@@ -128,7 +128,7 @@ export function PlatformUsers() {
                 setSearch(value);
                 setPage(1);
               }}
-              placeholder="Name, email or clinic"
+              placeholder="Name or email"
               label="Search users"
             />
             <SelectField
@@ -148,20 +148,6 @@ export function PlatformUsers() {
                 { value: 'system_administrator', label: 'System administrator' },
               ]}
             />
-            <SelectField
-              label="Account"
-              value={account}
-              onChange={(value) => {
-                setAccount(value);
-                setPage(1);
-              }}
-              options={[
-                { value: 'all', label: 'Any status' },
-                { value: 'active', label: 'Active' },
-                { value: 'invited', label: 'Invitation pending' },
-                { value: 'none', label: 'No clinic' },
-              ]}
-            />
           </div>
         }
         flush
@@ -170,7 +156,7 @@ export function PlatformUsers() {
           <LoadingState rows={6} />
         ) : state.error ? (
           <ErrorState message={state.error} onRetry={state.reload} />
-        ) : visible.length ? (
+        ) : rows.length ? (
           <>
             <div className="table-wrap">
               <table className="table">
@@ -186,7 +172,7 @@ export function PlatformUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.profile.id}>
                       <td>
                         <Link className="linkish" to={`/system-admin/users/${row.profile.id}`}>
@@ -217,7 +203,7 @@ export function PlatformUsers() {
                 </tbody>
               </table>
             </div>
-            <Pager page={current} pageSize={PAGE_SIZE} total={filtered.length} onPage={setPage} />
+            <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
           </>
         ) : (
           <EmptyState title="No users match those filters" description="Adjust the search or filters." />

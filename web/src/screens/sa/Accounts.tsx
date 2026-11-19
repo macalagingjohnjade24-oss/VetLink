@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchClinics, fetchMemberships, fetchProfiles, setClinicStatus } from '@/sa/data';
+import {
+  fetchClinicAdministrators,
+  fetchClinics,
+  fetchProfilesByIds,
+  setClinicStatus,
+} from '@/sa/data';
 import type { Clinic } from '@/sa/data';
 import { CLINIC_ACTIONS, type ClinicAction } from '@/sa/clinicActions';
 import {
@@ -31,13 +36,14 @@ export function ClinicAccounts() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
-  const state = useAsync(
-    () =>
-      Promise.all([fetchClinics(), fetchMemberships(), fetchProfiles()]).then(
-        ([clinics, memberships, profiles]) => ({ clinics, memberships, profiles }),
-      ),
-    [],
-  );
+  const state = useAsync(async () => {
+    const [clinics, administrators] = await Promise.all([
+      fetchClinics(),
+      fetchClinicAdministrators(),
+    ]);
+    const profiles = await fetchProfilesByIds(administrators.map((row) => row.user_id));
+    return { clinics, administrators, profiles };
+  }, []);
 
   const run = async () => {
     if (!pending) return;
@@ -71,20 +77,11 @@ export function ClinicAccounts() {
   });
 
   const administratorOf = (clinicId: string) => {
-    const membership = state.data?.memberships.find(
-      (row) =>
-        row.clinic_id === clinicId &&
-        row.staff_role === 'clinic_administrator' &&
-        row.status !== 'revoked',
-    );
+    const membership = state.data?.administrators.find((row) => row.clinic_id === clinicId);
     if (!membership) return 'Not provisioned';
     const profile = state.data?.profiles.find((row) => row.id === membership.user_id);
     return profile ? fullName(profile) : 'Not provisioned';
   };
-
-  const teamSize = (clinicId: string) =>
-    state.data?.memberships.filter((row) => row.clinic_id === clinicId && row.status === 'active')
-      .length ?? 0;
 
   return (
     <div className="page">
@@ -151,7 +148,6 @@ export function ClinicAccounts() {
                 <tr>
                   <th>Clinic</th>
                   <th>Administrator</th>
-                  <th>Active team</th>
                   <th>Status</th>
                   <th>Last reviewed</th>
                   <th className="table__right">Account actions</th>
@@ -169,7 +165,6 @@ export function ClinicAccounts() {
                       </p>
                     </td>
                     <td>{administratorOf(clinic.id)}</td>
-                    <td className="table__mono">{teamSize(clinic.id)}</td>
                     <td>
                       <StatusBadge status={clinic.status} />
                     </td>

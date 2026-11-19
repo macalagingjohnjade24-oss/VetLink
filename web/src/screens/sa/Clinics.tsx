@@ -8,9 +8,8 @@ import {
   fetchClinicDocuments,
   fetchClinicMemberships,
   fetchClinicServices,
+  fetchClinicAdministrators,
   fetchClinics,
-  fetchMemberships,
-  fetchProfiles,
   fetchProfilesByIds,
   setClinicStatus,
   signedDocumentUrl,
@@ -44,24 +43,20 @@ export function ClinicDirectory() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
 
-  const state = useAsync(
-    () =>
-      Promise.all([fetchClinics(), fetchMemberships(), fetchProfiles()]).then(
-        ([clinics, memberships, profiles]) => ({ clinics, memberships, profiles }),
-      ),
-    [],
-  );
+  const state = useAsync(async () => {
+    const [clinics, administrators] = await Promise.all([
+      fetchClinics(),
+      fetchClinicAdministrators(),
+    ]);
+    const profiles = await fetchProfilesByIds(administrators.map((row) => row.user_id));
+    return { clinics, administrators, profiles };
+  }, []);
 
   const rows = useMemo(() => {
     if (!state.data) return [];
-    const { clinics, memberships, profiles } = state.data;
+    const { clinics, administrators, profiles } = state.data;
     const administratorOf = (clinicId: string) => {
-      const membership = memberships.find(
-        (row) =>
-          row.clinic_id === clinicId &&
-          row.staff_role === 'clinic_administrator' &&
-          row.status !== 'revoked',
-      );
+      const membership = administrators.find((row) => row.clinic_id === clinicId);
       if (!membership) return 'Not provisioned';
       const profile = profiles.find((row) => row.id === membership.user_id);
       return profile ? fullName(profile) : 'Not provisioned';

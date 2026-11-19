@@ -5,12 +5,11 @@ import { useAsync } from '@/lib/useAsync';
 import {
   applicationState,
   fetchClinic,
+  fetchClinicAdministrators,
   fetchClinicDocuments,
   fetchClinicMemberships,
   fetchClinicServices,
   fetchClinics,
-  fetchMemberships,
-  fetchProfiles,
   fetchProfilesByIds,
   provisionClinicAdmin,
   reviewApplication,
@@ -52,20 +51,19 @@ export function Applications() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const state = useAsync(
-    () =>
-      Promise.all([fetchClinics(), fetchMemberships(), fetchProfiles()]).then(
-        ([clinics, memberships, profiles]) => ({ clinics, memberships, profiles }),
-      ),
-    [],
-  );
+  const state = useAsync(async () => {
+    const [clinics, administrators] = await Promise.all([
+      fetchClinics(),
+      fetchClinicAdministrators(),
+    ]);
+    const profiles = await fetchProfilesByIds(administrators.map((row) => row.user_id));
+    return { clinics, administrators, profiles };
+  }, []);
 
   const applications = (state.data?.clinics ?? []).filter((clinic) => clinic.submitted_at);
 
   const applicantOf = (clinicId: string) => {
-    const membership = state.data?.memberships.find(
-      (row) => row.clinic_id === clinicId && row.staff_role === 'clinic_administrator',
-    );
+    const membership = state.data?.administrators.find((row) => row.clinic_id === clinicId);
     if (!membership) return null;
     return state.data?.profiles.find((row) => row.id === membership.user_id) ?? null;
   };
