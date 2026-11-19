@@ -250,6 +250,26 @@ database (`0001` cannot — `appointments_pet_owner_fk` depends on the
 `pets_id_owner_key` constraint it drops), so re-running `0004` after fixing an
 error is safe.
 
+### Re-running the migration check
+
+`supabase/tests/` replays `0001`–`0007` and `seed.dev.system-admin.sql` on a
+disposable in-memory Postgres (PGlite), then asserts the platform functions:
+dashboard counts, `clinic_team_counts()`, and `platform_users_page()`'s role,
+account-state and search filters, paging and page-size validation, plus the
+grants and the non-administrator refusals. It needs no Supabase project, Docker
+or database URL:
+
+```bash
+cd supabase/tests
+npm install
+npm test
+```
+
+Every run starts from an empty database, so it fails as soon as a migration no
+longer applies from scratch. Fixtures and the replicated `auth`/`storage`
+schemas live in `harness.mjs`; add a migration to its `MIGRATIONS` array when you
+add a file under `supabase/migrations/`.
+
 ### Development seed: a System Administrator login
 
 `seed.dev.system-admin.sql` creates **one development-only** System

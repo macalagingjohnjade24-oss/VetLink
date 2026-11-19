@@ -1,0 +1,13 @@
+{
+  "name": "vetlink-supabase-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Re-runnable check of migrations 0001-0007 and the development seed against a disposable Postgres (PGlite).",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14"
+  }
+}
