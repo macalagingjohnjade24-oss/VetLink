@@ -216,3 +216,129 @@ entry to cover both that form and the standalone `vetlink://auth-callback`.
 - Enable custom SMTP, then add `{{ .Token }}` to the Confirm signup template (section 3).
 - Create the Google OAuth client and enable the provider (section 4).
 - Optionally run `seed.dev.sql` in development.
+- To open the web console before provisioning exists, run
+  `seed.dev.system-admin.sql` in development (section 8).
+
+## 8. Clinic staff and system administrator web console (`web/`)
+
+The web console is a separate Vite + React application in `web/`. It uses the
+same Supabase project as the mobile app; nothing under `src/` is shared or
+modified, so Expo Go builds are unaffected.
+
+### Apply the console migrations
+
+Run these **after** `0001`–`0003`:
+
+1. `migrations/0004_web_console.sql` — `system_administrator` policies, the
+   `clinic_staff` profile role, clinic review columns, service categories,
+   assigned veterinarian, `clinic_tasks`, `platform_audit_log`,
+   `clinic_documents`, clinic registration/review RPCs and the dashboard
+   statistics functions.
+2. `migrations/0005_clinic_documents.sql` — the private `clinic-documents`
+   bucket plus the clinic logo and attachment policies.
+
+`0004` is additive: it never drops a table, a column or a policy the mobile app
+depends on. The only constraint it replaces is `profiles_role_check`, to add
+`clinic_staff`. `0002`–`0005` can be pasted again on an already-migrated
+database (`0001` cannot — `appointments_pet_owner_fk` depends on the
+`pets_id_owner_key` constraint it drops), so re-running `0004` after fixing an
+error is safe.
+
+### Development seed: a System Administrator login
+
+`seed.dev.system-admin.sql` creates **one development-only** System
+Administrator, so the console can be opened before the real provisioning flow
+and the Phase 3 screens exist.
+
+| | |
+| --- | --- |
+| email | `admin@vetlink.dev` |
+| password | `VetLinkDev!2026` |
+| lands on | `/system-admin` |
+
+- **Development and staging only — never run it against production.**
+- Run it after `0004`/`0005`, either in the SQL editor or with
+  `psql "$DATABASE_URL" -f supabase/seed.dev.system-admin.sql`.
+- It is safe to re-run: an existing `admin@vetlink.dev` account is reused and its
+  password, confirmation and role are repaired instead of duplicated, so it also
+  fixes an account that was demoted or whose password is unknown.
+- It creates the `auth.users` row, its `auth.identities` row (needed by the
+  password grant) and the `profiles` row with `role = 'system_administrator'`.
+  It creates no clinics, staff, patients or clinical records.
+- Change the constants at the top of the `do $$` block for different credentials.
+
+The role is written under a transaction-local `service_role` claim, because
+`protect_profile_role()` refuses role changes from every other caller — browser
+clients still cannot promote themselves.
+
+### Environment
+
+The console reads its own file, `web/.env` (gitignored):
+
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon public key>
+```
+
+These are the same two public values as section 2. `service_role` must never
+appear here — Vite inlines `VITE_*` into the browser bundle.
+
+```bash
+cd web
+npm install
+npm run dev      # http://localhost:5173
+tsc --noEmit     # type check
+npm run build    # production bundle in web/dist
+```
+
+### Auth redirects for the console
+
+Add these to **Authentication → URL Configuration** as well (they are extra
+entries — keep the ones from section 3):
+
+```
+http://localhost:5173/reset-password
+http://localhost:5173/activate
+```
+
+`/activate` is where staff and clinic-administrator invitations return; without
+it Supabase rewrites the invitation to the Site URL and activation fails.
+
+### Edge Functions
+
+Two functions carry the only operations that need `service_role`:
+
+| Function | Caller | What it does |
+| --- | --- | --- |
+| `invite-staff` | an active Clinic Administrator of the clinic | invites (or links) a receptionist, veterinarian or clinic staff member and writes the membership row |
+| `provision-clinic-admin` | a System Administrator | approves a clinic and invites (or links) its Clinic Administrator |
+
+Both verify the caller's JWT with the anon key first, then use the service role
+only inside the function. Set the console origin and deploy:
+
+```bash
+supabase link --project-ref <project-ref>
+supabase secrets set CONSOLE_ORIGIN=http://localhost:5173
+supabase functions deploy invite-staff
+supabase functions deploy provision-clinic-admin
+```
+
+`CONSOLE_ORIGIN` is both the CORS allow-list origin and the base of the
+invitation `redirectTo`. After deploying, set it to the hosted console URL.
+
+### Roles
+
+The console signs in with the existing Supabase email/password provider. Role
+comes from `profiles.role`; clinic scope comes from an active or invited
+`clinic_memberships` row:
+
+| Role | Lands on |
+| --- | --- |
+| `clinic_administrator` | `/clinic-admin` |
+| `receptionist` | `/appointments` |
+| `veterinarian` | `/veterinarian` |
+| `clinic_staff` | `/staff` |
+| `system_administrator` | `/system-admin` |
+
+A `pet_owner` account is sent to the access-restricted screen, and `profiles.role`
+is still not writable by any browser client.
