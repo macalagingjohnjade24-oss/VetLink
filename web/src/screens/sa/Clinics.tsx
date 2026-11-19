@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { downloadCsv, formatDate, formatDateTime, fullName } from '@/lib/format';
+import { downloadCsv, formatDate, formatDateTime, formatOperatingHours, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   fetchClinic,
@@ -11,10 +11,11 @@ import {
   fetchClinics,
   fetchMemberships,
   fetchProfiles,
+  fetchProfilesByIds,
   setClinicStatus,
   signedDocumentUrl,
 } from '@/sa/data';
-import type { ClinicDocument, OperatingHours } from '@/sa/data';
+import type { ClinicDocument } from '@/sa/data';
 import {
   ConfirmDialog,
   ConsoleFooter,
@@ -35,13 +36,6 @@ import { Button } from '@/ui/Button';
 import { CLINIC_ACTIONS, type ClinicAction } from '@/sa/clinicActions';
 
 const PAGE_SIZE = 10;
-
-function hoursText(hours: OperatingHours): string {
-  if (!hours) return '—';
-  const window = hours.opens && hours.closes ? `${hours.opens} – ${hours.closes}` : null;
-  const days = hours.days?.length ? `${hours.days.length} days a week` : null;
-  return [window, days, hours.note].filter(Boolean).join(' · ') || '—';
-}
 
 /** SA-02 — every registered clinic, searchable and filterable. */
 export function ClinicDirectory() {
@@ -222,15 +216,16 @@ export function ClinicDetails() {
 
   const state = useAsync(async () => {
     if (!id) throw new Error('No clinic was selected.');
-    const [clinic, staff, profiles, services, documents, dashboard] = await Promise.all([
+    const [clinic, staff, services, documents, dashboard] = await Promise.all([
       fetchClinic(id),
       fetchClinicMemberships(id),
-      fetchProfiles(),
       fetchClinicServices(id),
       fetchClinicDocuments(id),
       fetchClinicDashboard(id),
     ]);
     if (!clinic) throw new Error('That clinic no longer exists.');
+    // Only the accounts on this clinic's team, not the whole platform.
+    const profiles = await fetchProfilesByIds(staff.map((row) => row.user_id));
     return { clinic, staff, profiles, services, documents, dashboard };
   }, [id]);
 
@@ -346,7 +341,7 @@ export function ClinicDetails() {
                 .filter(Boolean)
                 .join(', ') || '—'}
             </DetailRow>
-            <DetailRow term="Operating hours">{hoursText(clinic.operating_hours)}</DetailRow>
+            <DetailRow term="Operating hours">{formatOperatingHours(clinic.operating_hours)}</DetailRow>
             <DetailRow term="Submitted">{formatDateTime(clinic.submitted_at)}</DetailRow>
             <DetailRow term="Last reviewed">{formatDateTime(clinic.reviewed_at)}</DetailRow>
           </dl>

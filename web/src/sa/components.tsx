@@ -50,14 +50,12 @@ export function Panel({
   subtitle,
   actions,
   children,
-  footer,
   flush,
 }: {
   title?: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
-  footer?: ReactNode;
   flush?: boolean;
 }) {
   return (
@@ -72,7 +70,6 @@ export function Panel({
         </div>
       ) : null}
       <div className={`panel__body${flush ? ' panel__body--flush' : ''}`}>{children}</div>
-      {footer ? <div className="panel__foot">{footer}</div> : null}
     </section>
   );
 }
@@ -323,7 +320,7 @@ export function ConfirmDialog({
   );
 }
 
-export function Bars({ data, formatValue }: { data: TrendPoint[]; formatValue?: (value: number) => string }) {
+export function Bars({ data }: { data: TrendPoint[] }) {
   const max = Math.max(1, ...data.map((point) => point.value));
 
   return (
@@ -333,7 +330,7 @@ export function Bars({ data, formatValue }: { data: TrendPoint[]; formatValue?: 
         const height = Math.max(6, Math.round((point.value / max) * 148));
         return (
           <div className="bars__col" key={`${point.label}-${index}`}>
-            <span className="bars__value">{formatValue ? formatValue(point.value) : point.value}</span>
+            <span className="bars__value">{point.value}</span>
             <div
               className={`bars__track${isCurrent ? ' bars__track--current' : ''}`}
               style={{ height }}

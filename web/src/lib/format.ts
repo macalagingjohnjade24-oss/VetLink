@@ -70,14 +70,19 @@ export function label(value?: string | null): string {
   return STATUS_LABEL[value] ?? value.replace(/[._]/g, ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
+/** Opens/closes plus a human day count, for any clinic's operating_hours jsonb. */
+export function formatOperatingHours(
+  hours: { days?: number[]; opens?: string; closes?: string; note?: string } | null,
+): string {
+  if (!hours) return '—';
+  const opening = hours.opens && hours.closes ? `${hours.opens} – ${hours.closes}` : null;
+  const days = hours.days?.length ? `${hours.days.length} days a week` : null;
+  return [opening, days, hours.note].filter(Boolean).join(' · ') || '—';
+}
+
 /** `clinic.rejected` → "Clinic rejected" for the audit log. */
 export function humaniseAction(action: string): string {
   return action.replace(/[._]/g, ' ').replace(/^./, (c) => c.toUpperCase());
-}
-
-export function compactNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('en', { notation: value >= 10_000 ? 'compact' : 'standard' }).format(value);
 }
 
 function csvCell(value: string | number | null | undefined): string {

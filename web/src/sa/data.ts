@@ -169,15 +169,15 @@ export type ProvisionResult = {
 
 const message = (error: { message: string } | null) => (error ? new Error(error.message) : null);
 
-async function selectAll<T>(table: string, order: string, ascending = true): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select('*').order(order, { ascending });
+async function selectAll<T>(table: string, order: string): Promise<T[]> {
+  const { data, error } = await supabase.from(table).select('*').order(order, { ascending: true });
   const failure = message(error);
   if (failure) throw failure;
   return (data ?? []) as T[];
 }
 
 export function fetchClinics() {
-  return selectAll<Clinic>('clinics', 'created_at', true);
+  return selectAll<Clinic>('clinics', 'created_at');
 }
 
 export async function fetchClinic(id: string): Promise<Clinic | null> {
@@ -188,7 +188,39 @@ export async function fetchClinic(id: string): Promise<Clinic | null> {
 }
 
 export function fetchProfiles() {
-  return selectAll<Profile>('profiles', 'created_at', true);
+  return selectAll<Profile>('profiles', 'created_at');
+}
+
+/** Detail screens name a handful of accounts; they never download the directory. */
+export async function fetchProfilesByIds(ids: string[]): Promise<Profile[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return [];
+  const { data, error } = await supabase.from('profiles').select('*').in('id', unique);
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as Profile[];
+}
+
+/** Roles each announcement audience targets; `null` means everyone. */
+export const AUDIENCE_ROLES: Record<string, string[] | null> = {
+  all: null,
+  clinic_administrators: ['clinic_administrator'],
+  clinic_staff: ['veterinarian', 'receptionist', 'clinic_staff'],
+  pet_owners: ['pet_owner'],
+};
+
+/** Counting callers get a count, not every row. */
+export async function countProfiles(
+  options: { roles?: string[]; since?: Date | null; excludeId?: string | null } = {},
+): Promise<number> {
+  let query = supabase.from('profiles').select('id', { count: 'exact', head: true });
+  if (options.roles?.length) query = query.in('role', options.roles);
+  if (options.since) query = query.gte('created_at', options.since.toISOString());
+  if (options.excludeId) query = query.neq('id', options.excludeId);
+  const { count, error } = await query;
+  const failure = message(error);
+  if (failure) throw failure;
+  return count ?? 0;
 }
 
 export async function fetchProfile(id: string): Promise<Profile | null> {
@@ -199,7 +231,18 @@ export async function fetchProfile(id: string): Promise<Profile | null> {
 }
 
 export function fetchMemberships() {
-  return selectAll<Membership>('clinic_memberships', 'created_at', true);
+  return selectAll<Membership>('clinic_memberships', 'created_at');
+}
+
+export async function fetchMembershipsForUser(userId: string): Promise<Membership[]> {
+  const { data, error } = await supabase
+    .from('clinic_memberships')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as Membership[];
 }
 
 /** Memberships of one clinic only — detail screens never load the whole table. */

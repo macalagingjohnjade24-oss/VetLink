@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { relativeTime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchAnnouncements, fetchProfiles, sendAnnouncement } from '@/sa/data';
+import { AUDIENCE_ROLES, countProfiles, fetchAnnouncements, sendAnnouncement } from '@/sa/data';
 import {
   ConfirmDialog,
   ConsoleFooter,
@@ -35,19 +35,18 @@ export function SystemNotifications() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const state = useAsync(
-    () => Promise.all([fetchAnnouncements(), fetchProfiles()]).then(([announcements, profiles]) => ({ announcements, profiles })),
-    [],
-  );
+  const state = useAsync(() => fetchAnnouncements(), []);
 
-  const recipients = (state.data?.profiles ?? []).filter((profile) => {
-    if (profile.id === user?.id) return false;
-    if (audience === 'clinic_administrators') return profile.role === 'clinic_administrator';
-    if (audience === 'clinic_staff')
-      return ['veterinarian', 'receptionist', 'clinic_staff'].includes(profile.role);
-    if (audience === 'pet_owners') return profile.role === 'pet_owner';
-    return true;
-  }).length;
+  // A number is all this screen needs, so it asks the database to count.
+  const counts = useAsync(
+    () =>
+      countProfiles({
+        roles: AUDIENCE_ROLES[audience] ?? undefined,
+        excludeId: user?.id ?? null,
+      }),
+    [audience, user?.id],
+  );
+  const recipients = counts.data ?? 0;
 
   const send = async () => {
     if (title.trim().length < 4) {
@@ -67,6 +66,7 @@ export function SystemNotifications() {
       setBody('');
       setNotice(`Announcement delivered to ${result.recipients} account${result.recipients === 1 ? '' : 's'}.`);
       state.reload();
+      counts.reload();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -83,6 +83,9 @@ export function SystemNotifications() {
 
       {notice ? <Notice tone="success">{notice}</Notice> : null}
       {error && !confirming ? <Notice tone="error">{error}</Notice> : null}
+      {counts.error ? (
+        <Notice tone="error">Could not count the recipients: {counts.error}</Notice>
+      ) : null}
 
       <div className="grid grid--detail">
         <Panel title="New announcement" subtitle="Written to every matching account's notification list">
@@ -134,9 +137,9 @@ export function SystemNotifications() {
             <LoadingState rows={4} />
           ) : state.error ? (
             <ErrorState message={state.error} onRetry={state.reload} />
-          ) : state.data?.announcements.length ? (
+          ) : state.data?.length ? (
             <div className="stack--sm">
-              {state.data.announcements.map((announcement) => (
+              {state.data.map((announcement) => (
                 <div key={announcement.id} style={{ borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                   <p className="table__primary">{announcement.title}</p>
                   <p className="table__secondary" style={{ marginTop: 4 }}>

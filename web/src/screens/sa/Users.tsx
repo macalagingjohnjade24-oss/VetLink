@@ -6,6 +6,7 @@ import {
   fetchAuditForActor,
   fetchClinics,
   fetchMemberships,
+  fetchMembershipsForUser,
   fetchProfile,
   fetchProfiles,
   type Membership,
@@ -236,17 +237,12 @@ export function UserDetails() {
     if (!id) throw new Error('No user was selected.');
     const [profile, memberships, clinics, activity] = await Promise.all([
       fetchProfile(id),
-      fetchMemberships(),
+      fetchMembershipsForUser(id),
       fetchClinics(),
       fetchAuditForActor(id, 15),
     ]);
     if (!profile) throw new Error('That account no longer exists.');
-    return {
-      profile,
-      memberships: memberships.filter((row) => row.user_id === id),
-      clinics,
-      activity,
-    };
+    return { profile, memberships, clinics, activity };
   }, [id]);
 
   if (state.loading) {

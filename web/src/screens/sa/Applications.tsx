@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { formatDate, formatDateTime, fullName, label } from '@/lib/format';
+import { formatDate, formatDateTime, formatOperatingHours, fullName, label } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   applicationState,
@@ -11,12 +11,12 @@ import {
   fetchClinics,
   fetchMemberships,
   fetchProfiles,
+  fetchProfilesByIds,
   provisionClinicAdmin,
   reviewApplication,
   signedDocumentUrl,
   type ApplicationState,
   type ClinicDocument,
-  type OperatingHours,
 } from '@/sa/data';
 import {
   ConsoleFooter,
@@ -44,13 +44,6 @@ const TABS: { key: ApplicationState; label: string }[] = [
   { key: 'approved', label: 'Approved' },
   { key: 'rejected', label: 'Rejected' },
 ];
-
-function hoursText(hours: OperatingHours): string {
-  if (!hours) return '—';
-  const window = hours.opens && hours.closes ? `${hours.opens} – ${hours.closes}` : null;
-  const days = hours.days?.length ? `${hours.days.length} days a week` : null;
-  return [window, days, hours.note].filter(Boolean).join(' · ') || '—';
-}
 
 /** SA-03 — submitted clinic applications and their review state. */
 export function Applications() {
@@ -241,25 +234,21 @@ export function ApplicationReview() {
 
   const state = useAsync(async () => {
     if (!id) throw new Error('No application was selected.');
-    const [clinic, memberships, profiles, services, documents] = await Promise.all([
+    const [clinic, memberships, services, documents] = await Promise.all([
       fetchClinic(id),
       fetchClinicMemberships(id),
-      fetchProfiles(),
       fetchClinicServices(id),
       fetchClinicDocuments(id),
     ]);
     if (!clinic) throw new Error('That application no longer exists.');
-    return { clinic, memberships, profiles, services, documents };
+    const administrator = memberships.find((row) => row.staff_role === 'clinic_administrator');
+    const applicant = administrator
+      ? ((await fetchProfilesByIds([administrator.user_id]))[0] ?? null)
+      : null;
+    return { clinic, memberships, applicant, services, documents };
   }, [id]);
 
-  const applicant = (() => {
-    if (!state.data) return null;
-    const membership = state.data.memberships.find(
-      (row) => row.staff_role === 'clinic_administrator',
-    );
-    if (!membership) return null;
-    return state.data.profiles.find((row) => row.id === membership.user_id) ?? null;
-  })();
+  const applicant = state.data?.applicant ?? null;
 
   useEffect(() => {
     if (prefilled.current || !applicant) return;
@@ -503,7 +492,7 @@ export function ApplicationReview() {
                 .filter(Boolean)
                 .join(', ') || '—'}
             </DetailRow>
-            <DetailRow term="Operating hours">{hoursText(clinic.operating_hours)}</DetailRow>
+            <DetailRow term="Operating hours">{formatOperatingHours(clinic.operating_hours)}</DetailRow>
           </dl>
         </Panel>
 

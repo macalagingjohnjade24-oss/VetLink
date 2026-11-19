@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatDateTime, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchProfiles, fetchSettings, saveSettings, type PlatformSettings } from '@/sa/data';
+import { fetchProfile, fetchSettings, saveSettings, type PlatformSettings } from '@/sa/data';
 import {
   ConsoleFooter,
   ErrorState,
@@ -56,10 +56,11 @@ export function SystemSettings() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
-  const state = useAsync(
-    () => Promise.all([fetchSettings(), fetchProfiles()]).then(([settings, profiles]) => ({ settings, profiles })),
-    [],
-  );
+  const state = useAsync(async () => {
+    const settings = await fetchSettings();
+    const updatedBy = settings?.updated_by ? await fetchProfile(settings.updated_by) : null;
+    return { settings, updatedBy };
+  }, []);
 
   const settings = state.data?.settings ?? null;
 
@@ -147,7 +148,7 @@ export function SystemSettings() {
     );
   }
 
-  const updatedBy = state.data?.profiles.find((profile) => profile.id === settings.updated_by);
+  const updatedBy = state.data?.updatedBy;
 
   return (
     <div className="page">

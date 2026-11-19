@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { downloadCsv, formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchClinics, fetchPlatformDashboard, fetchProfiles } from '@/sa/data';
+import { countProfiles, fetchClinics, fetchPlatformDashboard } from '@/sa/data';
 import {
   Bars,
   ConsoleFooter,
@@ -39,13 +39,6 @@ function lastMonths(count: number): Month[] {
 /** SA-12 — platform-wide reporting with a real date filter and CSV export. */
 export function Reports() {
   const [range, setRange] = useState('90');
-  const state = useAsync(
-    () =>
-      Promise.all([fetchPlatformDashboard(), fetchClinics(), fetchProfiles()]).then(
-        ([dashboard, clinics, profiles]) => ({ dashboard, clinics, profiles }),
-      ),
-    [],
-  );
 
   const since = useMemo(() => {
     if (range === 'all') return null;
@@ -54,11 +47,18 @@ export function Reports() {
     return date;
   }, [range]);
 
+  const state = useAsync(
+    () =>
+      Promise.all([fetchPlatformDashboard(), fetchClinics(), countProfiles({ since })]).then(
+        ([dashboard, clinics, users]) => ({ dashboard, clinics, users }),
+      ),
+    [since],
+  );
+
   const data = state.data;
   const inRange = (value: string) => !since || new Date(value) >= since;
 
   const clinics = (data?.clinics ?? []).filter((clinic) => inRange(clinic.created_at));
-  const profiles = (data?.profiles ?? []).filter((profile) => inRange(profile.created_at));
   const approved = clinics.filter((clinic) => clinic.status === 'approved').length;
   const months = lastMonths(6);
   const trend = months.map((month) => ({
@@ -122,7 +122,7 @@ export function Reports() {
       <div className="grid grid--stats">
         <Stat label="Clinics registered" value={clinics.length} note="In the selected range" />
         <Stat label="Approved in range" value={approved} note={`${data.dashboard.clinics_total} on the platform`} />
-        <Stat label="Users registered" value={profiles.length} note={`${data.dashboard.users_total} in total`} />
+        <Stat label="Users registered" value={data.users} note={`${data.dashboard.users_total} in total`} />
         <Stat
           label="Pending applications"
           value={data.dashboard.applications_pending}
