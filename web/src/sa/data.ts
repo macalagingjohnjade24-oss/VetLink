@@ -179,6 +179,102 @@ export async function fetchClinics(): Promise<Clinic[]> {
   return (data ?? []) as Clinic[];
 }
 
+/**
+ * Names for the handful of clinics a page actually shows (audit entries,
+ * pending applications). An empty id list makes no request at all.
+ */
+export type ClinicOption = { id: string; clinic_name: string };
+
+export async function fetchClinicOptions(ids: string[]): Promise<ClinicOption[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return [];
+  const { data, error } = await supabase
+    .from('clinics')
+    .select('id, clinic_name')
+    .in('id', unique);
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as ClinicOption[];
+}
+
+export type PendingApplication = {
+  id: string;
+  clinic_name: string;
+  city: string | null;
+  province: string | null;
+  submitted_at: string | null;
+  review_notes: string | null;
+};
+
+/**
+ * SA-01's review queue: submitted, still pending, oldest first. Two narrow
+ * queries — one page plus a `head: true` count — replace scanning the table.
+ */
+export async function fetchPendingApplications(limit = 3): Promise<{
+  rows: PendingApplication[];
+  total: number;
+  awaitingInformation: number;
+}> {
+  const { data, error, count } = await supabase
+    .from('clinics')
+    .select('id, clinic_name, city, province, submitted_at, review_notes', { count: 'exact' })
+    .eq('status', 'pending')
+    .not('submitted_at', 'is', null)
+    .order('submitted_at', { ascending: true })
+    .limit(limit);
+
+  const failure = message(error);
+  if (failure) throw failure;
+
+  const { count: informationCount, error: informationError } = await supabase
+    .from('clinics')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .not('submitted_at', 'is', null)
+    .not('review_notes', 'is', null);
+
+  const informationFailure = message(informationError);
+  if (informationFailure) throw informationFailure;
+
+  return {
+    rows: (data ?? []) as PendingApplication[],
+    total: count ?? 0,
+    awaitingInformation: informationCount ?? 0,
+  };
+}
+
+/** Only the columns SA-12 displays, already narrowed to the chosen range. */
+export type ClinicRegistration = {
+  id: string;
+  reference: string | null;
+  clinic_name: string;
+  city: string | null;
+  province: string | null;
+  status: ClinicStatus;
+  created_at: string;
+};
+
+/**
+ * Registrations inside the selected reporting range. Only "All time" leaves
+ * `since` null, because the CSV export has to contain every registration.
+ */
+export async function fetchClinicRegistrations({
+  since,
+}: {
+  since: Date | null;
+}): Promise<ClinicRegistration[]> {
+  let query = supabase
+    .from('clinics')
+    .select('id, reference, clinic_name, city, province, status, created_at');
+
+  if (since) query = query.gte('created_at', since.toISOString());
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+  const failure = message(error);
+  if (failure) throw failure;
+  return (data ?? []) as ClinicRegistration[];
+}
+
 export async function fetchClinic(id: string): Promise<Clinic | null> {
   const { data, error } = await supabase.from('clinics').select('*').eq('id', id).maybeSingle();
   const failure = message(error);

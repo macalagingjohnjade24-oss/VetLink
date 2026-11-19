@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { formatDateTime, formatDate, humaniseAction, label } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchAuditActions, fetchAuditLog, fetchClinics } from '@/sa/data';
+import { fetchAuditActions, fetchAuditLog, fetchClinicOptions } from '@/sa/data';
 import {
   ConsoleFooter,
   EmptyState,
@@ -33,14 +33,14 @@ export function AuditLogs() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const state = useAsync(
-    () =>
-      Promise.all([
-        fetchAuditLog({ search: term, action, page, pageSize: PAGE_SIZE }),
-        fetchClinics(),
-      ]).then(([log, clinics]) => ({ ...log, clinics })),
-    [term, action, page],
-  );
+  const state = useAsync(async () => {
+    const log = await fetchAuditLog({ search: term, action, page, pageSize: PAGE_SIZE });
+    // Names only for the clinics on this page — never the whole directory.
+    const clinics = await fetchClinicOptions(
+      log.rows.map((entry) => entry.clinic_id).filter((id): id is string => id !== null),
+    );
+    return { ...log, clinics };
+  }, [term, action, page]);
 
   const actions = useAsync(() => fetchAuditActions(), []);
   const clinicName = (id: string | null) =>

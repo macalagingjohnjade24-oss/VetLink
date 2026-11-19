@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { downloadCsv, formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { countProfiles, fetchClinics, fetchPlatformDashboard } from '@/sa/data';
+import { countProfiles, fetchClinicRegistrations, fetchPlatformDashboard } from '@/sa/data';
 import {
   Bars,
   ConsoleFooter,
@@ -49,16 +49,17 @@ export function Reports() {
 
   const state = useAsync(
     () =>
-      Promise.all([fetchPlatformDashboard(), fetchClinics(), countProfiles({ since })]).then(
-        ([dashboard, clinics, users]) => ({ dashboard, clinics, users }),
-      ),
+      Promise.all([
+        fetchPlatformDashboard(),
+        fetchClinicRegistrations({ since }),
+        countProfiles({ since }),
+      ]).then(([dashboard, clinics, users]) => ({ dashboard, clinics, users })),
     [since],
   );
 
   const data = state.data;
-  const inRange = (value: string) => !since || new Date(value) >= since;
-
-  const clinics = (data?.clinics ?? []).filter((clinic) => inRange(clinic.created_at));
+  // The date range is applied in Postgres, so these rows are already in it.
+  const clinics = data?.clinics ?? [];
   const approved = clinics.filter((clinic) => clinic.status === 'approved').length;
   const months = lastMonths(6);
   const trend = months.map((month) => ({

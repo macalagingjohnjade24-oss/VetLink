@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate, formatTime, humaniseAction, relativeTime } from '@/lib/format';
 import {
-  fetchClinics,
+  fetchClinicOptions,
+  fetchPendingApplications,
   fetchPlatformDashboard,
   fetchRecentActivity,
 } from '@/sa/data';
@@ -22,13 +23,18 @@ import { Icon } from '@/ui/Icon';
 
 /** SA-01 — platform-wide statistics, growth and recent administrative activity. */
 export function AdminDashboard() {
-  const state = useAsync(
-    () =>
-      Promise.all([fetchPlatformDashboard(), fetchClinics(), fetchRecentActivity(6)]).then(
-        ([dashboard, clinics, activity]) => ({ dashboard, clinics, activity }),
-      ),
-    [],
-  );
+  const state = useAsync(async () => {
+    const [dashboard, applications, activity] = await Promise.all([
+      fetchPlatformDashboard(),
+      fetchPendingApplications(3),
+      fetchRecentActivity(6),
+    ]);
+    // Names for the clinics named in those six entries, not the whole directory.
+    const clinics = await fetchClinicOptions(
+      activity.map((entry) => entry.clinic_id).filter((id): id is string => id !== null),
+    );
+    return { dashboard, applications, activity, clinics };
+  }, []);
 
   if (state.loading) {
     return (
@@ -46,11 +52,9 @@ export function AdminDashboard() {
     );
   }
 
-  const { dashboard, clinics, activity } = state.data;
-  const pendingApplications = clinics.filter(
-    (clinic) => clinic.status === 'pending' && clinic.submitted_at,
-  );
-  const awaitingInformation = pendingApplications.filter((clinic) => clinic.review_notes).length;
+  const { dashboard, applications, activity, clinics } = state.data;
+  const pendingApplications = applications.rows;
+  const awaitingInformation = applications.awaitingInformation;
   const clinicName = (id: string | null) =>
     clinics.find((clinic) => clinic.id === id)?.clinic_name ?? 'Platform';
   const activePercent = dashboard.clinics_total
@@ -176,14 +180,14 @@ export function AdminDashboard() {
         <Panel
           title="Applications requiring attention"
           subtitle={
-            pendingApplications.length
-              ? `${pendingApplications.length} pending submission${pendingApplications.length === 1 ? '' : 's'}`
+            applications.total
+              ? `${applications.total} pending submission${applications.total === 1 ? '' : 's'}`
               : 'No pending submissions'
           }
         >
-          {pendingApplications.length ? (
+          {applications.total ? (
             <div className="stack--sm">
-              {pendingApplications.slice(0, 3).map((clinic) => (
+              {pendingApplications.map((clinic) => (
                 <div key={clinic.id} className="row row--between">
                   <div>
                     <p className="table__primary">{clinic.clinic_name}</p>
@@ -202,7 +206,7 @@ export function AdminDashboard() {
               ))}
               <Link to="/system-admin/applications" style={{ marginTop: 6 }}>
                 <span className="row" style={{ gap: 6, color: 'var(--brand)', fontWeight: 600 }}>
-                  View all {pendingApplications.length} pending applications
+                  View all {applications.total} pending applications
                   <Icon name="chevron-right" size={16} />
                 </span>
               </Link>
