@@ -1,0 +1,52 @@
+/* VetLink web console design tokens.
+   Values are measured from the Figma frames in page 13:3730 (CA-01, SA-01,
+   AUTH-01, and the shared authentication system sheet), not eyeballed. */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --brand-900: #5a0808;
+  --brand: #720b0b;
+  --brand-2: #8e2026;
+  --peach: #f4c5b9;
+  --peach-dark: #e9b4a6;
+  --peach-tint: #fcf0eb;
+  --orange: #ff6b00;
+
+  /* Surfaces and text */
+  --white: #ffffff;
+  --text: #1f2937;
+  --muted: #64748b;
+  --subtle: #b3b9c2;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --surface-muted: #f8fafc;
+
+  /* Status */
+  --success: #196b36;
+  --success-bg: #eaf6ee;
+  --warning: #87500d;
+  --warning-bg: #fff1df;
+  --danger: #ac2727;
+  --danger-bg: #fcecec;
+  --info: #3185d6;
+  --info-bg: #eaf2fb;
+
+  /* Layout — sidebar 256, header 80, 1120 content inside 1184 */
+  --sidebar-w: 256px;
+  --header-h: 80px;
+  --content-w: 1184px;
+  --gutter: 32px;
+
+  /* Radii — 8px controls, 10px cards, 12px buttons */
+  --r-control: 8px;
+  --r-card: 10px;
+  --r-button: 12px;
+  --r-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(31, 41, 55, 0.04), 0 4px 12px rgba(31, 41, 55, 0.04);
+  --shadow-raised: 0 8px 24px rgba(31, 41, 55, 0.12);
+  --ring: 0 0 0 3px rgba(114, 11, 11, 0.12);
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}

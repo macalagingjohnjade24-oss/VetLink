@@ -236,6 +236,9 @@ Run these **after** `0001`–`0003`:
    statistics functions.
 2. `migrations/0005_clinic_documents.sql` — the private `clinic-documents`
    bucket plus the clinic logo and attachment policies.
+3. `migrations/0006_platform_administration.sql` — the single
+   `platform_settings` row (SA-15), `send_platform_announcement()` (SA-14) and
+   the applicant notification for "request additional information".
 
 `0004` is additive: it never drops a table, a column or a policy the mobile app
 depends on. The only constraint it replaces is `profiles_role_check`, to add
@@ -270,6 +273,33 @@ and the Phase 3 screens exist.
 The role is written under a transaction-local `service_role` claim, because
 `protect_profile_role()` refuses role changes from every other caller — browser
 clients still cannot promote themselves.
+
+### System Administrator screens (Phase 3)
+
+All sixteen SA frames are implemented under `/system-admin`:
+
+| Screen | Route |
+| --- | --- |
+| SA-01 dashboard | `/system-admin` |
+| SA-02 clinic directory | `/system-admin/clinics` |
+| SA-03 registration requests | `/system-admin/applications` |
+| SA-04 review + SA-05 confirmation states | `/system-admin/applications/:id` |
+| SA-06 clinic accounts | `/system-admin/accounts` |
+| SA-07 clinic details | `/system-admin/clinics/:id` |
+| SA-08 platform users | `/system-admin/users` |
+| SA-09 user details | `/system-admin/users/:id` |
+| SA-10 roles & access | `/system-admin/roles` |
+| SA-11 monitoring | `/system-admin/monitoring` |
+| SA-12 reports | `/system-admin/reports` |
+| SA-13 audit logs | `/system-admin/audit` |
+| SA-14 notifications | `/system-admin/notifications` |
+| SA-15 system settings | `/system-admin/settings` |
+| SA-16 profile | `/system-admin/profile` |
+
+Every screen reads live Supabase rows through the policies in `0004`–`0006`;
+nothing is sample data. Where a design element would need infrastructure the
+project does not have — uptime history, error tracking, email/push delivery,
+editable role grants — the screen says so instead of simulating it.
 
 ### Environment
 

@@ -1,0 +1,26 @@
+{
+  "name": "vetlink-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "VetLink clinic staff and system administrator web console",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.9.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "~6.0.3",
+    "vite": "^7.1.12"
+  }
+}
