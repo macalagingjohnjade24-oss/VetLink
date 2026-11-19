@@ -5,13 +5,10 @@ import { useAsync } from '@/lib/useAsync';
 import {
   fetchAuditForActor,
   fetchClinics,
-  fetchClinicsByIds,
   fetchMembershipsForUser,
-  fetchMembershipsForUsers,
   fetchProfile,
-  fetchProfilesPage,
-  type Membership,
-  type Profile,
+  fetchPlatformUsersPage,
+  type PlatformUserRow,
 } from '@/sa/data';
 import {
   ConsoleFooter,
@@ -31,31 +28,32 @@ import { Button } from '@/ui/Button';
 
 const PAGE_SIZE = 12;
 
-type Row = {
-  profile: Profile;
-  membership: Membership | null;
-  clinicName: string;
+type Row = PlatformUserRow & {
   status: string;
   statusLabel: string;
   tone: 'success' | 'warning' | 'danger' | 'neutral';
 };
 
-function accountState(profile: Profile, membership: Membership | null): Pick<Row, 'status' | 'statusLabel' | 'tone'> {
-  if (profile.role === 'system_administrator') {
+function accountState(row: PlatformUserRow): Pick<Row, 'status' | 'statusLabel' | 'tone'> {
+  if (row.role === 'system_administrator') {
     return { status: 'platform', statusLabel: 'Platform admin', tone: 'neutral' };
   }
-  if (!membership) {
-    return profile.role === 'pet_owner'
+  if (!row.membership_status) {
+    return row.role === 'pet_owner'
       ? { status: 'owner', statusLabel: 'Pet owner', tone: 'neutral' }
       : { status: 'no_clinic', statusLabel: 'No clinic', tone: 'warning' };
   }
-  if (membership.status === 'active') {
+  if (row.membership_status === 'active') {
     return { status: 'active', statusLabel: 'Active', tone: 'success' };
   }
-  if (membership.status === 'invited') {
+  if (row.membership_status === 'invited') {
     return { status: 'invited', statusLabel: 'Invitation pending', tone: 'warning' };
   }
-  return { status: membership.status, statusLabel: label(membership.status), tone: 'danger' };
+  return {
+    status: row.membership_status,
+    statusLabel: label(row.membership_status),
+    tone: 'danger',
+  };
 }
 
 /** SA-08 — every account on the platform, clinic-scoped or not. */
@@ -63,6 +61,7 @@ export function PlatformUsers() {
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState('');
   const [role, setRole] = useState('all');
+  const [account, setAccount] = useState('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -73,35 +72,13 @@ export function PlatformUsers() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Postgres picks the page of accounts; only those rows' memberships and
-  // clinics are fetched afterwards.
-  const state = useAsync(async () => {
-    const { rows: profiles, total } = await fetchProfilesPage({
-      page,
-      pageSize: PAGE_SIZE,
-      search: term,
-      role,
-    });
-    const memberships = await fetchMembershipsForUsers(profiles.map((profile) => profile.id));
-    const clinics = await fetchClinicsByIds(memberships.map((row) => row.clinic_id));
-    return { profiles, total, memberships, clinics };
-  }, [page, term, role]);
+  // One RPC call: the join, the filters and the page all happen in Postgres.
+  const state = useAsync(
+    () => fetchPlatformUsersPage({ page, pageSize: PAGE_SIZE, search: term, role, account }),
+    [page, term, role, account],
+  );
 
-  const rows: Row[] = (state.data?.profiles ?? []).map((profile) => {
-    const membership =
-      state.data?.memberships.find(
-        (row) => row.user_id === profile.id && row.status !== 'revoked',
-      ) ?? null;
-    const clinic = membership
-      ? state.data?.clinics.find((row) => row.id === membership.clinic_id)
-      : null;
-    return {
-      profile,
-      membership,
-      clinicName: clinic?.clinic_name ?? '—',
-      ...accountState(profile, membership),
-    };
-  });
+  const rows: Row[] = (state.data?.rows ?? []).map((row) => ({ ...row, ...accountState(row) }));
   const total = state.data?.total ?? 0;
 
   return (
@@ -128,7 +105,7 @@ export function PlatformUsers() {
                 setSearch(value);
                 setPage(1);
               }}
-              placeholder="Name or email"
+              placeholder="Name, email or clinic"
               label="Search users"
             />
             <SelectField
@@ -146,6 +123,20 @@ export function PlatformUsers() {
                 { value: 'veterinarian', label: 'Veterinarian' },
                 { value: 'clinic_staff', label: 'Clinic staff' },
                 { value: 'system_administrator', label: 'System administrator' },
+              ]}
+            />
+            <SelectField
+              label="Account"
+              value={account}
+              onChange={(value) => {
+                setAccount(value);
+                setPage(1);
+              }}
+              options={[
+                { value: 'all', label: 'Any status' },
+                { value: 'active', label: 'Active' },
+                { value: 'invited', label: 'Invitation pending' },
+                { value: 'none', label: 'No clinic' },
               ]}
             />
           </div>
@@ -173,26 +164,28 @@ export function PlatformUsers() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.profile.id}>
+                    <tr key={row.id}>
                       <td>
-                        <Link className="linkish" to={`/system-admin/users/${row.profile.id}`}>
-                          {fullName(row.profile)}
+                        <Link className="linkish" to={`/system-admin/users/${row.id}`}>
+                          {fullName(row)}
                         </Link>
                         <p className="table__secondary">
-                          {row.membership ? row.membership.staff_role.replace(/_/g, ' ') : 'No membership'}
+                          {row.membership_role
+                            ? row.membership_role.replace(/_/g, ' ')
+                            : 'No membership'}
                         </p>
                       </td>
-                      <td>{row.profile.email ?? '—'}</td>
-                      <td>{row.clinicName}</td>
-                      <td>{label(row.profile.role)}</td>
+                      <td>{row.email ?? '—'}</td>
+                      <td>{row.clinic_name ?? '—'}</td>
+                      <td>{label(row.role)}</td>
                       <td>
                         <StatusBadge status={row.status} tone={row.tone}>
                           {row.statusLabel}
                         </StatusBadge>
                       </td>
-                      <td className="table__mono">{formatDate(row.profile.created_at)}</td>
+                      <td className="table__mono">{formatDate(row.created_at)}</td>
                       <td className="table__right">
-                        <Link to={`/system-admin/users/${row.profile.id}`}>
+                        <Link to={`/system-admin/users/${row.id}`}>
                           <Button size="sm" variant="outline">
                             Open
                           </Button>

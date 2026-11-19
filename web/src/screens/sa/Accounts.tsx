@@ -4,6 +4,7 @@ import { formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   fetchClinicAdministrators,
+  fetchClinicTeamCounts,
   fetchClinics,
   fetchProfilesByIds,
   setClinicStatus,
@@ -37,12 +38,13 @@ export function ClinicAccounts() {
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   const state = useAsync(async () => {
-    const [clinics, administrators] = await Promise.all([
+    const [clinics, administrators, teamCounts] = await Promise.all([
       fetchClinics(),
       fetchClinicAdministrators(),
+      fetchClinicTeamCounts(),
     ]);
     const profiles = await fetchProfilesByIds(administrators.map((row) => row.user_id));
-    return { clinics, administrators, profiles };
+    return { clinics, administrators, profiles, teamCounts };
   }, []);
 
   const run = async () => {
@@ -148,6 +150,7 @@ export function ClinicAccounts() {
                 <tr>
                   <th>Clinic</th>
                   <th>Administrator</th>
+                  <th>Active team</th>
                   <th>Status</th>
                   <th>Last reviewed</th>
                   <th className="table__right">Account actions</th>
@@ -165,6 +168,7 @@ export function ClinicAccounts() {
                       </p>
                     </td>
                     <td>{administratorOf(clinic.id)}</td>
+                    <td className="table__mono">{state.data?.teamCounts[clinic.id] ?? 0}</td>
                     <td>
                       <StatusBadge status={clinic.status} />
                     </td>

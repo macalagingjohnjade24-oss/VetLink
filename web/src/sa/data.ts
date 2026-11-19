@@ -179,15 +179,6 @@ export async function fetchClinics(): Promise<Clinic[]> {
   return (data ?? []) as Clinic[];
 }
 
-export async function fetchClinicsByIds(ids: string[]): Promise<Clinic[]> {
-  const unique = [...new Set(ids.filter(Boolean))];
-  if (!unique.length) return [];
-  const { data, error } = await supabase.from('clinics').select('*').in('id', unique);
-  const failure = message(error);
-  if (failure) throw failure;
-  return (data ?? []) as Clinic[];
-}
-
 export async function fetchClinic(id: string): Promise<Clinic | null> {
   const { data, error } = await supabase.from('clinics').select('*').eq('id', id).maybeSingle();
   const failure = message(error);
@@ -195,41 +186,53 @@ export async function fetchClinic(id: string): Promise<Clinic | null> {
   return (data ?? null) as Clinic | null;
 }
 
+export type PlatformUserRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  role: string;
+  created_at: string;
+  membership_status: string | null;
+  membership_role: string | null;
+  clinic_id: string | null;
+  clinic_name: string | null;
+};
+
 /**
- * One page of accounts. SA-08 lists users, so the page is cut in the database
- * instead of downloading the table and slicing it in the browser.
+ * One page of accounts, filtered and joined in Postgres (0007). The search
+ * covers name, email and clinic, which needs the membership join.
  */
-export async function fetchProfilesPage({
-  page,
-  pageSize,
-  search,
-  role,
-}: {
+export async function fetchPlatformUsersPage(params: {
   page: number;
   pageSize: number;
-  search?: string;
-  role?: string;
-}): Promise<{ rows: Profile[]; total: number }> {
-  const from = (page - 1) * pageSize;
-  let query = supabase.from('profiles').select('*', { count: 'exact' });
-
-  if (role && role !== 'all') query = query.eq('role', role);
-  if (search?.trim()) {
-    const term = search.trim().replace(/[,()*%]/g, ' ').trim();
-    if (term) {
-      query = query.or(
-        `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`,
-      );
-    }
-  }
-
-  const { data, error, count } = await query
-    .order('created_at', { ascending: true })
-    .range(from, from + pageSize - 1);
-
+  search: string;
+  role: string;
+  account: string;
+}): Promise<{ rows: PlatformUserRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('platform_users_page', {
+    p_search: params.search.trim() || null,
+    p_role: params.role,
+    p_account: params.account,
+    p_page: params.page,
+    p_page_size: params.pageSize,
+  });
   const failure = message(error);
   if (failure) throw failure;
-  return { rows: (data ?? []) as Profile[], total: count ?? 0 };
+  const payload = (data ?? {}) as { rows?: PlatformUserRow[]; total?: number };
+  return { rows: payload.rows ?? [], total: payload.total ?? 0 };
+}
+
+/** Active team size per clinic, aggregated in Postgres (0007). */
+export async function fetchClinicTeamCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('clinic_team_counts');
+  const failure = message(error);
+  if (failure) throw failure;
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { clinic_id: string; active_staff: number }[]) {
+    counts[row.clinic_id] = row.active_staff;
+  }
+  return counts;
 }
 
 /** Detail screens name a handful of accounts; they never download the directory. */
@@ -271,26 +274,13 @@ export async function fetchProfile(id: string): Promise<Profile | null> {
   return (data ?? null) as Profile | null;
 }
 
-/** One row per clinic that has an administrator — not the whole staff table. */
+/** Administrator memberships only — not the whole staff table. */
 export async function fetchClinicAdministrators(): Promise<Membership[]> {
   const { data, error } = await supabase
     .from('clinic_memberships')
     .select('*')
     .eq('staff_role', 'clinic_administrator')
     .neq('status', 'revoked')
-    .order('created_at', { ascending: true });
-  const failure = message(error);
-  if (failure) throw failure;
-  return (data ?? []) as Membership[];
-}
-
-export async function fetchMembershipsForUsers(ids: string[]): Promise<Membership[]> {
-  const unique = [...new Set(ids.filter(Boolean))];
-  if (!unique.length) return [];
-  const { data, error } = await supabase
-    .from('clinic_memberships')
-    .select('*')
-    .in('user_id', unique)
     .order('created_at', { ascending: true });
   const failure = message(error);
   if (failure) throw failure;

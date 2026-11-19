@@ -239,6 +239,9 @@ Run these **after** `0001`–`0003`:
 3. `migrations/0006_platform_administration.sql` — the single
    `platform_settings` row (SA-15), `send_platform_announcement()` (SA-14) and
    the applicant notification for "request additional information".
+4. `migrations/0007_platform_list_queries.sql` — `platform_users_page()`, the
+   paged account directory with role, account-state and clinic filters, and
+   `clinic_team_counts()`, the per-clinic active staff count.
 
 `0004` is additive: it never drops a table, a column or a policy the mobile app
 depends on. The only constraint it replaces is `profiles_role_check`, to add
