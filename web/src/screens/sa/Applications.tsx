@@ -4,12 +4,13 @@ import { formatDate, formatDateTime, formatOperatingHours, fullName, label } fro
 import { useAsync } from '@/lib/useAsync';
 import {
   applicationState,
+  fetchApplicationCounts,
+  fetchApplicationsPage,
   fetchClinic,
-  fetchClinicAdministrators,
   fetchClinicDocuments,
   fetchClinicMemberships,
   fetchClinicServices,
-  fetchClinics,
+  fetchClinicAdministrators,
   fetchProfilesByIds,
   provisionClinicAdmin,
   reviewApplication,
@@ -52,15 +53,15 @@ export function Applications() {
   const [page, setPage] = useState(1);
 
   const state = useAsync(async () => {
-    const [clinics, administrators] = await Promise.all([
-      fetchClinics(),
-      fetchClinicAdministrators(),
+    const [listing, counts] = await Promise.all([
+      fetchApplicationsPage({ state: tab, search, page, pageSize: PAGE_SIZE }),
+      fetchApplicationCounts(),
     ]);
+    const clinicIds = listing.rows.map((clinic) => clinic.id);
+    const administrators = await fetchClinicAdministrators(clinicIds);
     const profiles = await fetchProfilesByIds(administrators.map((row) => row.user_id));
-    return { clinics, administrators, profiles };
-  }, []);
-
-  const applications = (state.data?.clinics ?? []).filter((clinic) => clinic.submitted_at);
+    return { listing, counts, administrators, profiles };
+  }, [tab, search, page]);
 
   const applicantOf = (clinicId: string) => {
     const membership = state.data?.administrators.find((row) => row.clinic_id === clinicId);
@@ -68,19 +69,10 @@ export function Applications() {
     return state.data?.profiles.find((row) => row.id === membership.user_id) ?? null;
   };
 
-  const term = search.trim().toLowerCase();
-  const rows = applications.filter((clinic) => {
-    if (applicationState(clinic) !== tab) return false;
-    if (!term) return true;
-    const applicant = applicantOf(clinic.id);
-    return [clinic.clinic_name, clinic.reference, applicant ? fullName(applicant) : '']
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(term));
-  });
-
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const total = state.data?.listing.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const current = Math.min(page, pageCount);
-  const visible = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const visible = state.data?.listing.rows ?? [];
 
   return (
     <div className="page">
@@ -91,7 +83,7 @@ export function Applications() {
 
       <div className="chips">
         {TABS.map((item) => {
-          const count = applications.filter((clinic) => applicationState(clinic) === item.key).length;
+          const count = state.data?.counts[item.key] ?? 0;
           return (
             <button
               key={item.key}
@@ -110,7 +102,7 @@ export function Applications() {
       </div>
 
       <Panel
-        title={`${rows.length} application${rows.length === 1 ? '' : 's'}`}
+        title={`${total} application${total === 1 ? '' : 's'}`}
         subtitle={
           tab === 'pending'
             ? 'New submissions waiting for a first review.'
@@ -127,7 +119,7 @@ export function Applications() {
               setSearch(value);
               setPage(1);
             }}
-            placeholder="Clinic, reference or applicant"
+            placeholder="Clinic or reference"
             label="Search applications"
           />
         }
@@ -186,7 +178,7 @@ export function Applications() {
                 </tbody>
               </table>
             </div>
-            <Pager page={current} pageSize={PAGE_SIZE} total={rows.length} onPage={setPage} />
+            <Pager page={current} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
           </>
         ) : (
           <EmptyState
@@ -197,7 +189,7 @@ export function Applications() {
                 : `No ${TABS.find((item) => item.key === tab)?.label.toLowerCase()} applications`
             }
             description={
-              applications.length
+              Object.values(state.data?.counts ?? {}).some((count) => count > 0)
                 ? 'Switch tabs to see applications in other states.'
                 : 'Applications appear here as soon as a clinic submits the registration form.'
             }

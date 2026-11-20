@@ -179,6 +179,99 @@ export async function fetchClinics(): Promise<Clinic[]> {
   return (data ?? []) as Clinic[];
 }
 
+export type ApplicationPageQuery = {
+  state: ApplicationState;
+  search?: string;
+  page: number;
+  pageSize: number;
+};
+
+/**
+ * One page of submitted applications, filtered and counted on the server.
+ * The state mirrors applicationState(): pending = no review notes, information
+ * required = pending with notes, rejected = rejected, approved = any other status.
+ */
+export async function fetchApplicationsPage({
+  state,
+  search,
+  page,
+  pageSize,
+}: ApplicationPageQuery): Promise<{ rows: Clinic[]; total: number }> {
+  const from = (page - 1) * pageSize;
+  const term = search?.trim().replace(/[,()*%]/g, ' ').trim();
+  const stateFilter =
+    state === 'rejected'
+      ? 'status.eq.rejected'
+      : state === 'pending'
+        ? 'and(status.eq.pending,review_notes.is.null)'
+        : state === 'information_required'
+          ? 'and(status.eq.pending,review_notes.not.is.null)'
+          : 'status.not.in.(pending,rejected)';
+  // Applicant names live on profiles, linked to clinics via clinic_memberships.
+  const applicantClinicIds = term ? await clinicIdsForApplicantName(term) : [];
+  const searchFilter = term
+    ? [
+        `clinic_name.ilike.%${term}%`,
+        `reference.ilike.%${term}%`,
+        applicantClinicIds.length ? `id.in.(${applicantClinicIds.join(',')})` : null,
+      ]
+        .filter(Boolean)
+        .join(',')
+    : null;
+
+  const { data, error, count } = await supabase
+    .from('clinics')
+    .select('*', { count: 'exact' })
+    .not('submitted_at', 'is', null)
+    .or(stateFilter)
+    .or(searchFilter ?? 'id.not.is.null')
+    .order('submitted_at', { ascending: true })
+    .range(from, from + pageSize - 1);
+  const failure = message(error);
+  if (failure) throw failure;
+  return { rows: (data ?? []) as Clinic[], total: count ?? 0 };
+}
+
+/**
+ * Clinic ids whose administrator's first or last name matches the term.
+ * Two small lookups keep the clinic query itself a single filtered request.
+ */
+async function clinicIdsForApplicantName(term: string): Promise<string[]> {
+  // Each word must match the first or last name, so "System Administrator" finds a split name.
+  let peopleQuery = supabase.from('profiles').select('id').limit(200);
+  for (const word of term.split(/\s+/).filter(Boolean)) {
+    peopleQuery = peopleQuery.or(`first_name.ilike.%${word}%,last_name.ilike.%${word}%`);
+  }
+  const { data: people, error: peopleError } = await peopleQuery;
+  const peopleFailure = message(peopleError);
+  if (peopleFailure) throw peopleFailure;
+  const userIds = (people ?? []).map((person) => person.id as string);
+  if (!userIds.length) return [];
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from('clinic_memberships')
+    .select('clinic_id')
+    .eq('staff_role', 'clinic_administrator')
+    .neq('status', 'revoked')
+    .in('user_id', userIds);
+  const membershipFailure = message(membershipError);
+  if (membershipFailure) throw membershipFailure;
+  return (memberships ?? []).map((row) => row.clinic_id as string);
+}
+
+/** Per-state counts for the application tabs, computed on the server. */
+export async function fetchApplicationCounts(): Promise<Record<ApplicationState, number>> {
+  const count = (state: ApplicationState) =>
+    fetchApplicationsPage({ state, page: 1, pageSize: 1 }).then((result) => result.total);
+  const [pending, information_required, approved, rejected] = await Promise.all([
+    count('pending'),
+    count('information_required'),
+    count('approved'),
+    count('rejected'),
+  ]);
+  return { pending, information_required, approved, rejected };
+}
+
 /**
  * Names for the handful of clinics a page actually shows (audit entries,
  * pending applications). An empty id list makes no request at all.
@@ -371,13 +464,15 @@ export async function fetchProfile(id: string): Promise<Profile | null> {
 }
 
 /** Administrator memberships only — not the whole staff table. */
-export async function fetchClinicAdministrators(): Promise<Membership[]> {
-  const { data, error } = await supabase
+export async function fetchClinicAdministrators(clinicIds?: string[]): Promise<Membership[]> {
+  if (clinicIds && clinicIds.length === 0) return [];
+  let query = supabase
     .from('clinic_memberships')
     .select('*')
     .eq('staff_role', 'clinic_administrator')
-    .neq('status', 'revoked')
-    .order('created_at', { ascending: true });
+    .neq('status', 'revoked');
+  if (clinicIds) query = query.in('clinic_id', clinicIds);
+  const { data, error } = await query.order('created_at', { ascending: true });
   const failure = message(error);
   if (failure) throw failure;
   return (data ?? []) as Membership[];
