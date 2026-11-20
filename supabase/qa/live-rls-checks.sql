@@ -99,7 +99,7 @@ select pg_temp.reset_user();
 -- Skip only the protect_objects_delete trigger; RLS still applies to the authenticated role.
 do $$
 begin
-  set session_replication_role = replica;
+  set local session_replication_role = replica;
   if current_setting('session_replication_role') <> 'replica' then
     raise exception 'Trigger bypass not set: session_replication_role is %', current_setting('session_replication_role');
   end if;
@@ -121,7 +121,7 @@ select pg_temp.reset_user();
 
 do $$
 begin
-  set session_replication_role = origin;
+  set local session_replication_role = origin;
   if current_setting('session_replication_role') <> 'origin' then
     raise exception 'Trigger bypass not reset: session_replication_role is %', current_setting('session_replication_role');
   end if;
