@@ -24,6 +24,8 @@ export type ConsoleUser = {
   clinicReference: string | null;
   membershipStatus: string | null;
   profileComplete: boolean;
+  /** True when the signed-in user has at least one verified TOTP factor. Only loaded for system administrators; false otherwise. */
+  mfaEnrolled: boolean;
 };
 
 type ProfileRow = {
@@ -82,8 +84,13 @@ async function loadConsoleUser(): Promise<{ user: ConsoleUser | null; blocked: b
     return { user: null, blocked: profile.role === 'pet_owner' };
   }
 
+  let mfaEnrolled = false;
   let membership: MembershipRow | null = null;
-  if (profile.role !== 'system_administrator') {
+  if (profile.role === 'system_administrator') {
+    const { data: factorData, error: factorError } = await supabase.auth.mfa.listFactors();
+    if (factorError) throw new Error(factorError.message);
+    mfaEnrolled = (factorData?.totp ?? []).some((factor) => factor.status === 'verified');
+  } else {
     const { data } = await supabase
       .from('clinic_memberships')
       .select('clinic_id, staff_role, status, clinics(clinic_name, reference)')
@@ -110,6 +117,7 @@ async function loadConsoleUser(): Promise<{ user: ConsoleUser | null; blocked: b
       clinicReference: membership?.clinics?.reference ?? null,
       membershipStatus: membership?.status ?? null,
       profileComplete: Boolean(profile.first_name && profile.last_name),
+      mfaEnrolled,
     },
   };
 }

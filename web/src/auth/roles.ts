@@ -40,3 +40,9 @@ export const ROLE_SCOPE: Record<ConsoleRole, string> = {
   clinic_staff: 'Limited access',
   system_administrator: 'MFA protected',
 };
+
+/** Header scope line. System administrators see live MFA status instead of a static label. */
+export function scopeLabel(role: ConsoleRole, mfaEnrolled: boolean): string {
+  if (role === 'system_administrator') return mfaEnrolled ? 'MFA protected' : 'MFA not enrolled';
+  return ROLE_SCOPE[role];
+}

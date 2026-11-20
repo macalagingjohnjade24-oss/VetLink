@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ROLE_LABEL, ROLE_SCOPE } from '@/auth/roles';
+import { ROLE_LABEL, scopeLabel } from '@/auth/roles';
 import { useAuth, type ConsoleUser } from '@/auth/AuthProvider';
 import { NAV, ROLE_NOTE } from '@/shell/nav';
 import { Icon } from '@/ui/Icon';
@@ -102,7 +102,7 @@ export function AppShell({ user, children }: Props) {
           <div className="topbar__actions">
             <span className="topbar__scope">
               <Icon name="shield" size={20} />
-              {ROLE_SCOPE[user.role]}
+              {scopeLabel(user.role, user.mfaEnrolled)}
             </span>
             <button type="button" className="icon-button" aria-label="Notifications" disabled>
               <Icon name="bell" size={22} />
