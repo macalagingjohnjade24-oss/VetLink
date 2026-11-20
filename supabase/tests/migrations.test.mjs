@@ -134,6 +134,7 @@ test('the migrations listed in the harness are the ones on disk', async () => {
     '0005_clinic_documents.sql',
     '0006_platform_administration.sql',
     '0007_platform_list_queries.sql',
+    '0008_clinic_staff_permissions.sql',
   ]);
 });
 
