@@ -160,8 +160,8 @@ export function RolesAndAccess() {
   return (
     <div className="page">
       <PageHeader
-        title="Roles and access management"
-        subtitle="What each VetLink role can reach, as enforced by row-level security and the Edge Functions."
+        title="Roles and access reference"
+        subtitle="Reference documentation of intended access. It is not read from the live database."
         actions={
           <Button variant="outline" onClick={exportMatrix}>
             Export matrix
@@ -170,9 +170,11 @@ export function RolesAndAccess() {
       />
 
       <Notice tone="info">
-        This matrix documents the policies in <strong>supabase/migrations</strong> and the two Edge
-        Functions. It is deliberately not editable: <strong>profiles.role</strong> is written only by
-        the service role, so no browser session — including this one — can grant itself access.
+        <strong>Reference only.</strong> The matrix below is static text written by hand from the
+        policies in <strong>supabase/migrations</strong> and the two Edge Functions. It does not reflect
+        live permissions and will not update if policies change. The enforced access is defined by the
+        database policies. <strong>profiles.role</strong> is written only by the service role, so no browser
+        session, including this one, can grant itself access.
       </Notice>
 
       <div className="grid grid--two">
@@ -205,8 +207,8 @@ export function RolesAndAccess() {
       </div>
 
       <Panel
-        title="Permission matrix"
-        subtitle="Limited = the policy allows it, but that role's console UI does not offer it."
+        title="Permission matrix (reference)"
+        subtitle="Hand-written reference. Limited = the policy allows it, but that role's console UI does not offer it."
         flush
       >
         <div className="table-wrap">

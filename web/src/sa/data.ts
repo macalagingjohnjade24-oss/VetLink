@@ -583,12 +583,25 @@ export async function fetchRecentActivity(limit = 6): Promise<AuditEntry[]> {
   return (data ?? []) as AuditEntry[];
 }
 
+/**
+ * Every distinct audit action. Pages through the whole log in fixed-size
+ * ranges so the filter is never limited to a sample of recent rows.
+ */
 export async function fetchAuditActions(): Promise<string[]> {
-  const { data, error } = await supabase.from('platform_audit_log').select('action').limit(500);
-  const failure = message(error);
-  if (failure) throw failure;
+  const pageSize = 1000;
   const actions = new Set<string>();
-  for (const row of (data ?? []) as { action: string }[]) actions.add(row.action);
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('platform_audit_log')
+      .select('action')
+      .order('action', { ascending: true })
+      .range(from, from + pageSize - 1);
+    const failure = message(error);
+    if (failure) throw failure;
+    const rows = (data ?? []) as { action: string }[];
+    for (const row of rows) actions.add(row.action);
+    if (rows.length < pageSize) break;
+  }
   return [...actions].sort();
 }
 
@@ -655,12 +668,18 @@ export async function saveSettings(
   if (failure) throw failure;
   if (!data) throw new Error('The platform settings row is missing (apply migration 0006).');
 
-  await supabase.rpc('write_audit_log', {
+  const { error: auditError } = await supabase.rpc('write_audit_log', {
     p_action: 'platform.settings_updated',
     p_entity_type: 'platform',
     p_clinic_id: null,
     p_details: patch,
   });
+  if (auditError) {
+    // The settings row is already saved; say so, so the admin does not retry blindly.
+    throw new Error(
+      `The settings were saved, but the audit entry could not be recorded (${auditError.message}). Check the audit log before relying on this change.`,
+    );
+  }
 
   return data as PlatformSettings;
 }
@@ -761,6 +780,18 @@ export async function updateOwnProfile(
   const { error } = await supabase.from('profiles').update(patch).eq('id', id);
   const failure = message(error);
   if (failure) throw failure;
+}
+
+/**
+ * Re-checks the current password before a password change. A password grant
+ * sends no email and does not touch roles or enrolled MFA factors.
+ */
+export async function verifyCurrentPassword(email: string, currentPassword: string): Promise<void> {
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  });
+  if (error) throw new Error('The current password is not correct.');
 }
 
 export async function changePassword(password: string): Promise<void> {

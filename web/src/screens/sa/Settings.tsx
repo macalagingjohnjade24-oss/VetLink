@@ -244,8 +244,9 @@ export function SystemSettings() {
                 <span>
                   Maintenance mode
                   <p className="stat__note" style={{ marginTop: 4 }}>
-                    Recorded for the platform. The mobile app does not read this flag yet, so it does
-                    not block bookings on its own.
+                    Informational only. This flag is stored and audited, but it does not block bookings
+                    or any other workflow. Enforcement would need changes to the Pet Owner app and is not
+                    yet implemented.
                   </p>
                 </span>
               </label>

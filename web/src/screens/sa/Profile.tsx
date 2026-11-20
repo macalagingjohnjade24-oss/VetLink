@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
-import { ROLE_LABEL, ROLE_SCOPE } from '@/auth/roles';
+import { ROLE_LABEL, scopeLabel } from '@/auth/roles';
 import { supabase } from '@/lib/supabase';
 import { formatDateTime, initials } from '@/lib/format';
-import { changePassword, updateOwnProfile } from '@/sa/data';
+import { changePassword, updateOwnProfile, verifyCurrentPassword } from '@/sa/data';
 import {
   ConfirmDialog,
   ConsoleFooter,
@@ -29,6 +29,7 @@ export function AdminProfile() {
   const [savingDetails, setSavingDetails] = useState(false);
 
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [passwordNotice, setPasswordNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(
     null,
@@ -75,6 +76,10 @@ export function AdminProfile() {
   };
 
   const savePassword = async () => {
+    if (!currentPassword) {
+      setPasswordNotice({ tone: 'error', text: 'Enter your current password.' });
+      return;
+    }
     if (password.length < 8) {
       setPasswordNotice({ tone: 'error', text: 'Use at least eight characters.' });
       return;
@@ -85,7 +90,9 @@ export function AdminProfile() {
     }
     setSavingPassword(true);
     try {
+      await verifyCurrentPassword(user.email, currentPassword);
       await changePassword(password);
+      setCurrentPassword('');
       setPassword('');
       setConfirmation('');
       setPasswordNotice({ tone: 'success', text: 'Your password was changed.' });
@@ -109,7 +116,7 @@ export function AdminProfile() {
     <div className="page">
       <PageHeader
         title="My profile"
-        subtitle={`${ROLE_LABEL[user.role]} · ${ROLE_SCOPE[user.role]}`}
+        subtitle={`${ROLE_LABEL[user.role]} · ${scopeLabel(user.role, user.mfaEnrolled)}`}
       />
 
       <div className="grid grid--detail">
@@ -179,7 +186,9 @@ export function AdminProfile() {
               </dd>
               <dt>MFA</dt>
               <dd>
-                Not enrolled — enable it in Supabase Authentication before production launch.
+                {user.mfaEnrolled
+                  ? 'Enrolled — authenticator app (TOTP) verified'
+                  : 'MFA not enrolled'}
               </dd>
             </dl>
             <div className="row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
@@ -191,6 +200,13 @@ export function AdminProfile() {
 
           <Panel title="Change password" subtitle="At least eight characters">
             <div className="stack--sm" style={{ display: 'grid', gap: 12 }}>
+              <Input
+                label="Current password"
+                revealable
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                autoComplete="current-password"
+              />
               <Input
                 label="New password"
                 revealable
@@ -210,7 +226,7 @@ export function AdminProfile() {
                 <Button
                   onClick={() => void savePassword()}
                   loading={savingPassword}
-                  disabled={!password || !confirmation}
+                  disabled={!currentPassword || !password || !confirmation}
                 >
                   Update password
                 </Button>
