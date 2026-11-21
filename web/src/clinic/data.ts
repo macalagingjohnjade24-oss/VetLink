@@ -101,7 +101,7 @@ export type TeamMember = {
 
 // One literal, not a concatenation: supabase-js only infers the embedded
 // `pets(...)` shape when the select string is a single literal type.
-const APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,reason_for_visit,cancellation_requested,reschedule_requested,created_at,updated_at,pets(pet_name)' as const;
+const APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,reason_for_visit,cancellation_requested,reschedule_requested,created_at,updated_at,pets!appointments_pet_id_fkey(pet_name)' as const;
 
 function failure(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -144,6 +144,49 @@ export async function fetchClinicSchedule(
     .order('appointment_time', { ascending: true });
   failure(error);
   return (data ?? []) as unknown as ClinicAppointment[];
+}
+
+/**
+ * The columns AM-05's calendar reads. The vet is whichever assignment the
+ * booking carries; the two columns exist for historical reasons, so the screen
+ * resolves `assigned_vet_user_id ?? veterinarian_id` exactly like AM-02.
+ */
+export type CalendarAppointment = {
+  id: string;
+  reference: string | null;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  owner_name: string | null;
+  service_name: string | null;
+  assigned_vet_user_id: string | null;
+  veterinarian_id: string | null;
+  pets: { pet_name: string | null } | null;
+};
+
+const CALENDAR_COLUMNS =
+  'id,reference,appointment_date,appointment_time,status,owner_name,service_name,assigned_vet_user_id,veterinarian_id,pets!appointments_pet_id_fkey(pet_name)' as const;
+
+/**
+ * Every booking dated inside the range, earliest first. Both dates are
+ * inclusive `YYYY-MM-DD` values, and the appointments policy still decides
+ * which rows this account may see.
+ */
+export async function fetchClinicCalendar(
+  clinicId: string,
+  from: string,
+  to: string,
+): Promise<CalendarAppointment[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(CALENDAR_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .gte('appointment_date', from)
+    .lte('appointment_date', to)
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true });
+  failure(error);
+  return (data ?? []) as unknown as CalendarAppointment[];
 }
 
 /** Requests still waiting on a decision, longest wait first so nothing is missed. */
@@ -227,7 +270,7 @@ export type ManagedAppointment = {
   pets: { pet_name: string | null } | null;
 };
 
-const MANAGED_APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,created_at,updated_at,pets(pet_name)' as const;
+const MANAGED_APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,created_at,updated_at,pets!appointments_pet_id_fkey(pet_name)' as const;
 
 export type AppointmentFilters = {
   /** `YYYY-MM-DD`, or '' for every date. */
@@ -386,7 +429,7 @@ export async function fetchRecentOwnerRegistrations(
 ): Promise<OwnerRegistration[]> {
   const { data, error } = await supabase
     .from('appointments')
-    .select('owner_id,owner_name,contact,created_at,pets(pet_name)')
+    .select('owner_id,owner_name,contact,created_at,pets!appointments_pet_id_fkey(pet_name)')
     .eq('clinic_id', clinicId)
     .order('created_at', { ascending: true });
   failure(error);
@@ -426,7 +469,7 @@ export type ReportAppointment = {
   pets: { pet_name: string | null } | null;
 };
 
-const REPORT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_id,owner_name,pet_id,service_name,created_at,pets(pet_name)' as const;
+const REPORT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_id,owner_name,pet_id,service_name,created_at,pets!appointments_pet_id_fkey(pet_name)' as const;
 
 /**
  * Bookings whose visit date is inside the range. The filter runs in Postgres,

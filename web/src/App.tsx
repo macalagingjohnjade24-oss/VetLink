@@ -39,6 +39,7 @@ import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
 import { AppointmentManagement } from '@/screens/am/AppointmentManagement';
 import { AppointmentRequests } from '@/screens/am/AppointmentRequests';
 import { AppointmentsDashboard } from '@/screens/am/AppointmentsDashboard';
+import { ScheduleCalendar } from '@/screens/am/ScheduleCalendar';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -164,6 +165,7 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments', element: <AppointmentsDashboard /> },
   { path: '/appointments/management', element: <AppointmentManagement /> },
   { path: '/appointments/requests', element: <AppointmentRequests /> },
+  { path: '/appointments/calendar', element: <ScheduleCalendar /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */
