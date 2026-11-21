@@ -80,6 +80,8 @@ function ServiceForm({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    // Enter in a field can submit again while the first save is in flight.
+    if (saving) return;
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
