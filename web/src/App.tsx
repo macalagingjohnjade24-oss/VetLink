@@ -23,6 +23,7 @@ import { RolesAndAccess } from '@/screens/sa/Roles';
 import { SystemSettings } from '@/screens/sa/Settings';
 import { PlatformUsers, UserDetails } from '@/screens/sa/Users';
 import { ClinicDashboard } from '@/screens/ca/ClinicDashboard';
+import { ClinicNotifications } from '@/screens/ca/ClinicNotifications';
 import { ClinicPermissions } from '@/screens/ca/ClinicPermissions';
 import { ClinicProfile } from '@/screens/ca/ClinicProfile';
 import { ClinicReports } from '@/screens/ca/ClinicReports';
@@ -108,7 +109,7 @@ function SystemAdministratorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** CA-01 – CA-10. CA-11 – CA-13 still render their SectionPage notice. */
+/** CA-01 – CA-12. CA-11 and CA-13 still render their SectionPage notice. */
 const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin', element: <ClinicDashboard /> },
   { path: '/clinic-admin/profile', element: <ClinicProfile /> },
@@ -122,6 +123,7 @@ const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin/staff/:id/edit', element: <ClinicStaffEdit /> },
   { path: '/clinic-admin/permissions', element: <ClinicPermissions /> },
   { path: '/clinic-admin/reports', element: <ClinicReports /> },
+  { path: '/clinic-admin/notifications', element: <ClinicNotifications /> },
 ];
 
 /** A clinic workspace belongs to the clinic's administrator, not its staff. */
