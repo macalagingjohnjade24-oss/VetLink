@@ -10,17 +10,23 @@ const otherClinic = 'c0000000-0000-4000-8000-000000000099';
 const users = {
   vet: { id: 'a0000000-0000-4000-8000-000000000002', email: 'qa-vet@qa-vetlink.invalid' },
   reception: { id: 'a0000000-0000-4000-8000-000000000003', email: 'qa-reception@qa-vetlink.invalid' },
+  staff: { id: 'a0000000-0000-4000-8000-000000000004', email: 'qa-staff@qa-vetlink.invalid' },
+  admin: { id: 'a0000000-0000-4000-8000-000000000005', email: 'qa-admin@qa-vetlink.invalid' },
 };
 const svc = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 const pdf = { 'content-type': 'application/pdf', 'x-upsert': 'true' };
 const ownVet = `${clinic}/api-vet.pdf`;
 const ownReception = `${clinic}/api-reception.pdf`;
+const ownStaff = `${clinic}/api-staff.pdf`;
+const ownAdmin = `${clinic}/api-admin.pdf`;
 const otherObj = `${otherClinic}/api-other.pdf`;
-const allObjects = [ownVet, ownReception, otherObj];
+const allObjects = [ownVet, ownReception, ownStaff, ownAdmin, otherObj];
 const expected = {
   vet_api_delete_own: 'rows=1',
   vet_api_delete_other_clinic: 'rows=0',
   reception_api_delete_own: 'rows=0',
+  staff_api_delete_own: 'rows=0',
+  admin_api_delete_own: 'rows=0',
 };
 const results = [];
 
@@ -54,16 +60,21 @@ for (const role of Object.keys(users)) {
 }
 const vetToken = await signIn(users.vet.email, passwords.vet);
 const receptionToken = await signIn(users.reception.email, passwords.reception);
+const staffToken = await signIn(users.staff.email, passwords.staff);
+const adminToken = await signIn(users.admin.email, passwords.admin);
 
 // Clear leftovers from a previous run before seeding.
 for (const name of allObjects) await removeAsService(name);
 
 // Setup uses the service role for the objects the staff members do not upload
-// themselves. The receptionist cannot upload under 0008 (only veterinarians may),
-// so their own-clinic object is seeded here and their delete is still tested.
+// themselves. Under 0008 only veterinarians may write, so the receptionist,
+// limited-staff and administrator objects are seeded here and their deletes are
+// still tested.
 const seeds = [
   ['seed_other_clinic', otherObj],
   ['seed_reception_own', ownReception],
+  ['seed_staff_own', ownStaff],
+  ['seed_admin_own', ownAdmin],
 ];
 for (const [label, name] of seeds) {
   const r = await call('POST', objectPath(name), { ...svc, ...pdf }, 'QA');
@@ -78,6 +89,8 @@ const checks = [
   ['vet_api_delete_own', 'delete_vet_own', () => remove(vetToken, ownVet), ownVet],
   ['vet_api_delete_other_clinic', 'delete_vet_other_clinic', () => remove(vetToken, otherObj), otherObj],
   ['reception_api_delete_own', 'delete_reception_own', () => remove(receptionToken, ownReception), ownReception],
+  ['staff_api_delete_own', 'delete_staff_own', () => remove(staffToken, ownStaff), ownStaff],
+  ['admin_api_delete_own', 'delete_admin_own', () => remove(adminToken, ownAdmin), ownAdmin],
 ];
 for (const [key, label, act, name] of checks) {
   const r = await act();
