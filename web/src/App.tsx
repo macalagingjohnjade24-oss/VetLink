@@ -23,6 +23,7 @@ import { RolesAndAccess } from '@/screens/sa/Roles';
 import { SystemSettings } from '@/screens/sa/Settings';
 import { PlatformUsers, UserDetails } from '@/screens/sa/Users';
 import { ClinicDashboard } from '@/screens/ca/ClinicDashboard';
+import { ClinicProfile } from '@/screens/ca/ClinicProfile';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -101,6 +102,7 @@ function SystemAdministratorOnly({ children }: { children: ReactNode }) {
 /** CA-01 – CA-02. Later Phase 4 screens still render their SectionPage notice. */
 const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin', element: <ClinicDashboard /> },
+  { path: '/clinic-admin/profile', element: <ClinicProfile /> },
 ];
 
 /** A clinic workspace belongs to the clinic's administrator, not its staff. */
