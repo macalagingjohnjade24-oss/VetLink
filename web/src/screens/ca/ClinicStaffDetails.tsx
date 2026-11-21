@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useAsync } from '@/lib/useAsync';
 import { formatDate, fullName, initials, label } from '@/lib/format';
 import { fetchClinicStaffMember, updateClinicStaffMembership } from '@/clinic/staff';
+import { clinicRoleSummary } from '@/clinic/roles';
 import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import {
   ConfirmDialog,
@@ -16,18 +17,6 @@ import {
   StatusBadge,
 } from '@/sa/components';
 import { Button } from '@/ui/Button';
-
-/** What each clinic role can reach, mirroring the 0008 permission matrix in words. */
-const ROLE_ACCESS: Record<string, string> = {
-  clinic_administrator:
-    'Full clinic administration: profile, services, staff, appointments and clinic reports. Clinical records stay with veterinarians.',
-  receptionist:
-    'Appointment management plus owner and pet contact details. No medical or vaccination record editing.',
-  veterinarian:
-    'Assigned appointments, patient history, medical records and vaccinations for this clinic.',
-  clinic_staff:
-    'Assigned tasks and limited pet details through the staff RPCs. Read-only everywhere else.',
-};
 
 /** CA-08 — one team member, from the clinic's point of view. */
 export function ClinicStaffDetails() {
@@ -204,7 +193,7 @@ export function ClinicStaffDetails() {
 
       <Panel title="Assigned permissions" subtitle="Determined by the membership role">
         <p className="muted" style={{ lineHeight: 1.6 }}>
-          {ROLE_ACCESS[member.staff_role] ?? 'No clinic permissions are granted to this role.'}
+          {clinicRoleSummary(member.staff_role)}
         </p>
         <p className="stat__note" style={{ marginTop: 12 }}>
           Permissions are enforced by row-level security and the clinic RPCs. Role and status

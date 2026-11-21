@@ -175,6 +175,41 @@ export async function fetchRecentAppointmentActivity(
   return (data ?? []) as unknown as ClinicAppointment[];
 }
 
+/**
+ * The appointment columns CA-10 aggregates. Pet and owner ids stay in the row
+ * so distinct patients and owners can be counted without loading either table.
+ */
+export type ReportAppointment = {
+  id: string;
+  reference: string | null;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  owner_id: string;
+  owner_name: string | null;
+  pet_id: string;
+  service_name: string | null;
+  created_at: string;
+  pets: { pet_name: string | null } | null;
+};
+
+const REPORT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_id,owner_name,pet_id,service_name,created_at,pets(pet_name)' as const;
+
+/**
+ * Bookings whose visit date is inside the range. The filter runs in Postgres,
+ * and the appointments policy still scopes every row to this clinic.
+ */
+export async function fetchClinicAppointmentsForReport(
+  clinicId: string,
+  since: string | null,
+): Promise<ReportAppointment[]> {
+  const base = supabase.from('appointments').select(REPORT_COLUMNS).eq('clinic_id', clinicId);
+  const filtered = since ? base.gte('appointment_date', since) : base;
+  const { data, error } = await filtered.order('appointment_date', { ascending: false });
+  failure(error);
+  return (data ?? []) as unknown as ReportAppointment[];
+}
+
 /** The clinic's own team: memberships plus the colleague profiles RLS allows. */
 export async function fetchClinicTeam(clinicId: string): Promise<TeamMember[]> {
   const { data, error } = await supabase

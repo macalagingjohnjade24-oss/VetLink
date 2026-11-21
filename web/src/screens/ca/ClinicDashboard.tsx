@@ -375,15 +375,32 @@ export function ClinicDashboard() {
                 Manage clinic services
               </Button>
             </Link>
-            <Button variant="outline" block onClick={exportSchedule} disabled={!schedule.length}>
-              Export today's schedule
-            </Button>
+            <Link to="/clinic-admin/staff">
+              <Button variant="outline" block>
+                Manage staff and roles
+              </Button>
+            </Link>
+            <Link to="/clinic-admin/permissions">
+              <Button variant="outline" block>
+                Review staff permissions
+              </Button>
+            </Link>
+            <Link to="/clinic-admin/reports">
+              <Button variant="outline" block>
+                Open clinic reports
+              </Button>
+            </Link>
+            <Link to="/clinic-admin/notifications">
+              <Button variant="outline" block>
+                Open clinic notifications
+              </Button>
+            </Link>
             <Button variant="ghost" block onClick={state.reload}>
               Reload live data
             </Button>
             <p className="stat__note" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <Icon name="shield" size={16} />
-              Staff management, permissions and reports are the next Phase 4 screens; this
+              Import / export and clinic settings are the remaining Phase 4 screens; this
               dashboard only links to pages that already work.
             </p>
           </div>

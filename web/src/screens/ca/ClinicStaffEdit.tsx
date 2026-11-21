@@ -9,6 +9,7 @@ import {
   updateClinicStaffMembership,
   type EditableStaffRole,
 } from '@/clinic/staff';
+import { ADMINISTRATOR_MANAGED_NOTE, clinicRoleSummary } from '@/clinic/roles';
 import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import {
   DetailRow,
@@ -69,7 +70,7 @@ function RoleForm({
           options={[...STAFF_ROLE_OPTIONS]}
         />
         <p className="field__hint" style={{ marginTop: 10 }}>
-          Clinic administrators are provisioned by VetLink and are not editable here.
+          {clinicRoleSummary(role)}
         </p>
       </Panel>
 
@@ -155,10 +156,7 @@ export function ClinicStaffEdit() {
 
       {member.staff_role === 'clinic_administrator' ? (
         <Panel>
-          <Notice tone="info">
-            Clinic administrators are provisioned and managed by VetLink, so their role cannot be
-            changed from the clinic console.
-          </Notice>
+          <Notice tone="info">{ADMINISTRATOR_MANAGED_NOTE}</Notice>
           <div style={{ marginTop: 14 }}>
             <Link to={`/clinic-admin/staff/${member.id}`}>
               <Button variant="outline">Back to details</Button>
