@@ -49,9 +49,9 @@ function waitingFor(value: string): string {
   const minutes = Math.max(0, Math.round((Date.now() - started) / 60_000));
   if (minutes < 1) return 'waiting just now';
   if (minutes < 60) return `waiting ${minutes} minute${minutes === 1 ? '' : 's'}`;
-  const hours = Math.round(minutes / 60);
+  const hours = Math.floor(minutes / 60);
   if (hours < 24) return `waiting ${hours} hour${hours === 1 ? '' : 's'}`;
-  const days = Math.round(hours / 24);
+  const days = Math.floor(hours / 24);
   return `waiting ${days} day${days === 1 ? '' : 's'}`;
 }
 

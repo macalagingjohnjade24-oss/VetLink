@@ -87,7 +87,9 @@ export function OperatingHoursList({ hours }: { hours: OperatingHours }) {
     return <p className="muted">No operating hours have been recorded for this clinic.</p>;
   }
 
-  const days = (hours.days ?? []).filter((day) => day >= 0 && day <= 6).sort((a, b) => a - b);
+  const days = [...new Set(hours.days ?? [])]
+    .filter((day) => day >= 0 && day <= 6)
+    .sort((a, b) => a - b);
   const window = hours.opens && hours.closes ? `${hours.opens} – ${hours.closes}` : null;
 
   return (
