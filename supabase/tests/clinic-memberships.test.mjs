@@ -237,6 +237,44 @@ test('a membership edit never demotes a system administrator', async () => {
   await db.query('delete from public.clinic_memberships where id = $1', [membership[0].id]);
 });
 
+test('a role edit does not overwrite another clinic’s administrator role', async () => {
+  // The same person is an administrator at beta and a veterinarian at alpha.
+  await db.query(
+    "update public.clinic_memberships set status = 'active', staff_role = 'clinic_administrator' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.beta, ids.users.drReyes],
+  );
+  await db.query("update public.profiles set role = 'clinic_administrator' where id = $1", [
+    ids.users.drReyes,
+  ]);
+
+  await asActor(db, ids.users.alphaAdmin);
+  await asAuthenticated(
+    "update public.clinic_memberships set staff_role = 'clinic_staff' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+
+  const { rows: profile } = await db.query('select role from public.profiles where id = $1', [
+    ids.users.drReyes,
+  ]);
+  assert.equal(
+    profile[0].role,
+    'clinic_administrator',
+    'the beta administrator role must survive an alpha membership edit',
+  );
+
+  await db.query("update public.profiles set role = 'veterinarian' where id = $1", [
+    ids.users.drReyes,
+  ]);
+  await db.query(
+    "update public.clinic_memberships set staff_role = 'veterinarian' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+  await db.query(
+    "update public.clinic_memberships set status = 'revoked', staff_role = 'veterinarian' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.beta, ids.users.drReyes],
+  );
+});
+
 test('a non-administrator cannot change memberships', async () => {
   // An active veterinarian can read the directory but not promote or demote anyone.
   await asActor(db, ids.users.drReyes);
