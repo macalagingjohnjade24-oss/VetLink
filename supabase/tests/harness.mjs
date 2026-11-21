@@ -32,6 +32,7 @@ export const MIGRATIONS = [
   '0011_membership_profile_role_sync.sql',
   '0012_service_role_function_grants.sql',
   '0013_membership_insert_profile_role_sync.sql',
+  '0014_limited_staff_patient_reads.sql',
 ];
 
 const PRELUDE = `

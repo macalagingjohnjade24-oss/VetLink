@@ -27,7 +27,7 @@ export const CLINIC_ROLE_SUMMARY: Record<ClinicRole, string> = {
   veterinarian:
     'Appointments assigned to them, plus the patient history, medical records and vaccinations they author. Clinic-wide figures are limited to their own rows.',
   clinic_staff:
-    'Today’s schedule and the patients booked in it, pet and owner details, and their own tasks. No status changes and no clinical writes.',
+    'Today’s schedule plus the name and species of the pets booked in it, read through clinic_limited_pets(). No owner contact details, no full pet records, and no status or clinical writes.',
 };
 
 export function clinicRoleSummary(role: string): string {
@@ -65,23 +65,23 @@ export const CLINIC_CAPABILITIES: ClinicCapability[] = [
   {
     name: 'Owner contact details',
     detail:
-      'Owner profiles for anyone with a booking here — is_staff_of_patient(), open to every active membership.',
+      'Owner profiles for anyone with a booking here — is_patient_clinician(): administrators, receptionists and veterinarians. Limited staff have no owner read at all.',
     access: {
       clinic_administrator: 'yes',
       receptionist: 'yes',
       veterinarian: 'yes',
-      clinic_staff: 'yes',
+      clinic_staff: 'no',
     },
   },
   {
     name: 'Pet details',
     detail:
-      'Pet records for owners with a booking here (pets_staff_read). Limited staff also have clinic_limited_pets() for the current day.',
+      'Full pet records for owners with a booking here, through pets_clinician_read. Limited staff get only today’s pet name and species from clinic_limited_pets().',
     access: {
       clinic_administrator: 'yes',
       receptionist: 'yes',
       veterinarian: 'yes',
-      clinic_staff: 'yes',
+      clinic_staff: 'partial',
     },
   },
   {
