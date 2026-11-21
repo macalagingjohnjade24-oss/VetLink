@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { useAsync } from '@/lib/useAsync';
-import { formatDate, fullName, initials } from '@/lib/format';
+import { formatDate, fullName, initials, label } from '@/lib/format';
 import { fetchClinicTeam } from '@/clinic/data';
-import { STAFF_ROLE_LABEL } from '@/clinic/staff';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
+import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import {
   EmptyState,
   ErrorState,
   LoadingState,
+  Metric,
   Notice,
   PageHeader,
   Panel,
@@ -67,7 +67,7 @@ export function ClinicStaff() {
           member.profile?.last_name,
           member.profile?.email,
           member.profile?.mobile_number,
-          STAFF_ROLE_LABEL[member.staff_role],
+          label(member.staff_role),
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(term));
@@ -93,20 +93,7 @@ export function ClinicStaff() {
     [team],
   );
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Staff management" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Staff management" />;
 
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
@@ -143,22 +130,10 @@ export function ClinicStaff() {
       {flash ? <Notice tone="success">{flash}</Notice> : null}
 
       <div className="metrics">
-        <div className="metric">
-          <p className="metric__label">Team members</p>
-          <p className="metric__value">{counts.total}</p>
-        </div>
-        <div className="metric">
-          <p className="metric__label">Active</p>
-          <p className="metric__value">{counts.active}</p>
-        </div>
-        <div className="metric">
-          <p className="metric__label">Invitation pending</p>
-          <p className="metric__value">{counts.invited}</p>
-        </div>
-        <div className="metric">
-          <p className="metric__label">Suspended</p>
-          <p className="metric__value">{counts.suspended}</p>
-        </div>
+        <Metric label="Team members" value={counts.total} />
+        <Metric label="Active" value={counts.active} />
+        <Metric label="Invitation pending" value={counts.invited} />
+        <Metric label="Suspended" value={counts.suspended} />
       </div>
 
       <Panel
@@ -187,7 +162,7 @@ export function ClinicStaff() {
                   <th>Contact number</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th>Joined</th>
+                  <th>Added</th>
                   <th className="table__right">Actions</th>
                 </tr>
               </thead>
@@ -212,7 +187,7 @@ export function ClinicStaff() {
                         </div>
                       </td>
                       <td>{member.profile?.mobile_number ?? '—'}</td>
-                      <td>{STAFF_ROLE_LABEL[member.staff_role] ?? member.staff_role}</td>
+                      <td>{label(member.staff_role)}</td>
                       <td>
                         <StatusBadge status={member.status} />
                       </td>

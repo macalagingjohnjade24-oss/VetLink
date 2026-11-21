@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { STAFF_ROLE_OPTIONS, inviteClinicStaff, type StaffInviteInput } from '@/clinic/staff';
-import { InvitationPending } from '@/clinic/components';
+import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import { Notice, PageHeader, Panel, SelectField } from '@/sa/components';
 import { Button } from '@/ui/Button';
 import { Input } from '@/ui/Input';
@@ -26,19 +26,7 @@ export function ClinicStaffInvite() {
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Add staff" subtitle="No clinic assigned yet" />
-        <Panel>
-          <Notice tone="info">
-            A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to
-            provision the clinic account first.
-          </Notice>
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Add staff" />;
 
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
@@ -90,16 +78,6 @@ export function ClinicStaffInvite() {
       <PageHeader
         title="Add staff account"
         subtitle={`${user?.clinicName ?? 'Your clinic'} · the invitation is sent by email`}
-        actions={
-          <>
-            <Link to="/clinic-admin/staff">
-              <Button variant="ghost">Cancel</Button>
-            </Link>
-            <Button type="submit" form="clinic-staff-invite" loading={sending}>
-              Send invitation
-            </Button>
-          </>
-        }
       />
 
       {notice ? <Notice tone="error">{notice}</Notice> : null}
@@ -169,10 +147,7 @@ export function ClinicStaffInvite() {
         </div>
       </form>
 
-      <footer className="page__footer">
-        <span>VetLink · Clinic administration · CA-07</span>
-        <span>Invitations are sent by the invite-staff function</span>
-      </footer>
+      <ClinicFooter right="Invitations are sent by the invite-staff function" />
     </div>
   );
 }

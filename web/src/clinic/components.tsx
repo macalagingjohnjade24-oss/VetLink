@@ -184,6 +184,22 @@ export function InvitationPending({
   );
 }
 
+/** Shared shell for an administrator whose account has no clinic yet. */
+export function NoClinicAssigned({ title }: { title: string }) {
+  return (
+    <div className="page">
+      <PageHeader title={title} subtitle="No clinic assigned yet" />
+      <Panel>
+        <EmptyState
+          icon="map-pin"
+          title="No clinic is attached to this account"
+          description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
+        />
+      </Panel>
+    </div>
+  );
+}
+
 export function ClinicFooter({ right = 'Clinic-scoped by row-level security' }: { right?: string }) {
   return (
     <footer className="page__footer">
