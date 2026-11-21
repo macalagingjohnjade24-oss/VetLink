@@ -14,6 +14,7 @@ import {
   preflight,
   requireUser,
 } from '../_shared/http.ts';
+import { profileLinkError } from '../_shared/roleGuard.mjs';
 
 type Body = {
   clinic_id?: string;
@@ -72,11 +73,14 @@ Deno.serve(async (req) => {
 
   const { data: existingProfile, error: lookupError } = await admin
     .from('profiles')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, role')
     .ilike('email', email)
     .maybeSingle();
 
   if (lookupError) return json({ error: lookupError.message }, 400);
+
+  const roleConflict = profileLinkError(existingProfile?.role);
+  if (roleConflict) return json({ error: roleConflict }, 409);
 
   let userId = existingProfile?.id ?? null;
   let invited = false;
