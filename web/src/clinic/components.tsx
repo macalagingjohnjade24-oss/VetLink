@@ -1,4 +1,4 @@
-import { StatusBadge } from '@/sa/components';
+import { EmptyState, Notice, PageHeader, Panel, StatusBadge } from '@/sa/components';
 import { Icon } from '@/ui/Icon';
 import type { ClinicProfile, OperatingHours } from './data';
 
@@ -106,6 +106,45 @@ export function OperatingHoursList({ hours }: { hours: OperatingHours }) {
         </div>
       )}
       {hours.note ? <p className="hours__note">{hours.note}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * An invited administrator can sign in, but their membership is not active yet:
+ * every clinic policy is keyed on `status = 'active'`, so the profile and the
+ * dashboard RPC have no rows to return. That is an expected state, not a bug.
+ */
+export function InvitationPending({
+  clinicName,
+  email,
+}: {
+  clinicName: string | null;
+  email: string;
+}) {
+  return (
+    <div className="page">
+      <PageHeader
+        title="Invitation pending"
+        subtitle={
+          clinicName ? `${clinicName} · awaiting activation` : 'Your clinic workspace is not active yet'
+        }
+      />
+
+      <Panel>
+        <EmptyState
+          icon="mail"
+          title="Activate your account from the invitation email"
+          description={`VetLink sent an invitation to ${email || 'your email address'}. Accepting it activates your clinic membership. Until then the console cannot read the clinic's profile or records — there is nothing wrong with the data, access simply starts after activation.`}
+        />
+      </Panel>
+
+      <Notice tone="info">
+        Can't find the email? Check your spam folder, or ask your clinic administrator to resend
+        the invitation. Invitation links are single-use and expire.
+      </Notice>
+
+      <ClinicFooter right="Awaiting membership activation" />
     </div>
   );
 }

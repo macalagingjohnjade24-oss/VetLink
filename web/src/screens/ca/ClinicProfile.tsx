@@ -3,7 +3,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate, formatDateTime, formatOperatingHours, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicDashboard, fetchClinicProfile, fetchClinicTeam } from '@/clinic/data';
-import { ClinicCover, ClinicFooter, OperatingHoursList } from '@/clinic/components';
+import { ClinicCover, ClinicFooter, InvitationPending, OperatingHoursList } from '@/clinic/components';
 import {
   DetailRow,
   EmptyState,
@@ -21,16 +21,20 @@ import { Icon } from '@/ui/Icon';
 export function ClinicProfile() {
   const { user } = useAuth();
   const clinicId = user?.clinicId ?? null;
+  const invited = user?.membershipStatus === 'invited';
 
   const state = useAsync(async () => {
     if (!clinicId) throw new Error('No clinic is attached to this account.');
+    // Invited memberships are not active, so the clinic row and its counts are
+    // outside RLS until the invitation is accepted.
+    if (invited) return null;
     const [clinic, dashboard, team] = await Promise.all([
       fetchClinicProfile(clinicId),
       fetchClinicDashboard(clinicId),
       fetchClinicTeam(clinicId),
     ]);
     return { clinic, dashboard, team };
-  }, [clinicId]);
+  }, [clinicId, invited]);
 
   if (!clinicId) {
     return (
@@ -44,6 +48,12 @@ export function ClinicProfile() {
           />
         </Panel>
       </div>
+    );
+  }
+
+  if (invited) {
+    return (
+      <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />
     );
   }
 

@@ -11,7 +11,7 @@ import {
   fetchRecentAppointmentActivity,
   todayIso,
 } from '@/clinic/data';
-import { ClinicCover, ClinicFooter, StatusChart } from '@/clinic/components';
+import { ClinicCover, ClinicFooter, InvitationPending, StatusChart } from '@/clinic/components';
 import {
   Bars,
   EmptyState,
@@ -35,17 +35,38 @@ function clock(value: string): string {
   });
 }
 
+/**
+ * A null embed means the pets policy returned no row, not that the pet has no
+ * name. Say so plainly instead of claiming the name was never recorded.
+ */
 const petName = (appointment: { pets: { pet_name: string | null } | null }) =>
-  appointment.pets?.pet_name ?? 'Pet not recorded';
+  appointment.pets?.pet_name ?? 'Pet name unavailable';
+
+/** "waiting 3 days" — relativeTime() is phrased for events that already happened. */
+function waitingFor(value: string): string {
+  const started = new Date(value).getTime();
+  if (Number.isNaN(started)) return 'waiting';
+  const minutes = Math.max(0, Math.round((Date.now() - started) / 60_000));
+  if (minutes < 1) return 'waiting just now';
+  if (minutes < 60) return `waiting ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `waiting ${hours} hour${hours === 1 ? '' : 's'}`;
+  const days = Math.round(hours / 24);
+  return `waiting ${days} day${days === 1 ? '' : 's'}`;
+}
 
 /** CA-01 — the clinic's day, requests and team, all read from its own rows. */
 export function ClinicDashboard() {
   const { user } = useAuth();
   const clinicId = user?.clinicId ?? null;
+  const invited = user?.membershipStatus === 'invited';
   const today = todayIso();
 
   const state = useAsync(async () => {
     if (!clinicId) throw new Error('No clinic is attached to this account.');
+    // Not active yet: clinic policies and clinic_dashboard() would refuse, which
+    // is expected rather than a failed load.
+    if (invited) return null;
     const [clinic, dashboard, schedule, requests, activity, team] = await Promise.all([
       fetchClinicProfile(clinicId),
       fetchClinicDashboard(clinicId),
@@ -56,7 +77,7 @@ export function ClinicDashboard() {
     ]);
     if (!clinic) throw new Error('That clinic record could not be loaded.');
     return { clinic, dashboard, schedule, requests, activity, team };
-  }, [clinicId, today]);
+  }, [clinicId, invited, today]);
 
   if (!clinicId) {
     return (
@@ -70,6 +91,12 @@ export function ClinicDashboard() {
           />
         </Panel>
       </div>
+    );
+  }
+
+  if (invited) {
+    return (
+      <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />
     );
   }
 
@@ -258,7 +285,7 @@ export function ClinicDashboard() {
                     <p className="table__secondary">
                       {appointment.service_name ?? 'No service'} ·{' '}
                       {formatDate(appointment.appointment_date)} at{' '}
-                      {clock(appointment.appointment_time)} · waiting {relativeTime(appointment.created_at)}
+                      {clock(appointment.appointment_time)} · {waitingFor(appointment.created_at)}
                     </p>
                   </div>
                   <StatusBadge status="pending" />
