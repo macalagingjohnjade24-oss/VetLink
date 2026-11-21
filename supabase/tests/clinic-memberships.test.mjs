@@ -123,6 +123,67 @@ test('only the clinic administrator can change membership rows, and only in thei
 
 });
 
+test('a clinic administrator cannot promote anyone to clinic administrator', async () => {
+  await asActor(db, ids.users.alphaAdmin);
+
+  await assert.rejects(
+    () =>
+      asAuthenticated(
+        "update public.clinic_memberships set staff_role = 'clinic_administrator' where clinic_id = $1 and user_id = $2",
+        [ids.clinics.alpha, ids.users.drReyes],
+      ),
+    /provisioned by VetLink/i,
+    'a direct API promotion must be refused',
+  );
+
+  const { rows: vet } = await db.query(
+    'select staff_role from public.clinic_memberships where clinic_id = $1 and user_id = $2',
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+  assert.equal(vet[0].staff_role, 'veterinarian', 'the refused promotion must not be applied');
+
+  // The same guard covers an INSERT, not just an UPDATE.
+  await assert.rejects(
+    () =>
+      asAuthenticated(
+        "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_administrator', 'active')",
+        [ids.clinics.alpha, ids.users.loner],
+      ),
+    /provisioned by VetLink/i,
+    'a clinic cannot mint an administrator membership',
+  );
+
+  const { rows: inserted } = await db.query(
+    'select id from public.clinic_memberships where clinic_id = $1 and user_id = $2',
+    [ids.clinics.alpha, ids.users.loner],
+  );
+  assert.equal(inserted.length, 0);
+});
+
+test('a clinic administrator cannot deactivate, demote or delete an administrator', async () => {
+  await asActor(db, ids.users.alphaAdmin);
+
+  const attempts = [
+    "update public.clinic_memberships set status = 'suspended' where clinic_id = $1 and user_id = $2",
+    "update public.clinic_memberships set staff_role = 'clinic_staff' where clinic_id = $1 and user_id = $2",
+    'delete from public.clinic_memberships where clinic_id = $1 and user_id = $2',
+  ];
+  for (const sql of attempts) {
+    await assert.rejects(
+      () => asAuthenticated(sql, [ids.clinics.alpha, ids.users.alphaAdmin]),
+      /by VetLink/i,
+      `expected ${sql.split(' ')[0]} on an administrator to be refused`,
+    );
+  }
+
+  const { rows: admin } = await db.query(
+    'select staff_role, status from public.clinic_memberships where clinic_id = $1 and user_id = $2',
+    [ids.clinics.alpha, ids.users.alphaAdmin],
+  );
+  assert.equal(admin[0].staff_role, 'clinic_administrator');
+  assert.equal(admin[0].status, 'active', 'the administrator membership must survive intact');
+});
+
 test('a non-administrator cannot change memberships', async () => {
   // An active veterinarian can read the directory but not promote or demote anyone.
   await asActor(db, ids.users.drReyes);
