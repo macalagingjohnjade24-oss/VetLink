@@ -36,6 +36,7 @@ import { ClinicStaff } from '@/screens/ca/ClinicStaff';
 import { ClinicStaffDetails } from '@/screens/ca/ClinicStaffDetails';
 import { ClinicStaffEdit } from '@/screens/ca/ClinicStaffEdit';
 import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
+import { AppointmentsDashboard } from '@/screens/am/AppointmentsDashboard';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -156,6 +157,37 @@ function ClinicAdministratorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** AM-01 – AM-14. */
+const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
+  { path: '/appointments', element: <AppointmentsDashboard /> },
+];
+
+/** A receptionist works inside their clinic's front desk, and nowhere else. */
+function ReceptionistOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user || user.role !== 'receptionist') {
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Appointment Manager access only</h2>
+          <p className="muted" style={{ marginTop: 8 }}>
+            This workspace manages one clinic's appointments, owners and pets. Other clinic roles
+            keep their own workspace, and pet-owner accounts use the mobile app.
+          </p>
+          <a
+            className="auth__link"
+            href={user ? ROLE_HOME[user.role] : '/login'}
+            style={{ display: 'inline-block', marginTop: 14 }}
+          >
+            Back to your dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 /** SA-01 – SA-16. Detail routes carry SA-04, SA-05, SA-07 and SA-09. */
 const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/system-admin', element: <AdminDashboard /> },
@@ -176,7 +208,9 @@ const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
 ];
 
 const DEFINED_PATHS = new Set(
-  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES].map((route) => route.path),
+  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES, ...APPOINTMENT_ROUTES].map(
+    (route) => route.path,
+  ),
 );
 
 function AppRoutes() {
@@ -232,6 +266,13 @@ function AppRoutes() {
             key={route.path}
             path={route.path}
             element={<ClinicAdministratorOnly>{route.element}</ClinicAdministratorOnly>}
+          />
+        ))}
+        {APPOINTMENT_ROUTES.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<ReceptionistOnly>{route.element}</ReceptionistOnly>}
           />
         ))}
         {ALL_NAV_ITEMS.filter((item) => !DEFINED_PATHS.has(item.path)).map((item) => (

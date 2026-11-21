@@ -14,6 +14,17 @@ export function formatTime(value?: string | null): string {
   return date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
 }
 
+/** `14:30:00` → "2:30 PM". A time column value, never a timestamp. */
+export function formatClock(value?: string | null): string {
+  if (!value) return '—';
+  const [hours, minutes] = value.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
+  return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-PH', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function formatDateTime(value?: string | null): string {
   if (!value) return '—';
   return `${formatDate(value)} · ${formatTime(value)}`;

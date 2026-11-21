@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
-import { downloadCsv, formatDate, label, relativeTime } from '@/lib/format';
+import { downloadCsv, formatClock, formatDate, label, relativeTime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   fetchAppointmentRequests,
@@ -11,7 +11,13 @@ import {
   fetchRecentAppointmentActivity,
   todayIso,
 } from '@/clinic/data';
-import { ClinicCover, ClinicFooter, InvitationPending, StatusChart } from '@/clinic/components';
+import {
+  ClinicCover,
+  ClinicFooter,
+  InvitationPending,
+  StatusChart,
+  petName,
+} from '@/clinic/components';
 import {
   Bars,
   EmptyState,
@@ -24,23 +30,6 @@ import {
 } from '@/sa/components';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
-
-/** `14:30:00` → "2:30 PM"; dates never enter this value. */
-function clock(value: string): string {
-  const [hours, minutes] = value.split(':').map(Number);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
-  return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-/**
- * A null embed means the pets policy returned no row, not that the pet has no
- * name. Say so plainly instead of claiming the name was never recorded.
- */
-const petName = (appointment: { pets: { pet_name: string | null } | null }) =>
-  appointment.pets?.pet_name ?? 'Pet name unavailable';
 
 /** "waiting 3 days" — relativeTime() is phrased for events that already happened. */
 function waitingFor(value: string): string {
@@ -127,7 +116,7 @@ export function ClinicDashboard() {
       `vetlink-${clinic.reference ?? 'clinic'}-schedule-${today}.csv`,
       ['Time', 'Pet', 'Owner', 'Service', 'Reference', 'Status'],
       schedule.map((appointment) => [
-        clock(appointment.appointment_time),
+        formatClock(appointment.appointment_time),
         petName(appointment),
         appointment.owner_name ?? '',
         appointment.service_name ?? '',
@@ -243,7 +232,7 @@ export function ClinicDashboard() {
               <tbody>
                 {schedule.map((appointment) => (
                   <tr key={appointment.id}>
-                    <td className="table__mono">{clock(appointment.appointment_time)}</td>
+                    <td className="table__mono">{formatClock(appointment.appointment_time)}</td>
                     <td className="table__primary">{petName(appointment)}</td>
                     <td>{appointment.owner_name ?? '—'}</td>
                     <td>{appointment.service_name ?? '—'}</td>
@@ -285,7 +274,7 @@ export function ClinicDashboard() {
                     <p className="table__secondary">
                       {appointment.service_name ?? 'No service'} ·{' '}
                       {formatDate(appointment.appointment_date)} at{' '}
-                      {clock(appointment.appointment_time)} · {waitingFor(appointment.created_at)}
+                      {formatClock(appointment.appointment_time)} · {waitingFor(appointment.created_at)}
                     </p>
                   </div>
                   <StatusBadge status="pending" />

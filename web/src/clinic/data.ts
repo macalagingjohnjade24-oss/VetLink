@@ -176,6 +176,75 @@ export async function fetchRecentAppointmentActivity(
   return (data ?? []) as unknown as ClinicAppointment[];
 }
 
+/** Live bookings dated after `after`, soonest first — the front desk's next few. */
+export async function fetchUpcomingAppointments(
+  clinicId: string,
+  after: string,
+  limit = 6,
+): Promise<ClinicAppointment[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(APPOINTMENT_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .gt('appointment_date', after)
+    .in('status', ['pending', 'confirmed', 'rescheduled'])
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true })
+    .limit(limit);
+  failure(error);
+  return (data ?? []) as unknown as ClinicAppointment[];
+}
+
+export type OwnerRegistration = {
+  owner_id: string;
+  owner_name: string | null;
+  contact: string | null;
+  pet_name: string | null;
+  first_booked_at: string;
+};
+
+type RegistrationRow = {
+  owner_id: string;
+  owner_name: string | null;
+  contact: string | null;
+  created_at: string;
+  pets: { pet_name: string | null } | null;
+};
+
+/**
+ * Owners whose first booking at this clinic is the most recent. Reading the
+ * clinic's own rows means an owner with bookings elsewhere is not reported as
+ * new here, and no profiles query is needed: the name, contact and pet come
+ * from the booking the owner made.
+ */
+export async function fetchRecentOwnerRegistrations(
+  clinicId: string,
+  limit = 5,
+): Promise<OwnerRegistration[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('owner_id,owner_name,contact,created_at,pets(pet_name)')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: true });
+  failure(error);
+
+  const earliest = new Map<string, OwnerRegistration>();
+  for (const row of (data ?? []) as unknown as RegistrationRow[]) {
+    if (earliest.has(row.owner_id)) continue;
+    earliest.set(row.owner_id, {
+      owner_id: row.owner_id,
+      owner_name: row.owner_name,
+      contact: row.contact,
+      pet_name: row.pets?.pet_name ?? null,
+      first_booked_at: row.created_at,
+    });
+  }
+
+  return [...earliest.values()]
+    .sort((a, b) => b.first_booked_at.localeCompare(a.first_booked_at))
+    .slice(0, limit);
+}
+
 /**
  * The appointment columns CA-10 aggregates. Pet and owner ids stay in the row
  * so distinct patients and owners can be counted without loading either table.

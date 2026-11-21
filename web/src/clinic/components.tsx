@@ -12,6 +12,13 @@ const initials = (name: string) =>
     .map((word) => word.charAt(0).toUpperCase())
     .join('') || 'VL';
 
+/**
+ * A null embed means the pets policy returned no row, not that the pet has no
+ * name. Say so plainly instead of claiming the name was never recorded.
+ */
+export const petName = (appointment: { pets: { pet_name: string | null } | null }) =>
+  appointment.pets?.pet_name ?? 'Pet name unavailable';
+
 /** Cover photograph, logo and identity line shared by CA-01 and CA-02. */
 export function ClinicCover({ clinic }: { clinic: ClinicProfile }) {
   const location = [clinic.city, clinic.province].filter(Boolean).join(', ');
@@ -200,10 +207,16 @@ export function NoClinicAssigned({ title }: { title: string }) {
   );
 }
 
-export function ClinicFooter({ right = 'Clinic-scoped by row-level security' }: { right?: string }) {
+export function ClinicFooter({
+  left = 'Clinic administration',
+  right = 'Clinic-scoped by row-level security',
+}: {
+  left?: string;
+  right?: string;
+}) {
   return (
     <footer className="page__footer">
-      <span>VetLink · Clinic administration · Live Supabase data</span>
+      <span>VetLink · {left} · Live Supabase data</span>
       <span>{right}</span>
     </footer>
   );
