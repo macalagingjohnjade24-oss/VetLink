@@ -342,6 +342,53 @@ export async function fetchPendingAppointmentRequests(
 }
 
 /**
+ * AM-04's record: the booking, plus the pet row this clinic is allowed to read.
+ * The booking keeps its own owner and pet names, so the page still renders
+ * when the pet's record is outside what this account may read.
+ */
+export type AppointmentDetail = ManagedAppointment & {
+  owner_id: string;
+  pet_id: string;
+  checked_in_at: string | null;
+  pet: {
+    pet_name: string | null;
+    species: string | null;
+    breed: string | null;
+    sex: string | null;
+    weight: number | null;
+    date_of_birth: string | null;
+  } | null;
+};
+
+const DETAIL_COLUMNS =
+  'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,checked_in_at,created_at,updated_at,owner_id,pet_id,pets!appointments_pet_id_fkey(pet_name)' as const;
+
+/** One booking from this clinic, or null when the row is not this clinic's. */
+export async function fetchClinicAppointment(
+  clinicId: string,
+  appointmentId: string,
+): Promise<AppointmentDetail | null> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(DETAIL_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('id', appointmentId)
+    .maybeSingle();
+  failure(error);
+  if (!data) return null;
+
+  const row = data as unknown as Omit<AppointmentDetail, 'pet'>;
+  const { data: pet, error: petError } = await supabase
+    .from('pets')
+    .select('pet_name,species,breed,sex,weight,date_of_birth')
+    .eq('id', row.pet_id)
+    .maybeSingle();
+  failure(petError);
+
+  return { ...row, pet: (pet ?? null) as AppointmentDetail['pet'] };
+}
+
+/**
  * What the front desk decided about a pending request.
  *
  * Approve and reject move `pending` to `confirmed` or `rejected`, which the

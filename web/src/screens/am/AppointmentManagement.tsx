@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
-import { formatClock, formatDate, formatDateTime, fullName } from '@/lib/format';
+import { formatClock, formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import {
   fetchAppointmentServiceNames,
@@ -12,7 +13,6 @@ import {
 } from '@/clinic/data';
 import { ClinicFooter, InvitationPending, petName } from '@/clinic/components';
 import {
-  DetailRow,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -36,9 +36,6 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'rejected', label: 'Rejected' },
 ];
-
-const peso = (value: number) =>
-  `₱${Number(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Search runs over the loaded rows: reference, pet, owner, contact and service. */
 function matches(appointment: ManagedAppointment, term: string) {
@@ -66,13 +63,13 @@ export function AppointmentManagement() {
   const { user } = useAuth();
   const clinicId = user?.clinicId ?? null;
   const invited = user?.membershipStatus === 'invited';
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [service, setService] = useState('all');
   const [date, setDate] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Filter options come from the clinic's own rows and team, not a fixed list.
   const reference = useAsync(async () => {
@@ -155,8 +152,6 @@ export function AppointmentManagement() {
     setDate('');
     setPage(1);
   };
-
-  const selected = selectedId ? state.data.find((row) => row.id === selectedId) ?? null : null;
 
   return (
     <div className="page">
@@ -283,7 +278,7 @@ export function AppointmentManagement() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedId(appointment.id)}
+                          onClick={() => navigate(`/appointments/${appointment.id}`)}
                         >
                           View details
                         </Button>
@@ -327,105 +322,6 @@ export function AppointmentManagement() {
         } appointment${state.data.length === 1 ? '' : 's'} on record`}
       />
 
-      {selected ? (
-        <AppointmentDetails
-          appointment={selected}
-          vet={vetName(selected)}
-          onClose={() => setSelectedId(null)}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * The row's recorded data, read from the appointment itself. The full AM-04
- * record page arrives with its own activity feed; nothing here is invented.
- */
-function AppointmentDetails({
-  appointment,
-  vet,
-  onClose,
-}: {
-  appointment: ManagedAppointment;
-  vet: string;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="dialog"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="dialog__card"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Appointment details"
-        style={{ maxWidth: 560, maxHeight: '86vh', overflowY: 'auto' }}
-      >
-        <p className="dialog__title">{appointment.reference ?? 'Reference not assigned'}</p>
-        <p className="dialog__body">
-          {petName(appointment)} · {formatDate(appointment.appointment_date)} at{' '}
-          {formatClock(appointment.appointment_time)}
-        </p>
-        <div className="row" style={{ marginTop: 10 }}>
-          <StatusBadge status={appointment.status} />
-        </div>
-
-        <dl className="detail" style={{ marginTop: 18 }}>
-          <DetailRow term="Owner">
-            {appointment.owner_name ?? 'Owner name not recorded'}
-          </DetailRow>
-          <DetailRow term="Contact">{appointment.contact ?? 'No contact number recorded'}</DetailRow>
-          <DetailRow term="Pet">{petName(appointment)}</DetailRow>
-          <DetailRow term="Service">
-            {appointment.service_name ?? 'No service recorded'} · {peso(appointment.price)}
-          </DetailRow>
-          <DetailRow term="Veterinarian">{vet}</DetailRow>
-          <DetailRow term="Reason for visit">
-            {appointment.reason_for_visit ?? 'Not recorded'}
-          </DetailRow>
-          <DetailRow term="Additional notes">
-            {appointment.additional_notes ?? 'Not recorded'}
-          </DetailRow>
-          <DetailRow term="Clinic note">{appointment.clinic_note ?? 'Not recorded'}</DetailRow>
-          <DetailRow term="Cancellation request">
-            {appointment.cancellation_requested
-              ? appointment.cancellation_reason ?? 'Requested by the owner'
-              : 'None'}
-          </DetailRow>
-          <DetailRow term="Reschedule request">
-            {appointment.reschedule_requested
-              ? [
-                  appointment.requested_date ? formatDate(appointment.requested_date) : null,
-                  appointment.requested_time ? formatClock(appointment.requested_time) : null,
-                  appointment.reschedule_reason,
-                ]
-                  .filter(Boolean)
-                  .join(' · ') || 'Requested by the owner'
-              : 'None'}
-          </DetailRow>
-          <DetailRow term="Booked on">{formatDateTime(appointment.created_at)}</DetailRow>
-          <DetailRow term="Last updated">{formatDateTime(appointment.updated_at)}</DetailRow>
-        </dl>
-
-        <div className="dialog__actions">
-          <Button variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
