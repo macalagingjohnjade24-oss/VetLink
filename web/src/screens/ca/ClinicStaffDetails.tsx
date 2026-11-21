@@ -1,12 +1,13 @@
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { useAsync } from '@/lib/useAsync';
-import { formatDate, fullName, initials } from '@/lib/format';
-import { fetchClinicStaffMember, STAFF_ROLE_LABEL } from '@/clinic/staff';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
+import { formatDate, fullName, initials, label } from '@/lib/format';
+import { fetchClinicStaffMember, updateClinicStaffMembership } from '@/clinic/staff';
+import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import {
+  ConfirmDialog,
   DetailRow,
-  EmptyState,
   ErrorState,
   LoadingState,
   Notice,
@@ -34,6 +35,14 @@ export function ClinicStaffDetails() {
   const { user } = useAuth();
   const clinicId = user?.clinicId ?? null;
   const invited = user?.membershipStatus === 'invited';
+  const location = useLocation();
+
+  const [flash, setFlash] = useState(
+    (location.state as { flash?: string } | null)?.flash ?? null,
+  );
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<'active' | 'suspended' | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const state = useAsync(async () => {
     if (!clinicId) throw new Error('No clinic is attached to this account.');
@@ -44,20 +53,7 @@ export function ClinicStaffDetails() {
     return { member };
   }, [clinicId, invited, id]);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Staff details" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Staff details" />;
 
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
@@ -85,6 +81,29 @@ export function ClinicStaffDetails() {
   const { member } = state.data;
   const profile = member.profile;
   const name = profile ? fullName(profile) : 'Account not linked';
+  const isSelf = member.user_id === user?.id;
+  const vetLinkManaged = member.staff_role === 'clinic_administrator';
+
+  const changeStatus = async () => {
+    if (!pendingStatus || busy) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await updateClinicStaffMembership(clinicId, member.id, { status: pendingStatus });
+      setFlash(
+        pendingStatus === 'suspended'
+          ? `${name} can no longer access the clinic.`
+          : `${name} can access the clinic again.`,
+      );
+      setPendingStatus(null);
+      state.reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+      setPendingStatus(null);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="page">
@@ -92,16 +111,34 @@ export function ClinicStaffDetails() {
         title={name}
         subtitle={
           <span className="row" style={{ gap: 10 }}>
-            {STAFF_ROLE_LABEL[member.staff_role] ?? member.staff_role}
+            {label(member.staff_role)}
             <StatusBadge status={member.status} />
           </span>
         }
         actions={
-          <Link to="/clinic-admin/staff">
-            <Button variant="ghost">Back to staff</Button>
-          </Link>
+          <>
+            <Link to="/clinic-admin/staff">
+              <Button variant="ghost">Back to staff</Button>
+            </Link>
+            {!vetLinkManaged ? (
+              <Link to={`/clinic-admin/staff/${member.id}/edit`}>
+                <Button variant="outline">Edit staff</Button>
+              </Link>
+            ) : null}
+            {member.status === 'active' && !isSelf ? (
+              <Button variant="danger" onClick={() => setPendingStatus('suspended')}>
+                Deactivate
+              </Button>
+            ) : null}
+            {member.status === 'suspended' ? (
+              <Button onClick={() => setPendingStatus('active')}>Reactivate</Button>
+            ) : null}
+          </>
         }
       />
+
+      {flash ? <Notice tone="success">{flash}</Notice> : null}
+      {notice ? <Notice tone="error">{notice}</Notice> : null}
 
       {member.status === 'invited' ? (
         <Notice tone="info">
@@ -135,7 +172,7 @@ export function ClinicStaffDetails() {
               <p className="table__primary" style={{ fontSize: 16 }}>
                 {name}
               </p>
-              <p className="table__secondary">{STAFF_ROLE_LABEL[member.staff_role] ?? member.staff_role}</p>
+              <p className="table__secondary">{label(member.staff_role)}</p>
             </div>
           </div>
           <dl className="detail">
@@ -149,7 +186,7 @@ export function ClinicStaffDetails() {
 
         <Panel title="Membership" subtitle="Scoped to this clinic only">
           <dl className="detail">
-            <DetailRow term="Role">{STAFF_ROLE_LABEL[member.staff_role] ?? member.staff_role}</DetailRow>
+            <DetailRow term="Role">{label(member.staff_role)}</DetailRow>
             <DetailRow term="Status">
               <StatusBadge status={member.status} />
             </DetailRow>
@@ -157,6 +194,11 @@ export function ClinicStaffDetails() {
             <DetailRow term="Clinic">{user?.clinicName ?? '—'}</DetailRow>
             <DetailRow term="Reference">{user?.clinicReference ?? '—'}</DetailRow>
           </dl>
+          {isSelf ? (
+            <p className="stat__note" style={{ marginTop: 12 }}>
+              This is your own membership. Another Clinic Administrator must deactivate it.
+            </p>
+          ) : null}
         </Panel>
       </div>
 
@@ -165,10 +207,29 @@ export function ClinicStaffDetails() {
           {ROLE_ACCESS[member.staff_role] ?? 'No clinic permissions are granted to this role.'}
         </p>
         <p className="stat__note" style={{ marginTop: 12 }}>
-          Permissions are enforced by row-level security and the clinic RPCs. Role and account
-          changes are the remaining CA-06 actions and arrive in a later commit.
+          Permissions are enforced by row-level security and the clinic RPCs. Role and status
+          changes are recorded against your account.
         </p>
       </Panel>
+
+      <ConfirmDialog
+        open={pendingStatus !== null}
+        title={
+          pendingStatus === 'suspended' ? `Deactivate ${name}?` : `Reactivate ${name}?`
+        }
+        description={
+          pendingStatus === 'suspended'
+            ? 'They stay in the directory but lose access to every clinic screen and RPC immediately. Assignments and history are kept, and you can reactivate them later.'
+            : 'Their existing role is restored, so they can reach the clinic workspace again.'
+        }
+        confirmLabel={pendingStatus === 'suspended' ? 'Deactivate account' : 'Reactivate account'}
+        confirmVariant={pendingStatus === 'suspended' ? 'danger' : 'primary'}
+        busy={busy}
+        onConfirm={() => void changeStatus()}
+        onClose={() => {
+          if (!busy) setPendingStatus(null);
+        }}
+      />
 
       <ClinicFooter right="Membership data is clinic-scoped by row-level security" />
     </div>
