@@ -416,3 +416,68 @@ test('platform_dashboard() refuses a non-administrator too', async () => {
   await asAnon(db);
   await expectFailure('select public.platform_dashboard()', [], /Only a System Administrator/);
 });
+
+test('0009 still lets a System Administrator suspend and reactivate a clinic', async () => {
+  // Claims identify the caller; `set role authenticated` makes the column grants
+  // and RLS apply exactly as they do for a signed-in browser session.
+  const asAuthenticated = async (sql, params) => {
+    await db.exec('set role authenticated');
+    try {
+      return await db.query(sql, params);
+    } finally {
+      await db.exec('reset role');
+    }
+  };
+
+  await asActor(db, ids.adminId);
+
+  const { rows: suspended } = await asAuthenticated(
+    "select public.set_clinic_status($1, 'suspend') as payload",
+    [ids.clinics.beta],
+  );
+  assert.equal(suspended[0].payload.status, 'suspended');
+
+  const { rows: afterSuspend } = await asAuthenticated(
+    'select status from public.clinics where id = $1',
+    [ids.clinics.beta],
+  );
+  assert.equal(
+    afterSuspend[0].status,
+    'suspended',
+    'the security-definer RPC must write past the revoked column grant',
+  );
+
+  const { rows: reactivated } = await asAuthenticated(
+    "select public.set_clinic_status($1, 'reactivate') as payload",
+    [ids.clinics.beta],
+  );
+  assert.equal(reactivated[0].payload.status, 'approved');
+
+  const { rows: afterReactivate } = await asAuthenticated(
+    'select status from public.clinics where id = $1',
+    [ids.clinics.beta],
+  );
+  assert.equal(afterReactivate[0].status, 'approved');
+
+  const { rows: audit } = await asAuthenticated(
+    `select action from public.platform_audit_log
+      where clinic_id = $1 and action in ('clinic.suspend', 'clinic.reactivate')`,
+    [ids.clinics.beta],
+  );
+  assert.deepEqual(
+    audit.map((row) => row.action).sort(),
+    ['clinic.reactivate', 'clinic.suspend'],
+    'both status changes must be audited',
+  );
+
+  // The same write must still fail for the clinic's own administrator.
+  await asActor(db, ids.users.betaAdmin);
+  await assert.rejects(
+    () =>
+      asAuthenticated("update public.clinics set status = 'suspended' where id = $1", [
+        ids.clinics.beta,
+      ]),
+    /permission denied/,
+    'a clinic administrator must not suspend their own clinic',
+  );
+});
