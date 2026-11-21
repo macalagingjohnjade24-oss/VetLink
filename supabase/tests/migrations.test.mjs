@@ -90,6 +90,7 @@ test('0001-0007 apply in order and create the schema the console calls', async (
     'send_platform_announcement',
     'submit_clinic_application',
     'accept_staff_invitation',
+    'guard_clinic_membership_role',
   ];
   const { rows: functions } = await db.query(
     `select p.proname
@@ -136,6 +137,7 @@ test('the migrations listed in the harness are the ones on disk', async () => {
     '0007_platform_list_queries.sql',
     '0008_clinic_staff_permissions.sql',
     '0009_clinic_profile_guard.sql',
+    '0010_clinic_membership_role_guard.sql',
   ]);
 });
 
