@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { formatClock, formatDate } from '@/lib/format';
 
 /**
  * Everything the Clinic Administrator console reads.
@@ -277,6 +278,84 @@ export async function fetchAppointmentServiceNames(clinicId: string): Promise<st
         .filter((name): name is string => Boolean(name)),
     ),
   ].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Every request still waiting on a decision, longest wait first. AM-03 reads
+ * this queue, and the appointments SELECT policy keeps the rows inside the
+ * caller's own clinic.
+ */
+export async function fetchPendingAppointmentRequests(
+  clinicId: string,
+): Promise<ManagedAppointment[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(MANAGED_APPOINTMENT_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  failure(error);
+  return (data ?? []) as unknown as ManagedAppointment[];
+}
+
+/**
+ * What the front desk decided about a pending request.
+ *
+ * Approve and reject move `pending` to `confirmed` or `rejected`, which the
+ * transition trigger from 0008 allows an active receptionist or clinic
+ * administrator to do. A reschedule proposal leaves the status pending: the
+ * proposed slot goes into `clinic_note`, the note the Pet Owner app shows on
+ * the appointment, so the owner can pick a time the clinic can actually keep
+ * rather than having their request confirmed at a time they never chose.
+ */
+export type AppointmentDecision =
+  | { action: 'approve'; note: string }
+  | { action: 'reject'; note: string }
+  | { action: 'reschedule'; date: string; time: string; note: string };
+
+/**
+ * Writes the decision and returns the row the database kept. `clinic_id` is
+ * repeated in the filter, so the appointments policy decides whether this
+ * account may write; zero rows means the request is gone, already decided or
+ * no longer this clinic's.
+ */
+export async function decideAppointmentRequest(
+  clinicId: string,
+  appointmentId: string,
+  decision: AppointmentDecision,
+): Promise<ManagedAppointment> {
+  const note = decision.note.trim();
+  const patch =
+    decision.action === 'approve'
+      ? { status: 'confirmed', clinic_note: note || 'The clinic accepted your booking request.' }
+      : decision.action === 'reject'
+        ? {
+            status: 'rejected',
+            clinic_note: note || 'The clinic could not fit this request in. Please choose another time.',
+          }
+        : {
+            clinic_note: [
+              `The clinic proposes ${formatDate(decision.date)} at ${formatClock(decision.time)} instead.`,
+              note,
+            ]
+              .filter(Boolean)
+              .join(' '),
+          };
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update(patch)
+    .eq('clinic_id', clinicId)
+    .eq('id', appointmentId)
+    .select(MANAGED_APPOINTMENT_COLUMNS)
+    .maybeSingle();
+  failure(error);
+  if (!data) {
+    throw new Error(
+      'The request was not updated. It may have been decided already, or your access was revoked.',
+    );
+  }
+  return data as unknown as ManagedAppointment;
 }
 
 export type OwnerRegistration = {
