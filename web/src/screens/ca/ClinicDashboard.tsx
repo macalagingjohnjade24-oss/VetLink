@@ -370,6 +370,11 @@ export function ClinicDashboard() {
                 Open clinic profile
               </Button>
             </Link>
+            <Link to="/clinic-admin/services">
+              <Button variant="outline" block>
+                Manage clinic services
+              </Button>
+            </Link>
             <Button variant="outline" block onClick={exportSchedule} disabled={!schedule.length}>
               Export today's schedule
             </Button>
@@ -378,8 +383,8 @@ export function ClinicDashboard() {
             </Button>
             <p className="stat__note" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <Icon name="shield" size={16} />
-              Services, staff management and reports are the next Phase 4 screens; this dashboard
-              only links to pages that already work.
+              Staff management, permissions and reports are the next Phase 4 screens; this
+              dashboard only links to pages that already work.
             </p>
           </div>
         </Panel>
