@@ -179,6 +179,13 @@ export function AppointmentDetails() {
         )}`}
         actions={
           <div className="row">
+            {appointment.status === 'confirmed' || appointment.status === 'rescheduled' ? (
+              <Button
+                onClick={() => navigate(`/appointments/${appointment.id}/reschedule`)}
+              >
+                Reschedule
+              </Button>
+            ) : null}
             <StatusBadge status={appointment.status} />
             <Button variant="outline" onClick={() => navigate('/appointments/management')}>
               Back to appointments

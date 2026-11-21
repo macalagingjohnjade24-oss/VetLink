@@ -575,6 +575,72 @@ export type NewAppointmentInput = {
 
 export type CreatedAppointment = { id: string; reference: string | null };
 
+/** The clinic's saved operating window, used to propose reschedule slots. */
+export async function fetchClinicHours(clinicId: string): Promise<OperatingHours> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .select('operating_hours')
+    .eq('id', clinicId)
+    .maybeSingle();
+  failure(error);
+  return (data as { operating_hours: OperatingHours } | null)?.operating_hours ?? null;
+}
+
+export type RescheduleInput = { date: string; time: string; reason: string | null };
+
+/**
+ * Moves a booking to a new slot.
+ *
+ * The transition trigger from 0008 lets an active receptionist or clinic
+ * administrator move `confirmed` to `rescheduled`; the same call also handles a
+ * booking that was already rescheduled. The note records the slot it came from
+ * and the reason, because the row keeps no per-change history, and the owner's
+ * pending reschedule request, if any, is cleared now that it is answered.
+ */
+export async function rescheduleClinicAppointment(
+  clinicId: string,
+  appointment: { id: string; appointment_date: string; appointment_time: string },
+  input: RescheduleInput,
+): Promise<ManagedAppointment> {
+  const moved = `Moved from ${formatDate(appointment.appointment_date)} at ${formatClock(
+    appointment.appointment_time,
+  )} to ${formatDate(input.date)} at ${formatClock(input.time)}.`;
+  const reason = input.reason?.trim();
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({
+      appointment_date: input.date,
+      appointment_time: input.time,
+      status: 'rescheduled',
+      clinic_note: [moved, reason].filter(Boolean).join(' '),
+      reschedule_requested: false,
+      requested_date: null,
+      requested_time: null,
+      reschedule_reason: null,
+    })
+    .eq('clinic_id', clinicId)
+    .eq('id', appointment.id)
+    .select(MANAGED_APPOINTMENT_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('That date and time is already booked at this clinic. Choose another slot.');
+    }
+    if (error.code === '42501') {
+      throw new Error('Your access does not allow rescheduling this appointment.');
+    }
+    throw new Error(error.message);
+  }
+  if (!data) {
+    throw new Error(
+      'The appointment was not rescheduled. It may have been cancelled, or your access was revoked.',
+    );
+  }
+  return data as unknown as ManagedAppointment;
+}
+
 /**
  * Creates a confirmed booking at this clinic. The staff INSERT policy from 0016
  * allows an active receptionist or clinic administrator to do this, and the
