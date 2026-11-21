@@ -12,12 +12,17 @@ const users = {
   reception: { id: 'a0000000-0000-4000-8000-000000000003', email: 'qa-reception@qa-vetlink.invalid' },
 };
 const svc = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
-const results = [];
+const pdf = { 'content-type': 'application/pdf', 'x-upsert': 'true' };
+const ownVet = `${clinic}/api-vet.pdf`;
+const ownReception = `${clinic}/api-reception.pdf`;
+const otherObj = `${otherClinic}/api-other.pdf`;
+const allObjects = [ownVet, ownReception, otherObj];
 const expected = {
   vet_api_delete_own: 'rows=1',
   vet_api_delete_other_clinic: 'rows=0',
   reception_api_delete_own: 'rows=0',
 };
+const results = [];
 
 async function call(method, path, headers, body) {
   // Storage rejects a DELETE that declares a JSON body type but sends none, so
@@ -27,10 +32,12 @@ async function call(method, path, headers, body) {
   return { status: res.status, text: await res.text() };
 }
 
-async function exists(name) {
-  const r = await call('GET', `/storage/v1/object/info/${bucket}/${name}`, svc);
-  return r.status === 200;
-}
+const objectPath = (name) => `/storage/v1/object/${bucket}/${name}`;
+const exists = async (name) => (await call('GET', `/storage/v1/object/info/${bucket}/${name}`, svc)).status === 200;
+const removeAsService = (name) => call('DELETE', objectPath(name), svc);
+const remove = (token, name) => call('DELETE', objectPath(name), { apikey: anonKey, Authorization: `Bearer ${token}` });
+const upload = (token, name) =>
+  call('POST', objectPath(name), { apikey: anonKey, Authorization: `Bearer ${token}`, ...pdf }, 'QA');
 
 async function signIn(email, password) {
   const r = await call('POST', '/auth/v1/token?grant_type=password', { apikey: anonKey }, JSON.stringify({ email, password }));
@@ -38,53 +45,48 @@ async function signIn(email, password) {
   return JSON.parse(r.text).access_token;
 }
 
-async function upload(token, name) {
-  return call('POST', `/storage/v1/object/${bucket}/${name}`, { apikey: anonKey, Authorization: `Bearer ${token}`, 'content-type': 'application/pdf', 'x-upsert': 'true' }, 'QA');
-}
-
-async function remove(token, name) {
-  return call('DELETE', `/storage/v1/object/${bucket}/${name}`, { apikey: anonKey, Authorization: `Bearer ${token}` });
-}
-
+// Sets fresh random passwords on the QA users through the admin API.
 const passwords = {};
 for (const role of Object.keys(users)) {
   passwords[role] = randomBytes(24).toString('base64url');
   const r = await call('PUT', `/auth/v1/admin/users/${users[role].id}`, svc, JSON.stringify({ password: passwords[role] }));
-  if (r.status !== 200) throw new Error(`password set failed for ${role}: ${r.status}`);
+  if (r.status !== 200) throw new Error(`password set failed for ${role}: ${r.status} ${r.text}`);
 }
 const vetToken = await signIn(users.vet.email, passwords.vet);
 const receptionToken = await signIn(users.reception.email, passwords.reception);
 
-const ownVet = `${clinic}/api-vet.pdf`;
-const ownReception = `${clinic}/api-reception.pdf`;
-const otherObj = `${otherClinic}/api-other.pdf`;
+// Clear leftovers from a previous run before seeding.
+for (const name of allObjects) await removeAsService(name);
 
-const steps = [];
-for (const name of [ownVet, ownReception, otherObj]) await call('DELETE', `/storage/v1/object/${bucket}/${name}`, svc);
 // Setup uses the service role for the objects the staff members do not upload
 // themselves. The receptionist cannot upload under 0008 (only veterinarians may),
 // so their own-clinic object is seeded here and their delete is still tested.
-const seededOther = await call('POST', `/storage/v1/object/${bucket}/${otherObj}`, { ...svc, 'content-type': 'application/pdf', 'x-upsert': 'true' }, 'QA');
-steps.push(['seed_other_clinic', seededOther.status]);
-const seededRec = await call('POST', `/storage/v1/object/${bucket}/${ownReception}`, { ...svc, 'content-type': 'application/pdf', 'x-upsert': 'true' }, 'QA');
-steps.push(['seed_reception_own', seededRec.status]);
+const seeds = [
+  ['seed_other_clinic', otherObj],
+  ['seed_reception_own', ownReception],
+];
+for (const [label, name] of seeds) {
+  const r = await call('POST', objectPath(name), { ...svc, ...pdf }, 'QA');
+  console.log(`step ${label}: HTTP ${r.status}`);
+  if (r.status !== 200) throw new Error(`RLS API QA setup seed failed: ${label} ${r.text}`);
+}
 const upVet = await upload(vetToken, ownVet);
-steps.push(['upload_vet_own', upVet.status]);
-if (upVet.status !== 200 || seededRec.status !== 200 || seededOther.status !== 200) throw new Error(`RLS API QA setup upload failed: ${JSON.stringify(steps)} ${upVet.text} | ${seededRec.text} | ${seededOther.text}`);
+console.log(`step upload_vet_own: HTTP ${upVet.status}`);
+if (upVet.status !== 200) throw new Error(`RLS API QA setup upload failed: ${upVet.text}`);
 
-const delVet = await remove(vetToken, ownVet);
-steps.push(['delete_vet_own', delVet.status]);
-results.push(['vet_api_delete_own', (await exists(ownVet)) ? 'rows=0' : 'rows=1']);
-const delOther = await remove(vetToken, otherObj);
-steps.push(['delete_vet_other_clinic', delOther.status]);
-results.push(['vet_api_delete_other_clinic', (await exists(otherObj)) ? 'rows=0' : 'rows=1']);
-const delRec = await remove(receptionToken, ownReception);
-steps.push(['delete_reception_own', delRec.status]);
-results.push(['reception_api_delete_own', (await exists(ownReception)) ? 'rows=0' : 'rows=1']);
-for (const [k, v] of steps) console.log(`step ${k}: HTTP ${v}`);
+const checks = [
+  ['vet_api_delete_own', 'delete_vet_own', () => remove(vetToken, ownVet), ownVet],
+  ['vet_api_delete_other_clinic', 'delete_vet_other_clinic', () => remove(vetToken, otherObj), otherObj],
+  ['reception_api_delete_own', 'delete_reception_own', () => remove(receptionToken, ownReception), ownReception],
+];
+for (const [key, label, act, name] of checks) {
+  const r = await act();
+  console.log(`step ${label}: HTTP ${r.status}`);
+  results.push([key, (await exists(name)) ? 'rows=0' : 'rows=1']);
+}
 
 // Cleanup of any objects that remain (service role, through the API).
-for (const name of [ownVet, ownReception, otherObj]) await call('DELETE', `/storage/v1/object/${bucket}/${name}`, svc);
+for (const name of allObjects) await removeAsService(name);
 
 const got = Object.fromEntries(results);
 const missing = Object.keys(expected).filter((k) => !(k in got));
