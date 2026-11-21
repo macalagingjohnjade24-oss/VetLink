@@ -43,7 +43,17 @@ insert into qa_results select 'limited_sees_medical_records', count(*)::text fro
 select pg_temp.reset_user();
 
 select pg_temp.as_user('a0000000-0000-4000-8000-000000000005');
+insert into qa_results select 'admin_sees_appointments', count(*)::text from public.appointments where clinic_id = 'c0000000-0000-4000-8000-000000000001';
 insert into qa_results select 'admin_sees_medical_records', count(*)::text from public.medical_records where clinic_id = 'c0000000-0000-4000-8000-000000000001';
+select pg_temp.reset_user();
+
+-- A pending appointment for the administrator to confirm. Seeded after the read
+-- counts above so they keep seeing only the two fixture rows.
+insert into public.appointments (id, owner_id, clinic_id, pet_id, appointment_date, appointment_time, status)
+values ('d0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', current_date, '11:00', 'pending');
+
+select pg_temp.as_user('a0000000-0000-4000-8000-000000000005');
+select pg_temp.try_sql('admin_confirms_pending', $q$update public.appointments set status='confirmed' where id='d0000000-0000-4000-8000-000000000003'$q$);
 select pg_temp.reset_user();
 
 select pg_temp.as_user('a0000000-0000-4000-8000-000000000002');
@@ -135,6 +145,16 @@ select pg_temp.as_user('a0000000-0000-4000-8000-000000000004');
 insert into qa_results select 'rpc_columns_' || p.proname, pg_get_function_result(p.oid) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('clinic_limited_pets','clinic_limited_due_vaccinations','clinic_receptionist_counts');
 select pg_temp.reset_user();
 
+-- A suspended membership must grant nothing: every helper requires status 'active'.
+update public.clinic_memberships set status = 'suspended'
+ where clinic_id = 'c0000000-0000-4000-8000-000000000001' and user_id = 'a0000000-0000-4000-8000-000000000003';
+select pg_temp.as_user('a0000000-0000-4000-8000-000000000003');
+insert into qa_results select 'suspended_receptionist_sees_vaccinations', count(*)::text from public.vaccinations where clinic_id = 'c0000000-0000-4000-8000-000000000001';
+select pg_temp.try_sql('suspended_receptionist_updates_appt', $q$update public.appointments set appointment_time='12:00' where id='d0000000-0000-4000-8000-000000000001'$q$);
+select pg_temp.reset_user();
+update public.clinic_memberships set status = 'active'
+ where clinic_id = 'c0000000-0000-4000-8000-000000000001' and user_id = 'a0000000-0000-4000-8000-000000000003';
+
 create temp table qa_expected (check_name text primary key, expected text) on commit drop;
 insert into qa_expected values
   ('vet_sees_own_appointments','1'),('vet2_sees_own_appointments','1'),
@@ -151,7 +171,9 @@ insert into qa_expected values
   ('vet_storage_delete_attachment','rows=1'),('vet_storage_delete_other_clinic','rows=0'),('receptionist_storage_delete_attachment','rows=0'),('admin_storage_insert_attachment','error=42501'),('admin_storage_read_attachment','0'),
   ('rpc_columns_clinic_limited_pets','TABLE(pet_id uuid, pet_name text, species text)'),
   ('rpc_columns_clinic_limited_due_vaccinations','TABLE(vaccination_id uuid, pet_name text, vaccine_name text, next_due_date date)'),
-  ('rpc_columns_clinic_receptionist_counts','TABLE(pending_count bigint, confirmed_today_count bigint)');
+  ('rpc_columns_clinic_receptionist_counts','TABLE(pending_count bigint, confirmed_today_count bigint)'),
+  ('admin_sees_appointments','2'),('admin_confirms_pending','rows=1'),
+  ('suspended_receptionist_sees_vaccinations','0'),('suspended_receptionist_updates_appt','rows=0');
 
 do $$
 declare mismatches text;
