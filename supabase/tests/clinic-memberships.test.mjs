@@ -184,6 +184,59 @@ test('a clinic administrator cannot deactivate, demote or delete an administrato
   assert.equal(admin[0].status, 'active', 'the administrator membership must survive intact');
 });
 
+test('a staff role edit updates the account role with the membership', async () => {
+  await asActor(db, ids.users.alphaAdmin);
+
+  const { rows: updated } = await asAuthenticated(
+    "update public.clinic_memberships set staff_role = 'clinic_staff' where clinic_id = $1 and user_id = $2 returning staff_role",
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+  assert.equal(updated[0].staff_role, 'clinic_staff');
+
+  const { rows: profile } = await db.query('select role from public.profiles where id = $1', [
+    ids.users.drReyes,
+  ]);
+  assert.equal(
+    profile[0].role,
+    'clinic_staff',
+    'the membership edit must not leave profiles.role behind',
+  );
+
+  // Restore the fixture and confirm the sync works in both directions.
+  await db.query(
+    "update public.clinic_memberships set staff_role = 'veterinarian' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+  const { rows: restored } = await db.query('select role from public.profiles where id = $1', [
+    ids.users.drReyes,
+  ]);
+  assert.equal(restored[0].role, 'veterinarian');
+});
+
+test('a membership edit never demotes a system administrator', async () => {
+  const { rows: membership } = await db.query(
+    "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_staff', 'active') returning id",
+    [ids.clinics.alpha, ids.adminId],
+  );
+
+  await asActor(db, ids.users.alphaAdmin);
+  await asAuthenticated(
+    "update public.clinic_memberships set staff_role = 'receptionist' where id = $1",
+    [membership[0].id],
+  );
+
+  const { rows: profile } = await db.query('select role from public.profiles where id = $1', [
+    ids.adminId,
+  ]);
+  assert.equal(
+    profile[0].role,
+    'system_administrator',
+    'a clinic membership must never overwrite the platform role',
+  );
+
+  await db.query('delete from public.clinic_memberships where id = $1', [membership[0].id]);
+});
+
 test('a non-administrator cannot change memberships', async () => {
   // An active veterinarian can read the directory but not promote or demote anyone.
   await asActor(db, ids.users.drReyes);
