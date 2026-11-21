@@ -10,6 +10,17 @@ values
   ('a0000000-0000-4000-8000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'qa-vet2@qa-vetlink.invalid', '', now(), '{}', '{"first_name":"QA","last_name":"Vet2"}', now(), now(), '', false, false)
 on conflict (id) do nothing;
 
+-- GoTrue scans the token columns into plain strings, so a NULL makes the row
+-- unloadable by the admin API ("Database error loading user") and the QA users
+-- could not be given passwords. The update also repairs rows from earlier runs.
+update auth.users
+   set email_change = coalesce(email_change, ''),
+       email_change_token_new = coalesce(email_change_token_new, ''),
+       recovery_token = coalesce(recovery_token, ''),
+       phone_change = coalesce(phone_change, ''),
+       confirmation_token = coalesce(confirmation_token, '')
+ where id::text like 'a0000000-0000-4000-8000-00000000000%';
+
 insert into public.clinics (id, clinic_name, status) values ('c0000000-0000-4000-8000-000000000001', 'QA Test Clinic (delete me)', 'approved')
 on conflict (id) do nothing;
 
