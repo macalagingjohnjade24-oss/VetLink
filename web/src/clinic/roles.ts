@@ -27,7 +27,7 @@ export const CLINIC_ROLE_SUMMARY: Record<ClinicRole, string> = {
   veterinarian:
     'Appointments assigned to them, plus the patient history, medical records and vaccinations they author. Clinic-wide figures are limited to their own rows.',
   clinic_staff:
-    'Today’s schedule plus the name and species of the pets booked in it, read through clinic_limited_pets(). No owner contact details, no full pet records, and no status or clinical writes.',
+    'Today’s times, statuses, services and the booked pets’ names and species, read through clinic_limited_schedule(). No appointment rows, no owner contact details, no full pet records, and no status or clinical writes.',
 };
 
 export function clinicRoleSummary(role: string): string {
@@ -54,7 +54,7 @@ export const CLINIC_CAPABILITIES: ClinicCapability[] = [
   {
     name: 'Appointment management',
     detail:
-      'Read requests and confirm, reschedule or cancel bookings — the 0008 appointments policies scope the rows.',
+      'Read requests and confirm, reschedule or cancel bookings — the 0008 appointments policies scope the rows. Limited staff have no appointment-row read at all; they see today’s schedule through clinic_limited_schedule(), which omits the owner’s name and contact number stored on the row.',
     access: {
       clinic_administrator: 'yes',
       receptionist: 'yes',
@@ -120,7 +120,7 @@ export const CLINIC_CAPABILITIES: ClinicCapability[] = [
   {
     name: 'Clinic reports',
     detail:
-      'clinic_dashboard() accepts any active membership, and the appointment rows behind a report are scoped per role — so only the administrator sees every booking.',
+      'clinic_dashboard() accepts any active membership, and the appointment rows behind a report are scoped per role — so only the administrator sees every booking. Limited staff get the counts but no appointment rows to break down.',
     access: {
       clinic_administrator: 'yes',
       receptionist: 'partial',

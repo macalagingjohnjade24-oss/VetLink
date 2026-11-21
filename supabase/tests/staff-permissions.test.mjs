@@ -163,10 +163,17 @@ test('a veterinarian cannot cancel an appointment', async () => {
   );
 });
 
-test('limited staff see only today’s pets and due vaccinations via RPCs', async () => {
+test('limited staff read today’s schedule and due vaccinations only through RPCs', async () => {
   await act(ids.users.loner);
+  // 0015: the appointment rows carry owner_name/contact, so limited staff get
+  // no rows at all and use clinic_limited_schedule() instead.
   const { rows: appts } = await db.query('select id from public.appointments');
-  assert.equal(appts.length, 2);
+  assert.deepEqual(appts, []);
+  const { rows: schedule } = await db.query(
+    'select appointment_id, pet_name from public.clinic_limited_schedule($1)',
+    [ids.clinics.alpha],
+  );
+  assert.deepEqual(schedule.map((row) => row.pet_name).sort(), ['Biscuit', 'Mochi']);
   const { rows: pets } = await db.query(
     'select pet_name, species from public.clinic_limited_pets($1)',
     [ids.clinics.alpha],
@@ -185,6 +192,20 @@ test('limited staff see only today’s pets and due vaccinations via RPCs', asyn
 });
 
 test('limited staff get only name, species and due-date columns from the RPCs', async () => {
+  await act(ids.users.loner);
+  const { rows: schedule } = await db.query('select * from public.clinic_limited_schedule($1)', [
+    ids.clinics.alpha,
+  ]);
+  assert.deepEqual(Object.keys(schedule[0]).sort(), [
+    'appointment_id',
+    'appointment_time',
+    'pet_id',
+    'pet_name',
+    'reference',
+    'service_name',
+    'species',
+    'status',
+  ]);
   await act(ids.users.loner);
   const { rows: pets } = await db.query('select * from public.clinic_limited_pets($1)', [
     ids.clinics.alpha,

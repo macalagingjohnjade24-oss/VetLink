@@ -90,6 +90,7 @@ select pg_temp.reset_user();
 
 select pg_temp.as_user('a0000000-0000-4000-8000-000000000004');
 select pg_temp.try_sql('limited_rpc_pets', $q$select * from public.clinic_limited_pets('c0000000-0000-4000-8000-000000000001')$q$);
+select pg_temp.try_sql('limited_rpc_schedule', $q$select * from public.clinic_limited_schedule('c0000000-0000-4000-8000-000000000001')$q$);
 select pg_temp.try_sql('limited_rpc_due_vax', $q$select * from public.clinic_limited_due_vaccinations('c0000000-0000-4000-8000-000000000001')$q$);
 select pg_temp.try_sql('limited_rpc_counts_denied', $q$select * from public.clinic_receptionist_counts('c0000000-0000-4000-8000-000000000001')$q$);
 select pg_temp.reset_user();
@@ -164,11 +165,11 @@ create temp table qa_expected (check_name text primary key, expected text) on co
 insert into qa_expected values
   ('vet_sees_own_appointments','1'),('vet2_sees_own_appointments','1'),
   ('receptionist_sees_vaccinations','1'),('receptionist_sees_medical_records','0'),
-  ('admin_sees_medical_records','0'),('limited_sees_appointments','2'),('limited_sees_medical_records','0'),
+  ('admin_sees_medical_records','0'),('limited_sees_appointments','0'),('limited_sees_medical_records','0'),
   ('author_edits_own_record','rows=1'),('vet2_edits_others_record','rows=0'),('vet2_deletes_others_record','rows=0'),
   ('author_deletes_own_record','rows=0'),('author_deletes_own_vaccination','rows=0'),
   ('limited_inserts_vaccination','error=42501'),('limited_updates_appt','rows=0'),
-  ('limited_rpc_pets','rows=1'),('limited_rpc_due_vax','rows=1'),('limited_rpc_counts_denied','rows=0'),('receptionist_rpc_counts','rows=1'),
+  ('limited_rpc_pets','rows=1'),('limited_rpc_due_vax','rows=1'),('limited_rpc_schedule','rows=2'),('limited_rpc_counts_denied','rows=0'),('receptionist_rpc_counts','rows=1'),
   ('vet_completes_own_confirmed','rows=1'),('vet_completes_others_appt','rows=0'),('vet_confirms_pending','error=42501'),
   ('receptionist_reschedules','rows=1'),('receptionist_completes','error=42501'),
   ('owner_cancels_own_pending','rows=1'),('owner_confirms_own','error=42501'),
