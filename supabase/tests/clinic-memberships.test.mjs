@@ -121,11 +121,46 @@ test('only the clinic administrator can change membership rows, and only in thei
     /row-level security/i,
   );
 
-  // A veterinarian may read the directory but not change it.
+});
+
+test('a non-administrator cannot change memberships', async () => {
+  // An active veterinarian can read the directory but not promote or demote anyone.
   await asActor(db, ids.users.drReyes);
-  const { rows: vetWrite } = await asAuthenticated(
+
+  const { rows: vetRole } = await asAuthenticated(
+    "update public.clinic_memberships set staff_role = 'clinic_administrator' where clinic_id = $1 and user_id = $2 returning id",
+    [ids.clinics.alpha, ids.users.drReyes],
+  );
+  assert.equal(vetRole.length, 0, 'a veterinarian cannot promote themselves');
+
+  const { rows: vetStatus } = await asAuthenticated(
     "update public.clinic_memberships set status = 'suspended' where clinic_id = $1 and user_id = $2 returning id",
     [ids.clinics.alpha, ids.users.frontDesk],
   );
-  assert.equal(vetWrite.length, 0, 'only a Clinic Administrator manages memberships');
+  assert.equal(vetStatus.length, 0, 'a veterinarian cannot suspend a colleague');
+
+  // An invited receptionist cannot activate their own membership early.
+  await asActor(db, ids.users.frontDesk);
+  const { rows: selfActivate } = await asAuthenticated(
+    "update public.clinic_memberships set status = 'active' where clinic_id = $1 and user_id = $2 returning id",
+    [ids.clinics.alpha, ids.users.frontDesk],
+  );
+  assert.equal(selfActivate.length, 0, 'accepting the invitation is the only way to activate');
+
+  const { rows: frontDesk } = await db.query(
+    'select status from public.clinic_memberships where clinic_id = $1 and user_id = $2',
+    [ids.clinics.alpha, ids.users.frontDesk],
+  );
+  assert.equal(frontDesk[0].status, 'invited', 'the membership must be unchanged');
+
+  // No non-administrator may add a membership, even to their own clinic.
+  await asActor(db, ids.users.drReyes);
+  await assert.rejects(
+    () =>
+      asAuthenticated(
+        "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_staff', 'invited')",
+        [ids.clinics.alpha, ids.users.owner],
+      ),
+    /row-level security/i,
+  );
 });
