@@ -400,8 +400,8 @@ export function ClinicDashboard() {
             </Button>
             <p className="stat__note" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <Icon name="shield" size={16} />
-              Import / export and clinic settings are the remaining Phase 4 screens; this
-              dashboard only links to pages that already work.
+              Clinic settings and import / export live in the sidebar; these shortcuts cover
+              day-to-day work.
             </p>
           </div>
         </Panel>

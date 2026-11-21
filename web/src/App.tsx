@@ -23,6 +23,7 @@ import { RolesAndAccess } from '@/screens/sa/Roles';
 import { SystemSettings } from '@/screens/sa/Settings';
 import { PlatformUsers, UserDetails } from '@/screens/sa/Users';
 import { ClinicDashboard } from '@/screens/ca/ClinicDashboard';
+import { ClinicImportExport } from '@/screens/ca/ClinicImportExport';
 import { ClinicNotifications } from '@/screens/ca/ClinicNotifications';
 import { ClinicPermissions } from '@/screens/ca/ClinicPermissions';
 import { ClinicProfile } from '@/screens/ca/ClinicProfile';
@@ -110,7 +111,7 @@ function SystemAdministratorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** CA-01 – CA-13. CA-11 still renders its SectionPage notice. */
+/** CA-01 – CA-13. */
 const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin', element: <ClinicDashboard /> },
   { path: '/clinic-admin/profile', element: <ClinicProfile /> },
@@ -124,6 +125,7 @@ const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin/staff/:id/edit', element: <ClinicStaffEdit /> },
   { path: '/clinic-admin/permissions', element: <ClinicPermissions /> },
   { path: '/clinic-admin/reports', element: <ClinicReports /> },
+  { path: '/clinic-admin/import-export', element: <ClinicImportExport /> },
   { path: '/clinic-admin/notifications', element: <ClinicNotifications /> },
   { path: '/clinic-admin/settings', element: <ClinicSettings /> },
 ];

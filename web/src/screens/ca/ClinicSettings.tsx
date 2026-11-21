@@ -1,53 +1,29 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
-import { formatDate, formatDateTime, formatOperatingHours, label } from '@/lib/format';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import {
-  fetchClinicProfile,
-  fetchClinicServices,
-  updateClinicSettings,
-  type ClinicProfile,
-  type ClinicService,
-} from '@/clinic/data';
-import {
-  ClinicFooter,
-  InvitationPending,
-  NoClinicAssigned,
-  OperatingHoursList,
-} from '@/clinic/components';
+import { fetchClinicProfile, updateClinicSettings, type ClinicProfile } from '@/clinic/data';
+import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
 import {
   DetailRow,
   ErrorState,
   LoadingState,
-  Metric,
   Notice,
   PageHeader,
   Panel,
   StatusBadge,
 } from '@/sa/components';
 import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
 
 /**
  * CA-13. The switches are the two clinic columns no other screen writes:
  * `has_availability` (what the Pet Owner app filters on) and `emergency_service`
- * (displayed on the profile and in the platform directory). Availability is a
+ * (shown on the profile and in the platform directory). Availability is a
  * clinic-declared flag, not a check of the appointment diary, and the copy says
  * so instead of implying enforcement. Everything else on the page is read from
- * the clinic's own rows.
+ * the clinic's own row.
  */
-function SettingsForm({
-  clinic,
-  services,
-  clinicId,
-}: {
-  clinic: ClinicProfile;
-  services: ClinicService[];
-  clinicId: string;
-}) {
-  const { user } = useAuth();
-
+function SettingsForm({ clinic, clinicId }: { clinic: ClinicProfile; clinicId: string }) {
   const [availability, setAvailability] = useState(clinic.has_availability);
   const [emergency, setEmergency] = useState(clinic.emergency_service);
   const [baseline, setBaseline] = useState({
@@ -75,7 +51,7 @@ function SettingsForm({
         emergency_service: emergency,
       });
       // Hold the row the database kept, so the form shows what was stored even
-      // if a trigger or a revoked membership changed it in between.
+      // if the membership was revoked in between.
       setBaseline({
         availability: saved.has_availability,
         emergency: saved.emergency_service,
@@ -93,18 +69,11 @@ function SettingsForm({
     }
   };
 
-  const counts = {
-    total: services.length,
-    available: services.filter((service) => service.availability === 'available').length,
-    limited: services.filter((service) => service.availability === 'limited').length,
-    unavailable: services.filter((service) => service.availability === 'unavailable').length,
-  };
-
   return (
     <div className="page">
       <PageHeader
         title="Clinic settings"
-        subtitle={`${clinic.clinic_name} · ${clinic.reference ?? 'No reference'} · clinic-wide switches and record facts`}
+        subtitle={`${clinic.clinic_name} · ${clinic.reference ?? 'No reference'}`}
         actions={
           <>
             <Button variant="ghost" onClick={reset} disabled={!dirty || busy}>
@@ -132,22 +101,19 @@ function SettingsForm({
                 onChange={(event) => setAvailability(event.target.checked)}
                 disabled={busy}
               />
-              <span>
-                Show the clinic as accepting appointments
-                <p className="stat__note" style={{ marginTop: 4 }}>
-                  Pet owners can filter clinics by “Available appointments”. The flag is your
-                  clinic&rsquo;s own signal — it is not read from the appointment diary and it does not
-                  block a booking on its own.
-                </p>
-              </span>
+              <span>Show the clinic as accepting appointments</span>
             </label>
-            <p className="stat__note" style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-              <Icon name="calendar" size={16} />
-              Stored as clinics.has_availability and saved with this form.
+            <p className="stat__note" style={{ marginTop: 12 }}>
+              Pet owners can filter clinics by “Available appointments”. It is the clinic&rsquo;s own
+              signal, not a count from the appointment diary, and it does not block a booking on its
+              own.
             </p>
           </Panel>
 
-          <Panel title="Emergency service" subtitle="Shown on your profile and in the clinic directory">
+          <Panel
+            title="Emergency service"
+            subtitle="Shown on your profile and in the clinic directory"
+          >
             <label className="switch">
               <input
                 type="checkbox"
@@ -155,110 +121,32 @@ function SettingsForm({
                 onChange={(event) => setEmergency(event.target.checked)}
                 disabled={busy}
               />
-              <span>
-                Offer emergency care
-                <p className="stat__note" style={{ marginTop: 4 }}>
-                  This marks the clinic as offering emergency care. It does not add a separate
-                  appointment type, and emergency cases still arrive through the normal booking
-                  requests.
-                </p>
-              </span>
+              <span>Offer emergency care</span>
             </label>
-            <p className="stat__note" style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-              <Icon name="shield" size={16} />
-              Stored as clinics.emergency_service. Only an active clinic administrator can write it.
+            <p className="stat__note" style={{ marginTop: 12 }}>
+              Marks the clinic as offering emergency care. It adds no separate appointment type;
+              emergency cases still arrive as normal booking requests.
             </p>
           </Panel>
         </div>
 
-        <div className="stack">
-          <Panel title="Clinic record" subtitle="Read-only facts managed by VetLink">
-            <dl className="detail" style={{ gridTemplateColumns: '130px 1fr' }}>
-              <DetailRow term="Status">
-                <StatusBadge status={clinic.status} />
-              </DetailRow>
-              <DetailRow term="Reference">{clinic.reference ?? '—'}</DetailRow>
-              <DetailRow term="Registered">{formatDate(clinic.created_at)}</DetailRow>
-              <DetailRow term="Last updated">{formatDateTime(clinic.updated_at)}</DetailRow>
-              <DetailRow term="Discovery">
-                {clinic.status === 'approved'
-                  ? 'Listed for pet owners'
-                  : 'Hidden from pet owners until approved'}
-              </DetailRow>
-            </dl>
-            <p className="stat__note" style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-              <Icon name="lock" size={16} />
-              Approval, suspension and deactivation are platform decisions; 0009 removes the write
-              privilege for those columns.
-            </p>
-          </Panel>
-
-          <Panel title="Your access" subtitle="The membership this console signs you in with">
-            <dl className="detail" style={{ gridTemplateColumns: '130px 1fr' }}>
-              <DetailRow term="Account">
-                {user ? `${user.firstName} ${user.lastName}`.trim() || user.email : '—'}
-              </DetailRow>
-              <DetailRow term="Email">{user?.email || '—'}</DetailRow>
-              <DetailRow term="Role">{label(user?.role)}</DetailRow>
-              <DetailRow term="Membership">
-                {user?.membershipStatus ? (
-                  <StatusBadge status={user.membershipStatus} />
-                ) : (
-                  '—'
-                )}
-              </DetailRow>
-            </dl>
-            <p className="stat__note" style={{ marginTop: 14 }}>
-              Clinic administrators are provisioned by VetLink. Staff roles and statuses are managed
-              on Staff management, and every write is still checked by the membership policies.
-            </p>
-          </Panel>
-        </div>
-      </div>
-
-      <div className="grid grid--two">
-        <Panel
-          title="Services"
-          subtitle={`${counts.total} service${counts.total === 1 ? '' : 's'} on this clinic`}
-          actions={
-            <Link to="/clinic-admin/services">
-              <Button size="sm" variant="outline">
-                Manage services
-              </Button>
-            </Link>
-          }
-        >
-          <div className="metrics">
-            <Metric label="Available" value={counts.available} />
-            <Metric label="Limited" value={counts.limited} />
-            <Metric label="Unavailable" value={counts.unavailable} />
-          </div>
+        <Panel title="Clinic record" subtitle="Managed by VetLink platform administration">
+          <dl className="detail" style={{ gridTemplateColumns: '130px 1fr' }}>
+            <DetailRow term="Status">
+              <StatusBadge status={clinic.status} />
+            </DetailRow>
+            <DetailRow term="Reference">{clinic.reference ?? '—'}</DetailRow>
+            <DetailRow term="Registered">{formatDate(clinic.created_at)}</DetailRow>
+            <DetailRow term="Last updated">{formatDateTime(clinic.updated_at)}</DetailRow>
+          </dl>
           <p className="stat__note" style={{ marginTop: 14 }}>
-            Counts come from this clinic&rsquo;s clinic_services rows. A service&rsquo;s availability is
-            set per service, not by the clinic-wide booking flag above.
-          </p>
-        </Panel>
-
-        <Panel
-          title="Operating hours"
-          subtitle={formatOperatingHours(clinic.operating_hours)}
-          actions={
-            <Link to="/clinic-admin/profile/edit">
-              <Button size="sm" variant="outline">
-                Edit on profile
-              </Button>
-            </Link>
-          }
-        >
-          <OperatingHoursList hours={clinic.operating_hours} />
-          <p className="stat__note" style={{ marginTop: 14 }}>
-            Opening hours are part of the public clinic profile, so they are edited on the profile
-            form rather than duplicated here.
+            Approval, suspension and deactivation are platform decisions. The profile form and this
+            page cannot write those columns.
           </p>
         </Panel>
       </div>
 
-      <ClinicFooter right="Settings are written to this clinic's own row" />
+      <ClinicFooter right="Two clinic-wide switches, written to this clinic's own row" />
     </div>
   );
 }
@@ -270,14 +158,10 @@ export function ClinicSettings() {
   const invited = user?.membershipStatus === 'invited';
 
   const state = useAsync(async () => {
-    if (!clinicId) return null;
-    if (invited) return null;
-    const [clinic, services] = await Promise.all([
-      fetchClinicProfile(clinicId),
-      fetchClinicServices(clinicId),
-    ]);
+    if (!clinicId || invited) return null;
+    const clinic = await fetchClinicProfile(clinicId);
     if (!clinic) throw new Error('That clinic record could not be loaded.');
-    return { clinic, services };
+    return clinic;
   }, [clinicId, invited]);
 
   if (!clinicId) return <NoClinicAssigned title="Clinic settings" />;
@@ -302,12 +186,5 @@ export function ClinicSettings() {
     );
   }
 
-  return (
-    <SettingsForm
-      key={state.data.clinic.id}
-      clinic={state.data.clinic}
-      services={state.data.services}
-      clinicId={clinicId}
-    />
-  );
+  return <SettingsForm key={state.data.id} clinic={state.data} clinicId={clinicId} />;
 }
