@@ -44,6 +44,11 @@ select pg_temp.reset_user();
 
 select pg_temp.as_user('a0000000-0000-4000-8000-000000000005');
 insert into qa_results select 'admin_sees_appointments', count(*)::text from public.appointments where clinic_id = 'c0000000-0000-4000-8000-000000000001';
+-- CA-01 embeds pets(pet_name); the join only works if pets_staff_read admits
+-- this administrator for every patient of the clinic.
+insert into qa_results select 'admin_joins_pet_names', count(p.pet_name)::text
+  from public.appointments a join public.pets p on p.id = a.pet_id
+ where a.clinic_id = 'c0000000-0000-4000-8000-000000000001';
 insert into qa_results select 'admin_sees_medical_records', count(*)::text from public.medical_records where clinic_id = 'c0000000-0000-4000-8000-000000000001';
 select pg_temp.reset_user();
 
@@ -172,7 +177,7 @@ insert into qa_expected values
   ('rpc_columns_clinic_limited_pets','TABLE(pet_id uuid, pet_name text, species text)'),
   ('rpc_columns_clinic_limited_due_vaccinations','TABLE(vaccination_id uuid, pet_name text, vaccine_name text, next_due_date date)'),
   ('rpc_columns_clinic_receptionist_counts','TABLE(pending_count bigint, confirmed_today_count bigint)'),
-  ('admin_sees_appointments','2'),('admin_confirms_pending','rows=1'),
+  ('admin_sees_appointments','2'),('admin_joins_pet_names','2'),('admin_confirms_pending','rows=1'),
   ('suspended_receptionist_sees_vaccinations','0'),('suspended_receptionist_updates_appt','rows=0');
 
 do $$
