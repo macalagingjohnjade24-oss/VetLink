@@ -117,6 +117,39 @@ export function OperatingHoursList({ hours }: { hours: OperatingHours }) {
  * every clinic policy is keyed on `status = 'active'`, so the profile and the
  * dashboard RPC have no rows to return. That is an expected state, not a bug.
  */
+export function TextArea({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  rows = 4,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  hint?: string;
+  rows?: number;
+  maxLength?: number;
+}) {
+  return (
+    <div className="field">
+      <label className="field__label">{label}</label>
+      <textarea
+        className="textarea"
+        value={value}
+        rows={rows}
+        maxLength={maxLength}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={error ? true : undefined}
+      />
+      {error ? <p className="field__error">{error}</p> : hint ? <p className="field__hint">{hint}</p> : null}
+    </div>
+  );
+}
+
 export function InvitationPending({
   clinicName,
   email,

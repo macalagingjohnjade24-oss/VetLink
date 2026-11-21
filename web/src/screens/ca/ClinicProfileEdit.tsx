@@ -9,7 +9,7 @@ import {
   type ClinicProfile,
   type ClinicProfileInput,
 } from '@/clinic/data';
-import { InvitationPending } from '@/clinic/components';
+import { InvitationPending, TextArea } from '@/clinic/components';
 import {
   EmptyState,
   ErrorState,
@@ -33,39 +33,6 @@ const DAYS = [
 ];
 
 const blank = (value: string) => (value.trim() ? value.trim() : null);
-
-function TextArea({
-  label,
-  value,
-  onChange,
-  error,
-  hint,
-  rows = 4,
-  maxLength,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-  hint?: string;
-  rows?: number;
-  maxLength?: number;
-}) {
-  return (
-    <div className="field">
-      <label className="field__label">{label}</label>
-      <textarea
-        className="textarea"
-        value={value}
-        rows={rows}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error ? true : undefined}
-      />
-      {error ? <p className="field__error">{error}</p> : hint ? <p className="field__hint">{hint}</p> : null}
-    </div>
-  );
-}
 
 function ImageField({
   label,
