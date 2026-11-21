@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatClock, formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -64,6 +64,8 @@ export function AppointmentManagement() {
   const clinicId = user?.clinicId ?? null;
   const invited = user?.membershipStatus === 'invited';
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const ownerParam = params.get('owner');
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -139,11 +141,15 @@ export function AppointmentManagement() {
   };
 
   const term = search.trim().toLowerCase();
-  const rows = state.data.filter((appointment) => matches(appointment, term));
+  const rows = state.data.filter(
+    (appointment) => matches(appointment, term) && (!ownerParam || appointment.owner_id === ownerParam),
+  );
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pages);
   const visible = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const filtering = Boolean(search.trim() || date || status !== 'all' || service !== 'all');
+  const filtering = Boolean(
+    search.trim() || date || status !== 'all' || service !== 'all' || ownerParam,
+  );
 
   const clearFilters = () => {
     setSearch('');
@@ -151,6 +157,7 @@ export function AppointmentManagement() {
     setService('all');
     setDate('');
     setPage(1);
+    setParams({}, { replace: true });
   };
 
   return (
@@ -166,9 +173,11 @@ export function AppointmentManagement() {
       <Panel
         title={`${rows.length} appointment${rows.length === 1 ? '' : 's'}`}
         subtitle={
-          filtering
-            ? `${state.data.length} on record · filtered by your search and date, status and service`
-            : 'Every status, newest visit first'
+          ownerParam
+            ? `${state.data.length} on record · filtered to one owner`
+            : filtering
+              ? `${state.data.length} on record · filtered by your search and date, status and service`
+              : 'Every status, newest visit first'
         }
         actions={
           <div className="toolbar__group">

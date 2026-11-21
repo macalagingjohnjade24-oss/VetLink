@@ -246,6 +246,7 @@ export async function fetchUpcomingAppointments(
  */
 export type ManagedAppointment = {
   id: string;
+  owner_id: string;
   reference: string | null;
   appointment_date: string;
   appointment_time: string;
@@ -270,7 +271,7 @@ export type ManagedAppointment = {
   pets: { pet_name: string | null } | null;
 };
 
-const MANAGED_APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,created_at,updated_at,pets!appointments_pet_id_fkey(pet_name)' as const;
+const MANAGED_APPOINTMENT_COLUMNS = 'id,owner_id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,created_at,updated_at,pets!appointments_pet_id_fkey(pet_name)' as const;
 
 export type AppointmentFilters = {
   /** `YYYY-MM-DD`, or '' for every date. */
@@ -304,6 +305,94 @@ export async function fetchClinicAppointmentList(
     .order('appointment_time', { ascending: false });
   failure(error);
   return (data ?? []) as unknown as ManagedAppointment[];
+}
+
+/**
+ * One owner the clinic has treated: the account details its staff may read,
+ * the number of pets registered to the account, and when the account was made.
+ */
+export type ClinicOwner = {
+  owner_id: string;
+  name: string;
+  email: string | null;
+  contact: string | null;
+  pet_count: number;
+  registered_at: string | null;
+};
+
+type OwnerBookingRow = {
+  owner_id: string;
+  owner_name: string | null;
+  contact: string | null;
+  created_at: string;
+};
+
+type OwnerProfileRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  mobile_number: string | null;
+  created_at: string;
+};
+
+/**
+ * The owners behind this clinic's bookings, newest registered account first.
+ * The clinic's own appointments decide who appears, so an owner who has never
+ * booked here is not reported; the profile and pet policies still decide how
+ * much of each account is readable. A profile the account may not read falls
+ * back to the name and contact recorded on the booking.
+ */
+export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('owner_id,owner_name,contact,created_at')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: true });
+  failure(error);
+
+  const firstBooking = new Map<string, OwnerBookingRow>();
+  for (const row of (data ?? []) as OwnerBookingRow[]) {
+    if (!firstBooking.has(row.owner_id)) firstBooking.set(row.owner_id, row);
+  }
+  const ids = [...firstBooking.keys()];
+  if (!ids.length) return [];
+
+  const [profiles, pets] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id,first_name,last_name,email,mobile_number,created_at')
+      .in('id', ids),
+    supabase.from('pets').select('owner_id').in('owner_id', ids),
+  ]);
+  failure(profiles.error);
+  failure(pets.error);
+
+  const profilesById = new Map(
+    ((profiles.data ?? []) as OwnerProfileRow[]).map((profile) => [profile.id, profile]),
+  );
+
+  const petCounts = new Map<string, number>();
+  for (const pet of (pets.data ?? []) as { owner_id: string }[]) {
+    petCounts.set(pet.owner_id, (petCounts.get(pet.owner_id) ?? 0) + 1);
+  }
+
+  return ids
+    .map((ownerId) => {
+      const booking = firstBooking.get(ownerId)!;
+      const profile = profilesById.get(ownerId) ?? null;
+      const profileName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
+
+      return {
+        owner_id: ownerId,
+        name: profileName || booking.owner_name || 'Owner name not recorded',
+        email: profile?.email ?? null,
+        contact: profile?.mobile_number || booking.contact,
+        pet_count: petCounts.get(ownerId) ?? 0,
+        registered_at: profile?.created_at ?? booking.created_at,
+      };
+    })
+    .sort((a, b) => (b.registered_at ?? '').localeCompare(a.registered_at ?? ''));
 }
 
 /** The service names this clinic's bookings actually carry, for the filter. */

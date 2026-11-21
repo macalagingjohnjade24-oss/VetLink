@@ -76,15 +76,6 @@ function activityFor(appointment: AppointmentDetail): ActivityEvent[] {
     });
   }
 
-  if (appointment.updated_at && appointment.updated_at !== appointment.created_at) {
-    events.push({
-      key: 'updated',
-      when: appointment.updated_at,
-      title: 'Booking last updated',
-      detail: `The booking now records the status ${appointment.status}.`,
-    });
-  }
-
   return events;
 }
 
@@ -187,24 +178,18 @@ export function AppointmentDetails() {
           appointment.appointment_time,
         )}`}
         actions={
-          <Button variant="outline" onClick={() => navigate('/appointments/management')}>
-            Back to appointments
-          </Button>
+          <div className="row">
+            <StatusBadge status={appointment.status} />
+            <Button variant="outline" onClick={() => navigate('/appointments/management')}>
+              Back to appointments
+            </Button>
+          </div>
         }
       />
 
-      <div className="row" style={{ marginTop: -8 }}>
-        <StatusBadge status={appointment.status} />
-        <span className="table__secondary">
-          {appointment.service_name ?? 'No service recorded'} · {peso(appointment.price)}
-        </span>
-      </div>
-
-      <div className="grid grid--two">
+      <div className="grid grid--detail">
         <Panel title="Booking" subtitle="The details recorded on this appointment">
           <dl className="detail">
-            <DetailRow term="Reference">{appointment.reference ?? 'Not assigned'}</DetailRow>
-            <DetailRow term="Status">{appointment.status}</DetailRow>
             <DetailRow term="Service">
               {appointment.service_name ?? 'No service recorded'} · {peso(appointment.price)}
             </DetailRow>
@@ -221,55 +206,29 @@ export function AppointmentDetails() {
           </dl>
         </Panel>
 
-        <Panel title="Owner" subtitle="As recorded on the booking">
-          <dl className="detail">
-            <DetailRow term="Name">{appointment.owner_name ?? 'Owner name not recorded'}</DetailRow>
-            <DetailRow term="Contact">{appointment.contact ?? 'No contact number recorded'}</DetailRow>
-            <DetailRow term="Booked on">{formatDateTime(appointment.created_at)}</DetailRow>
-            <DetailRow term="Last updated">{formatDateTime(appointment.updated_at)}</DetailRow>
-            <DetailRow term="Checked in">
-              {appointment.checked_in_at ? formatDateTime(appointment.checked_in_at) : 'Not checked in'}
-            </DetailRow>
-          </dl>
-        </Panel>
-      </div>
+        <div className="stack">
+          <Panel title="Owner" subtitle="As recorded on the booking">
+            <dl className="detail">
+              <DetailRow term="Name">{appointment.owner_name ?? 'Owner name not recorded'}</DetailRow>
+              <DetailRow term="Contact">{appointment.contact ?? 'No contact number recorded'}</DetailRow>
+            </dl>
+          </Panel>
 
-      <div className="grid grid--two">
-        <Panel title="Pet" subtitle="The patient this booking is for">
-          <dl className="detail">
-            <DetailRow term="Name">{petName(appointment)}</DetailRow>
-            <DetailRow term="Species">{appointment.pet?.species ?? 'Not recorded'}</DetailRow>
-            <DetailRow term="Breed">{appointment.pet?.breed ?? 'Not recorded'}</DetailRow>
-            <DetailRow term="Sex">{appointment.pet?.sex ?? 'Not recorded'}</DetailRow>
-            <DetailRow term="Weight">
-              {appointment.pet?.weight != null ? `${appointment.pet.weight} kg` : 'Not recorded'}
-            </DetailRow>
-            <DetailRow term="Date of birth">
-              {appointment.pet?.date_of_birth ? formatDate(appointment.pet.date_of_birth) : 'Not recorded'}
-            </DetailRow>
-          </dl>
-        </Panel>
-
-        <Panel title="Owner requests" subtitle="Cancellation and reschedule flags on this booking">
-          <dl className="detail">
-            <DetailRow term="Cancellation">
-              {appointment.cancellation_requested
-                ? appointment.cancellation_reason ?? 'Requested, no reason recorded'
-                : 'None'}
-            </DetailRow>
-            <DetailRow term="Reschedule">
-              {appointment.reschedule_requested
-                ? [
-                    appointment.requested_date ? formatDate(appointment.requested_date) : null,
-                    appointment.requested_time ? formatClock(appointment.requested_time) : null,
-                    appointment.reschedule_reason,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') || 'Requested, no preferred time recorded'
-                : 'None'}
-            </DetailRow>
-          </dl>
-        </Panel>
+          <Panel title="Pet" subtitle="The patient this booking is for">
+            <dl className="detail">
+              <DetailRow term="Name">{petName(appointment)}</DetailRow>
+              <DetailRow term="Species">{appointment.pet?.species ?? 'Not recorded'}</DetailRow>
+              <DetailRow term="Breed">{appointment.pet?.breed ?? 'Not recorded'}</DetailRow>
+              <DetailRow term="Sex">{appointment.pet?.sex ?? 'Not recorded'}</DetailRow>
+              <DetailRow term="Weight">
+                {appointment.pet?.weight != null ? `${appointment.pet.weight} kg` : 'Not recorded'}
+              </DetailRow>
+              <DetailRow term="Date of birth">
+                {appointment.pet?.date_of_birth ? formatDate(appointment.pet.date_of_birth) : 'Not recorded'}
+              </DetailRow>
+            </dl>
+          </Panel>
+        </div>
       </div>
 
       <Panel
