@@ -27,6 +27,9 @@ const expected = {
   reception_api_delete_own: 'rows=0',
   staff_api_delete_own: 'rows=0',
   admin_api_delete_own: 'rows=0',
+  vet_api_read_own: 'http=200',
+  admin_api_read_own: 'http=400 NoSuchKey',
+  staff_api_read_own: 'http=400 NoSuchKey',
 };
 const results = [];
 
@@ -44,6 +47,7 @@ const removeAsService = (name) => call('DELETE', objectPath(name), svc);
 const remove = (token, name) => call('DELETE', objectPath(name), { apikey: anonKey, Authorization: `Bearer ${token}` });
 const upload = (token, name) =>
   call('POST', objectPath(name), { apikey: anonKey, Authorization: `Bearer ${token}`, ...pdf }, 'QA');
+const read = (token, name) => call('GET', objectPath(name), { apikey: anonKey, Authorization: `Bearer ${token}` });
 
 async function signIn(email, password) {
   const r = await call('POST', '/auth/v1/token?grant_type=password', { apikey: anonKey }, JSON.stringify({ email, password }));
@@ -84,6 +88,20 @@ for (const [label, name] of seeds) {
 const upVet = await upload(vetToken, ownVet);
 console.log(`step upload_vet_own: HTTP ${upVet.status}`);
 if (upVet.status !== 200) throw new Error(`RLS API QA setup upload failed: ${upVet.text}`);
+
+// Read checks run before any delete, while every object still exists. Under 0008
+// only veterinarians may read attachments; for everyone else the policy hides the
+// row, so Storage answers 400 with a not_found body instead of 403.
+const reads = [
+  ['vet_api_read_own', 'read_vet_own', vetToken, ownVet],
+  ['admin_api_read_own', 'read_admin_own', adminToken, ownAdmin],
+  ['staff_api_read_own', 'read_staff_own', staffToken, ownStaff],
+];
+for (const [key, label, token, name] of reads) {
+  const r = await read(token, name);
+  console.log(`step ${label}: HTTP ${r.status}`);
+  results.push([key, r.status === 200 ? 'http=200' : `http=${r.status} ${JSON.parse(r.text).code}`]);
+}
 
 const checks = [
   ['vet_api_delete_own', 'delete_vet_own', () => remove(vetToken, ownVet), ownVet],
