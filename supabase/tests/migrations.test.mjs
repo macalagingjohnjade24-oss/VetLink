@@ -140,7 +140,31 @@ test('the migrations listed in the harness are the ones on disk', async () => {
     '0009_clinic_profile_guard.sql',
     '0010_clinic_membership_role_guard.sql',
     '0011_membership_profile_role_sync.sql',
+    '0012_service_role_function_grants.sql',
   ]);
+});
+
+test('0012 lets the server-only service role run the Edge Functions', async () => {
+  const { rows } = await db.query(`
+    select
+      has_table_privilege('service_role', 'public.profiles', 'select') as profiles_read,
+      has_table_privilege('service_role', 'public.profiles', 'update') as profiles_write,
+      has_table_privilege('service_role', 'public.clinic_memberships', 'insert') as memberships_insert,
+      has_table_privilege('service_role', 'public.clinic_memberships', 'update') as memberships_update,
+      has_table_privilege('service_role', 'public.clinics', 'update') as clinics_update,
+      has_table_privilege('service_role', 'public.notifications', 'insert') as notifications_insert,
+      has_table_privilege('service_role', 'public.platform_audit_log', 'insert') as audit_insert,
+      has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE') as browser_role_write
+  `);
+
+  assert.equal(rows[0].profiles_read, true, 'invite-staff reads profiles by email');
+  assert.equal(rows[0].profiles_write, true, 'invite-staff links an existing account');
+  assert.equal(rows[0].memberships_insert, true, 'invite-staff creates a membership');
+  assert.equal(rows[0].memberships_update, true, 'invite-staff upserts a membership');
+  assert.equal(rows[0].clinics_update, true, 'provision-clinic-admin approves the clinic');
+  assert.equal(rows[0].notifications_insert, true);
+  assert.equal(rows[0].audit_insert, true);
+  assert.equal(rows[0].browser_role_write, false, 'browser roles still cannot write profiles.role');
 });
 
 test('0009 keeps clinic status and review fields out of the browser', async () => {
