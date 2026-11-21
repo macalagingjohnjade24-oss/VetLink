@@ -28,6 +28,7 @@ import { ClinicProfileEdit } from '@/screens/ca/ClinicProfileEdit';
 import { ClinicServiceForm } from '@/screens/ca/ClinicServiceForm';
 import { ClinicServices } from '@/screens/ca/ClinicServices';
 import { ClinicStaff } from '@/screens/ca/ClinicStaff';
+import { ClinicStaffDetails } from '@/screens/ca/ClinicStaffDetails';
 import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
@@ -114,6 +115,7 @@ const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin/services/:id/edit', element: <ClinicServiceForm /> },
   { path: '/clinic-admin/staff', element: <ClinicStaff /> },
   { path: '/clinic-admin/staff/new', element: <ClinicStaffInvite /> },
+  { path: '/clinic-admin/staff/:id', element: <ClinicStaffDetails /> },
 ];
 
 /** A clinic workspace belongs to the clinic's administrator, not its staff. */
