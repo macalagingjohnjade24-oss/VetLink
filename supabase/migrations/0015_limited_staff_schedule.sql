@@ -83,8 +83,3 @@ $$;
 
 revoke all on function public.clinic_limited_schedule(uuid) from public, anon;
 grant execute on function public.clinic_limited_schedule(uuid) to authenticated;
-
--- The 0008 RPCs keep their grants; restated so a partial run cannot leave them
--- without execute rights.
-grant execute on function public.clinic_limited_pets(uuid) to authenticated;
-grant execute on function public.clinic_limited_due_vaccinations(uuid) to authenticated;
