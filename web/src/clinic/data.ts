@@ -642,6 +642,62 @@ export async function rescheduleClinicAppointment(
 }
 
 /**
+ * Cancels a booking at the owner's or the clinic's request.
+ *
+ * The transition trigger from 0008 allows an active receptionist or clinic
+ * administrator to move a pending, confirmed or rescheduled booking to
+ * `cancelled`; completed and rejected bookings have no such transition. The
+ * reason is written into the clinic note the owner sees, the owner's own
+ * cancellation request is marked answered, and the booking releases its slot.
+ */
+export async function cancelClinicAppointment(
+  clinicId: string,
+  appointment: { id: string; cancellation_reason: string | null },
+  reason: string,
+): Promise<ManagedAppointment> {
+  const asked = appointment.cancellation_reason?.trim();
+  const note = [
+    `Cancelled by the clinic on ${formatDate(todayIso())} at ${new Date().toLocaleTimeString(
+      'en-PH',
+      { hour: 'numeric', minute: '2-digit' },
+    )}.`,
+    reason.trim(),
+    asked ? `The owner had asked to cancel: ${asked}` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({
+      status: 'cancelled',
+      clinic_note: note,
+      cancellation_requested: false,
+      reschedule_requested: false,
+      requested_date: null,
+      requested_time: null,
+      reschedule_reason: null,
+    })
+    .eq('clinic_id', clinicId)
+    .eq('id', appointment.id)
+    .select(MANAGED_APPOINTMENT_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === '42501') {
+      throw new Error('Your access does not allow cancelling this appointment.');
+    }
+    throw new Error(error.message);
+  }
+  if (!data) {
+    throw new Error(
+      'The appointment was not cancelled. It may already be closed, or your access was revoked.',
+    );
+  }
+  return data as unknown as ManagedAppointment;
+}
+
+/**
  * Creates a confirmed booking at this clinic. The staff INSERT policy from 0016
  * allows an active receptionist or clinic administrator to do this, and the
  * slot index refuses a time that is already booked.

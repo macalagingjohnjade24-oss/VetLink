@@ -37,6 +37,7 @@ import { ClinicStaffDetails } from '@/screens/ca/ClinicStaffDetails';
 import { ClinicStaffEdit } from '@/screens/ca/ClinicStaffEdit';
 import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
 import { AppointmentDetails } from '@/screens/am/AppointmentDetails';
+import { CancelAppointment } from '@/screens/am/CancelAppointment';
 import { AppointmentManagement } from '@/screens/am/AppointmentManagement';
 import { AppointmentRequests } from '@/screens/am/AppointmentRequests';
 import { AppointmentsDashboard } from '@/screens/am/AppointmentsDashboard';
@@ -173,6 +174,7 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/owners', element: <PetOwners /> },
   { path: '/appointments/new', element: <CreateAppointment /> },
   { path: '/appointments/:id/reschedule', element: <RescheduleAppointment /> },
+  { path: '/appointments/:id/cancel', element: <CancelAppointment /> },
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 

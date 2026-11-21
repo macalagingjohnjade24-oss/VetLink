@@ -186,6 +186,16 @@ export function AppointmentDetails() {
                 Reschedule
               </Button>
             ) : null}
+            {appointment.status === 'pending' ||
+            appointment.status === 'confirmed' ||
+            appointment.status === 'rescheduled' ? (
+              <Button
+                variant="danger"
+                onClick={() => navigate(`/appointments/${appointment.id}/cancel`)}
+              >
+                Cancel appointment
+              </Button>
+            ) : null}
             <StatusBadge status={appointment.status} />
             <Button variant="outline" onClick={() => navigate('/appointments/management')}>
               Back to appointments
