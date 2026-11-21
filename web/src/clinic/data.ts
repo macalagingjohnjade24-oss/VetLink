@@ -537,6 +537,90 @@ export async function decideAppointmentRequest(
   return data as unknown as ManagedAppointment;
 }
 
+/** A pet the clinic may read, for the booking form. */
+export type ClinicPet = {
+  id: string;
+  pet_name: string;
+  species: string | null;
+  breed: string | null;
+};
+
+/** The registered pets of one owner, alphabetically. */
+export async function fetchOwnerPets(ownerId: string): Promise<ClinicPet[]> {
+  const { data, error } = await supabase
+    .from('pets')
+    .select('id,pet_name,species,breed')
+    .eq('owner_id', ownerId)
+    .order('pet_name', { ascending: true });
+  failure(error);
+  return (data ?? []) as ClinicPet[];
+}
+
+/**
+ * The booking the front desk fills in. The owner's name and contact are stored
+ * on the row as a snapshot, the same way an owner-made request carries them.
+ */
+export type NewAppointmentInput = {
+  ownerId: string;
+  petId: string;
+  serviceId: string;
+  serviceName: string;
+  price: number;
+  appointmentDate: string;
+  appointmentTime: string;
+  reasonForVisit: string | null;
+  additionalNotes: string | null;
+  assignedVetUserId: string | null;
+};
+
+export type CreatedAppointment = { id: string; reference: string | null };
+
+/**
+ * Creates a confirmed booking at this clinic. The staff INSERT policy from 0016
+ * allows an active receptionist or clinic administrator to do this, and the
+ * slot index refuses a time that is already booked.
+ */
+export async function createClinicAppointment(
+  clinicId: string,
+  owner: { name: string; contact: string | null },
+  input: NewAppointmentInput,
+): Promise<CreatedAppointment> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .insert({
+      clinic_id: clinicId,
+      owner_id: input.ownerId,
+      pet_id: input.petId,
+      service_id: input.serviceId,
+      service_name: input.serviceName,
+      price: input.price,
+      appointment_date: input.appointmentDate,
+      appointment_time: input.appointmentTime,
+      status: 'confirmed',
+      owner_name: owner.name,
+      contact: owner.contact,
+      reason_for_visit: input.reasonForVisit,
+      additional_notes: input.additionalNotes,
+      assigned_vet_user_id: input.assignedVetUserId,
+    })
+    .select('id,reference')
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error(
+        'That date and time is already booked at this clinic. Choose another slot.',
+      );
+    }
+    if (error.code === '42501') {
+      throw new Error('Your access does not allow creating appointments at this clinic.');
+    }
+    throw new Error(error.message);
+  }
+
+  return data as CreatedAppointment;
+}
+
 export type OwnerRegistration = {
   owner_id: string;
   owner_name: string | null;

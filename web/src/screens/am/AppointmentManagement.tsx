@@ -167,7 +167,14 @@ export function AppointmentManagement() {
         subtitle={`${user?.clinicName ?? 'Clinic'} · ${state.data.length} booking${
           state.data.length === 1 ? '' : 's'
         } on record · ${formatDate(todayIso())}`}
-        actions={<Button onClick={state.reload}>Refresh</Button>}
+        actions={
+          <div className="row">
+            <Button onClick={() => navigate('/appointments/new')}>New appointment</Button>
+            <Button variant="outline" onClick={state.reload}>
+              Refresh
+            </Button>
+          </div>
+        }
       />
 
       <Panel

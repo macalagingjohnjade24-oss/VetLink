@@ -34,6 +34,7 @@ export const MIGRATIONS = [
   '0013_membership_insert_profile_role_sync.sql',
   '0014_limited_staff_patient_reads.sql',
   '0015_limited_staff_schedule.sql',
+  '0016_staff_appointment_insert.sql',
 ];
 
 const PRELUDE = `
