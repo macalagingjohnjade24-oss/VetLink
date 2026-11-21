@@ -197,3 +197,81 @@ export async function fetchClinicTeam(clinicId: string): Promise<TeamMember[]> {
   const byId = new Map(((profiles ?? []) as TeamProfile[]).map((profile) => [profile.id, profile]));
   return memberships.map((row) => ({ ...row, profile: byId.get(row.user_id) ?? null }));
 }
+
+/**
+ * The columns CA-03 owns. Status, reference, review fields and the computed
+ * discovery columns never appear here, and 0009 removes their UPDATE
+ * privilege from `authenticated` as defence in depth.
+ */
+export type ClinicProfileInput = {
+  clinic_name: string;
+  description: string | null;
+  email: string | null;
+  contact_number: string | null;
+  address: string | null;
+  area: string | null;
+  city: string | null;
+  province: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  website: string | null;
+  operating_hours: OperatingHours;
+  logo_url: string | null;
+  cover_url: string | null;
+};
+
+/**
+ * Writes the profile and returns the row the database actually kept. `.eq`
+ * repeats the clinic id and nothing else, so the RLS policy on clinics decides
+ * whether this account may write; a caller without an active administrator
+ * membership updates zero rows and gets an error instead of a silent success.
+ */
+export async function updateClinicProfile(
+  clinicId: string,
+  patch: ClinicProfileInput,
+): Promise<ClinicProfile> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .update(patch)
+    .eq('id', clinicId)
+    .select('*')
+    .maybeSingle();
+  failure(error);
+  if (!data) {
+    throw new Error(
+      'The clinic was not updated. Your administrator access may have been revoked, or the clinic no longer exists.',
+    );
+  }
+  return data as ClinicProfile;
+}
+
+/**
+ * Uploads a logo or cover into the public `clinic-logos` bucket. The path starts
+ * with the clinic id, which is exactly what the storage policy checks, so an
+ * administrator can only write inside their own clinic's folder.
+ */
+export async function uploadClinicImage(
+  clinicId: string,
+  kind: 'logo' | 'cover',
+  file: File,
+): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Choose a PNG, JPEG or WebP image.');
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('Images must be 5 MB or smaller.');
+  }
+
+  const extension =
+    file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') ||
+    (file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg');
+  const path = `${clinicId}/${kind}-${Date.now()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from('clinic-logos')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  failure(error);
+
+  const { data } = supabase.storage.from('clinic-logos').getPublicUrl(path);
+  return data.publicUrl;
+}

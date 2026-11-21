@@ -111,13 +111,9 @@ export function ClinicProfile() {
             <Link to="/clinic-admin">
               <Button variant="ghost">Back to dashboard</Button>
             </Link>
-            <Button
-              variant="outline"
-              disabled
-              title="Editing clinic information is CA-03, the next screen in Phase 4."
-            >
-              Edit clinic profile
-            </Button>
+            <Link to="/clinic-admin/profile/edit">
+              <Button>Edit clinic profile</Button>
+            </Link>
           </>
         }
       />
@@ -237,7 +233,7 @@ export function ClinicProfile() {
         </div>
       </Panel>
 
-      <ClinicFooter right="Editing arrives with CA-03" />
+      <ClinicFooter right="Clinic status is managed by VetLink platform administration" />
     </div>
   );
 }
