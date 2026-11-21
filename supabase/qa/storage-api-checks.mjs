@@ -31,6 +31,7 @@ const expected = {
   staff_api_delete_own: 'rows=0',
   admin_api_delete_own: 'rows=0',
   vet_api_read_own: 'http=200',
+  vet_api_read_other_clinic: 'http=400 NoSuchKey',
   reception_api_read_own: 'http=400 NoSuchKey',
   staff_api_read_own: 'http=400 NoSuchKey',
   admin_api_read_own: 'http=400 NoSuchKey',
@@ -48,6 +49,9 @@ async function call(method, path, headers, body) {
 const objectPath = (name) => `/storage/v1/object/${bucket}/${name}`;
 const asUser = (token) => ({ apikey: anonKey, Authorization: `Bearer ${token}` });
 const removeAsService = (name) => call('DELETE', objectPath(name), svc);
+const clearObjects = async () => {
+  for (const name of allObjects) await removeAsService(name);
+};
 const seed = (name) => call('POST', objectPath(name), { ...svc, ...pdf }, 'QA');
 const upload = (token, name) => call('POST', objectPath(name), { ...asUser(token), ...pdf }, 'QA');
 const exists = async (name) => (await call('GET', `/storage/v1/object/info/${bucket}/${name}`, svc)).status === 200;
@@ -82,26 +86,26 @@ for (const role of roles) {
 }
 
 // Clear leftovers from a previous run before seeding.
-for (const name of allObjects) await removeAsService(name);
+await clearObjects();
 
 // Setup uses the service role for the objects the staff members do not upload
 // themselves. Under 0008 only veterinarians may write, so the veterinarian's own
 // object is uploaded by the veterinarian and every other one is seeded here.
-for (const role of roles.filter((r) => r !== 'vet')) {
-  const r = await seed(ownObject[role]);
-  console.log(`step seed_${role}_own: HTTP ${r.status}`);
-  if (r.status !== 200) throw new Error(`RLS API QA setup seed failed for ${role}: ${r.text}`);
+const setup = [
+  ...roles.filter((r) => r !== 'vet').map((role) => [`seed_${role}_own`, () => seed(ownObject[role])]),
+  ['seed_other_clinic', () => seed(otherObject)],
+  ['upload_vet_own', () => upload(tokens.vet, ownObject.vet)],
+];
+for (const [label, run] of setup) {
+  const r = await run();
+  console.log(`step ${label}: HTTP ${r.status}`);
+  if (r.status !== 200) throw new Error(`RLS API QA setup failed: ${label} ${r.text}`);
 }
-const seededOther = await seed(otherObject);
-console.log(`step seed_other_clinic: HTTP ${seededOther.status}`);
-if (seededOther.status !== 200) throw new Error(`RLS API QA setup seed failed for other_clinic: ${seededOther.text}`);
-const upVet = await upload(tokens.vet, ownObject.vet);
-console.log(`step upload_vet_own: HTTP ${upVet.status}`);
-if (upVet.status !== 200) throw new Error(`RLS API QA setup upload failed: ${upVet.text}`);
 
 // Reads run before any delete, while every object still exists.
 const checks = [
   ...roles.map((role) => [`${role}_api_read_own`, () => readResult(tokens[role], ownObject[role])]),
+  ['vet_api_read_other_clinic', () => readResult(tokens.vet, otherObject)],
   ...roles.map((role) => [`${role}_api_delete_own`, () => deleteResult(tokens[role], ownObject[role])]),
   ['vet_api_delete_other_clinic', () => deleteResult(tokens.vet, otherObject)],
 ];
@@ -112,7 +116,7 @@ for (const [key, run] of checks) {
 }
 
 // Cleanup of any objects that remain (service role, through the API).
-for (const name of allObjects) await removeAsService(name);
+await clearObjects();
 
 const got = Object.fromEntries(results);
 const missing = Object.keys(expected).filter((k) => !(k in got));
