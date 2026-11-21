@@ -36,6 +36,7 @@ import { ClinicStaff } from '@/screens/ca/ClinicStaff';
 import { ClinicStaffDetails } from '@/screens/ca/ClinicStaffDetails';
 import { ClinicStaffEdit } from '@/screens/ca/ClinicStaffEdit';
 import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
+import { AppointmentManagement } from '@/screens/am/AppointmentManagement';
 import { AppointmentsDashboard } from '@/screens/am/AppointmentsDashboard';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
@@ -160,6 +161,7 @@ function ClinicAdministratorOnly({ children }: { children: ReactNode }) {
 /** AM-01 – AM-14. */
 const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments', element: <AppointmentsDashboard /> },
+  { path: '/appointments/management', element: <AppointmentManagement /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */

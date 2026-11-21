@@ -195,6 +195,90 @@ export async function fetchUpcomingAppointments(
   return (data ?? []) as unknown as ClinicAppointment[];
 }
 
+/**
+ * The columns AM-02 lists and its details view reads. Both assignment columns
+ * exist — `veterinarian_id` from 0004 and `assigned_vet_user_id` from 0008 — so
+ * the console shows whichever one the booking actually carries.
+ */
+export type ManagedAppointment = {
+  id: string;
+  reference: string | null;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  owner_name: string | null;
+  contact: string | null;
+  service_name: string | null;
+  price: number;
+  reason_for_visit: string | null;
+  additional_notes: string | null;
+  clinic_note: string | null;
+  cancellation_requested: boolean;
+  cancellation_reason: string | null;
+  reschedule_requested: boolean;
+  requested_date: string | null;
+  requested_time: string | null;
+  reschedule_reason: string | null;
+  veterinarian_id: string | null;
+  assigned_vet_user_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  pets: { pet_name: string | null } | null;
+};
+
+const MANAGED_APPOINTMENT_COLUMNS = 'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,price,reason_for_visit,additional_notes,clinic_note,cancellation_requested,cancellation_reason,reschedule_requested,requested_date,requested_time,reschedule_reason,veterinarian_id,assigned_vet_user_id,created_at,updated_at,pets(pet_name)' as const;
+
+export type AppointmentFilters = {
+  /** `YYYY-MM-DD`, or '' for every date. */
+  date: string;
+  /** An appointment status, or 'all'. */
+  status: string;
+  /** The service name recorded on the booking, or 'all'. */
+  service: string;
+};
+
+/**
+ * Every appointment this clinic's staff can see, newest visit first. The
+ * filters run in Postgres against the booking's own snapshot columns, so a
+ * service that was renamed or removed still finds the bookings it names.
+ */
+export async function fetchClinicAppointmentList(
+  clinicId: string,
+  filters: AppointmentFilters,
+): Promise<ManagedAppointment[]> {
+  let query = supabase
+    .from('appointments')
+    .select(MANAGED_APPOINTMENT_COLUMNS)
+    .eq('clinic_id', clinicId);
+
+  if (filters.status !== 'all') query = query.eq('status', filters.status);
+  if (filters.service !== 'all') query = query.eq('service_name', filters.service);
+  if (filters.date) query = query.eq('appointment_date', filters.date);
+
+  const { data, error } = await query
+    .order('appointment_date', { ascending: false })
+    .order('appointment_time', { ascending: false });
+  failure(error);
+  return (data ?? []) as unknown as ManagedAppointment[];
+}
+
+/** The service names this clinic's bookings actually carry, for the filter. */
+export async function fetchAppointmentServiceNames(clinicId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('service_name')
+    .eq('clinic_id', clinicId)
+    .not('service_name', 'is', null);
+  failure(error);
+  return [
+    ...new Set(
+      ((data ?? []) as { service_name: string | null }[])
+        .map((row) => row.service_name)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+}
+
 export type OwnerRegistration = {
   owner_id: string;
   owner_name: string | null;
