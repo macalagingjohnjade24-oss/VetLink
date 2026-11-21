@@ -22,6 +22,7 @@ import { Reports } from '@/screens/sa/Reports';
 import { RolesAndAccess } from '@/screens/sa/Roles';
 import { SystemSettings } from '@/screens/sa/Settings';
 import { PlatformUsers, UserDetails } from '@/screens/sa/Users';
+import { ClinicDashboard } from '@/screens/ca/ClinicDashboard';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -97,6 +98,37 @@ function SystemAdministratorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** CA-01 – CA-02. Later Phase 4 screens still render their SectionPage notice. */
+const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
+  { path: '/clinic-admin', element: <ClinicDashboard /> },
+];
+
+/** A clinic workspace belongs to the clinic's administrator, not its staff. */
+function ClinicAdministratorOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user || user.role !== 'clinic_administrator') {
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Clinic Administrator access only</h2>
+          <p className="muted" style={{ marginTop: 8 }}>
+            This workspace manages a clinic's profile, services, staff and reports. Other clinic
+            roles keep their own workspace, and pet-owner accounts use the mobile app.
+          </p>
+          <a
+            className="auth__link"
+            href={user ? ROLE_HOME[user.role] : '/login'}
+            style={{ display: 'inline-block', marginTop: 14 }}
+          >
+            Back to your dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 /** SA-01 – SA-16. Detail routes carry SA-04, SA-05, SA-07 and SA-09. */
 const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/system-admin', element: <AdminDashboard /> },
@@ -116,7 +148,9 @@ const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/system-admin/profile', element: <AdminProfile /> },
 ];
 
-const SYSTEM_ADMIN_PATHS = new Set(SYSTEM_ADMIN_ROUTES.map((route) => route.path));
+const DEFINED_PATHS = new Set(
+  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES].map((route) => route.path),
+);
 
 function AppRoutes() {
   const { status } = useAuth();
@@ -166,7 +200,14 @@ function AppRoutes() {
             element={<SystemAdministratorOnly>{route.element}</SystemAdministratorOnly>}
           />
         ))}
-        {ALL_NAV_ITEMS.filter((item) => !SYSTEM_ADMIN_PATHS.has(item.path)).map((item) => (
+        {CLINIC_ADMIN_ROUTES.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<ClinicAdministratorOnly>{route.element}</ClinicAdministratorOnly>}
+          />
+        ))}
+        {ALL_NAV_ITEMS.filter((item) => !DEFINED_PATHS.has(item.path)).map((item) => (
           <Route key={item.path} path={item.path} element={<SectionPage item={item} />} />
         ))}
         <Route path="*" element={<NotFound />} />
