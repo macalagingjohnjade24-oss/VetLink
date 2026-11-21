@@ -36,6 +36,7 @@ export type ClinicProfile = {
   operating_hours: OperatingHours;
   year_established: number | null;
   emergency_service: boolean;
+  has_availability: boolean;
   status: string;
   created_at: string;
   updated_at: string | null;
@@ -275,6 +276,39 @@ export async function updateClinicProfile(
   if (!data) {
     throw new Error(
       'The clinic was not updated. Your administrator access may have been revoked, or the clinic no longer exists.',
+    );
+  }
+  return data as ClinicProfile;
+}
+
+/**
+ * The two operational switches CA-13 owns. Both columns are inside the UPDATE
+ * grant 0009 leaves to administrators, and nothing else is submitted.
+ */
+export type ClinicSettingsInput = {
+  has_availability: boolean;
+  emergency_service: boolean;
+};
+
+/**
+ * Writes the settings and returns the row the database kept. The clinics policy
+ * still decides who may write, so a caller without an active administrator
+ * membership updates zero rows and gets an error instead of a silent success.
+ */
+export async function updateClinicSettings(
+  clinicId: string,
+  patch: ClinicSettingsInput,
+): Promise<ClinicProfile> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .update(patch)
+    .eq('id', clinicId)
+    .select('*')
+    .maybeSingle();
+  failure(error);
+  if (!data) {
+    throw new Error(
+      'The clinic settings were not updated. Your administrator access may have been revoked, or the clinic no longer exists.',
     );
   }
   return data as ClinicProfile;
