@@ -213,10 +213,76 @@ test('a staff role edit updates the account role with the membership', async () 
   assert.equal(restored[0].role, 'veterinarian');
 });
 
+test('inserting a first membership updates the account role', async () => {
+  const { rows: inserted } = await db.query(
+    "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_staff', 'invited') returning id",
+    [ids.clinics.alpha, ids.users.loner],
+  );
+
+  try {
+    const { rows: profile } = await db.query('select role from public.profiles where id = $1', [
+      ids.users.loner,
+    ]);
+    assert.equal(
+      profile[0].role,
+      'clinic_staff',
+      'the membership insert must update profiles.role',
+    );
+  } finally {
+    await db.query('delete from public.clinic_memberships where id = $1', [inserted[0].id]);
+    await db.query("update public.profiles set role = 'pet_owner' where id = $1", [
+      ids.users.loner,
+    ]);
+  }
+});
+
+test('inserting a membership does not overwrite another clinic’s administrator role', async () => {
+  // The same person is an administrator at beta and a veterinarian at alpha.
+  await db.query(
+    "update public.clinic_memberships set status = 'active', staff_role = 'clinic_administrator' where clinic_id = $1 and user_id = $2",
+    [ids.clinics.beta, ids.users.drReyes],
+  );
+
+  const { rows: inserted } = await db.query(
+    "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_staff', 'active') returning id",
+    [ids.clinics.gamma, ids.users.drReyes],
+  );
+
+  try {
+    const { rows: profile } = await db.query('select role from public.profiles where id = $1', [
+      ids.users.drReyes,
+    ]);
+    assert.equal(
+      profile[0].role,
+      'clinic_administrator',
+      'the beta administrator role must survive a gamma membership insert',
+    );
+  } finally {
+    await db.query('delete from public.clinic_memberships where id = $1', [inserted[0].id]);
+    await db.query(
+      "update public.clinic_memberships set status = 'revoked', staff_role = 'veterinarian' where clinic_id = $1 and user_id = $2",
+      [ids.clinics.beta, ids.users.drReyes],
+    );
+    await db.query("update public.profiles set role = 'veterinarian' where id = $1", [
+      ids.users.drReyes,
+    ]);
+  }
+});
+
 test('a membership edit never demotes a system administrator', async () => {
   const { rows: membership } = await db.query(
     "insert into public.clinic_memberships (clinic_id, user_id, staff_role, status) values ($1, $2, 'clinic_staff', 'active') returning id",
     [ids.clinics.alpha, ids.adminId],
+  );
+
+  const { rows: afterInsert } = await db.query(
+    'select role from public.profiles where id = $1',
+    [ids.adminId],
+  );
+  assert.equal(
+    afterInsert[0].role,
+    'system_administrator',
+    'inserting a clinic membership must not demote the platform role',
   );
 
   await asActor(db, ids.users.alphaAdmin);

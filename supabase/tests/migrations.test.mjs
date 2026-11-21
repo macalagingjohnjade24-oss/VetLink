@@ -141,6 +141,7 @@ test('the migrations listed in the harness are the ones on disk', async () => {
     '0010_clinic_membership_role_guard.sql',
     '0011_membership_profile_role_sync.sql',
     '0012_service_role_function_grants.sql',
+    '0013_membership_insert_profile_role_sync.sql',
   ]);
 });
 
