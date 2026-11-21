@@ -21,7 +21,11 @@ const ownObject = {
   admin: `${clinic}/api-admin.pdf`,
 };
 const otherObject = `${otherClinic}/api-other.pdf`;
-const allObjects = [...Object.values(ownObject), otherObject];
+const nonVetUpload = {
+  reception: `${clinic}/api-reception-upload.pdf`,
+  staff: `${clinic}/api-staff-upload.pdf`,
+};
+const allObjects = [...Object.values(ownObject), ...Object.values(nonVetUpload), otherObject];
 const svc = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 const pdf = { 'content-type': 'application/pdf', 'x-upsert': 'true' };
 const expected = {
@@ -32,6 +36,8 @@ const expected = {
   admin_api_delete_own: 'rows=0',
   vet_api_read_own: 'http=200',
   vet_api_read_other_clinic: 'http=400 NoSuchKey',
+  reception_api_upload_own: 'http=400 AccessDenied',
+  staff_api_upload_own: 'http=400 AccessDenied',
   reception_api_read_own: 'http=400 NoSuchKey',
   staff_api_read_own: 'http=400 NoSuchKey',
   admin_api_read_own: 'http=400 NoSuchKey',
@@ -61,6 +67,13 @@ const exists = async (name) => (await call('GET', `/storage/v1/object/info/${buc
 // not_found body instead of 403.
 async function readResult(token, name) {
   const r = await call('GET', objectPath(name), asUser(token));
+  return { status: r.status, result: r.status === 200 ? 'http=200' : `http=${r.status} ${JSON.parse(r.text).code}` };
+}
+
+// A non-veterinarian write is refused by the insert policy, which Storage reports
+// as 400 with an AccessDenied body.
+async function uploadResult(token, name) {
+  const r = await upload(token, name);
   return { status: r.status, result: r.status === 200 ? 'http=200' : `http=${r.status} ${JSON.parse(r.text).code}` };
 }
 
@@ -106,6 +119,7 @@ for (const [label, run] of setup) {
 const checks = [
   ...roles.map((role) => [`${role}_api_read_own`, () => readResult(tokens[role], ownObject[role])]),
   ['vet_api_read_other_clinic', () => readResult(tokens.vet, otherObject)],
+  ...Object.keys(nonVetUpload).map((role) => [`${role}_api_upload_own`, () => uploadResult(tokens[role], nonVetUpload[role])]),
   ...roles.map((role) => [`${role}_api_delete_own`, () => deleteResult(tokens[role], ownObject[role])]),
   ['vet_api_delete_other_clinic', () => deleteResult(tokens.vet, otherObject)],
 ];
