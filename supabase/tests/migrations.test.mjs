@@ -135,7 +135,23 @@ test('the migrations listed in the harness are the ones on disk', async () => {
     '0006_platform_administration.sql',
     '0007_platform_list_queries.sql',
     '0008_clinic_staff_permissions.sql',
+    '0009_clinic_profile_guard.sql',
   ]);
+});
+
+test('0009 keeps clinic status and review fields out of the browser', async () => {
+  const { rows } = await db.query(`
+    select
+      has_column_privilege('authenticated', 'public.clinics', 'status', 'UPDATE') as can_write_status,
+      has_column_privilege('authenticated', 'public.clinics', 'review_notes', 'UPDATE') as can_write_review,
+      has_column_privilege('authenticated', 'public.clinics', 'clinic_name', 'UPDATE') as can_write_name,
+      has_column_privilege('authenticated', 'public.clinics', 'operating_hours', 'UPDATE') as can_write_hours
+  `);
+
+  assert.equal(rows[0].can_write_status, false, 'a clinic admin must not approve or suspend their own clinic');
+  assert.equal(rows[0].can_write_review, false, 'review notes belong to the platform review RPC');
+  assert.equal(rows[0].can_write_name, true, 'CA-03 edits the clinic name');
+  assert.equal(rows[0].can_write_hours, true, 'CA-03 edits operating hours');
 });
 
 test('0007 can be re-applied on a live database without losing data', async () => {

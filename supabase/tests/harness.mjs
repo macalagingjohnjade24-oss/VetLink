@@ -27,6 +27,7 @@ export const MIGRATIONS = [
   '0006_platform_administration.sql',
   '0007_platform_list_queries.sql',
   '0008_clinic_staff_permissions.sql',
+  '0009_clinic_profile_guard.sql',
 ];
 
 const PRELUDE = `
