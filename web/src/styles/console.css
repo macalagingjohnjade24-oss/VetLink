@@ -647,6 +647,163 @@
   transform: translateX(16px);
 }
 
+/* Clinic workspace — cover and logo (CA-01 / CA-02) */
+.clinic-cover {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--white);
+  overflow: hidden;
+}
+
+.clinic-cover__media {
+  position: relative;
+  height: 148px;
+  background: linear-gradient(120deg, #f4c5b9 0%, #faf8f6 55%, #e8c7bb 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.clinic-cover__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.clinic-cover__body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px 18px;
+  margin-top: -28px;
+}
+
+.clinic-logo {
+  display: grid;
+  place-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 4px solid var(--white);
+  background: var(--brand);
+  color: var(--white);
+  font-size: 22px;
+  font-weight: 700;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.clinic-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.clinic-cover__titles {
+  flex: 1;
+  min-width: 0;
+  padding-top: 26px;
+}
+
+.clinic-cover__name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.clinic-cover__meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Appointment status breakdown (CA-01) */
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.split__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.split__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.split__head strong {
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.split__track {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.split__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+}
+
+.split__fill--warning {
+  background: var(--warning);
+}
+
+.split__fill--success {
+  background: var(--success);
+}
+
+.split__fill--muted {
+  background: var(--subtle);
+}
+
+/* Operating hours (CA-02) */
+.hours {
+  display: flex;
+  flex-direction: column;
+}
+
+.hours__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.hours__row:last-of-type {
+  border-bottom: 0;
+}
+
+.hours__value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hours__note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 @media (max-width: 1180px) {
   .grid--main,
   .grid--detail,
