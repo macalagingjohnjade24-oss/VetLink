@@ -222,8 +222,8 @@ function ImportExportPanel({
                 disabled={importing}
               />
               <p className="field__hint">
-                Columns: {SERVICE_IMPORT_COLUMNS.join(', ')} — in any order, matched by the header
-                row. Empty price, duration and availability default to 0, 30 and available. Up to{' '}
+                Columns: {SERVICE_IMPORT_COLUMNS.join(', ')} — matched by the header row, in any
+                order. Empty price, duration and availability default to 0, 30 and available. Up to{' '}
                 {MAX_IMPORT_ROWS} rows per file.
               </p>
             </div>
@@ -232,7 +232,7 @@ function ImportExportPanel({
               <>
                 <p className="field__hint">
                   {fileName} · {plan.rows.length} row{plan.rows.length === 1 ? '' : 's'} ·{' '}
-                  {plan.ready} ready · {plan.problem} need attention
+                  {plan.ready} ready · {plan.rows.length - plan.ready} need attention
                 </p>
 
                 <div className="table-wrap">
@@ -271,8 +271,7 @@ function ImportExportPanel({
                   </table>
                   {hidden > 0 ? (
                     <p className="field__hint" style={{ padding: '10px 16px' }}>
-                      …and {hidden} more row{hidden === 1 ? '' : 's'}. Issues are checked on import
-                      for every row.
+                      …and {hidden} more row{hidden === 1 ? '' : 's'}.
                     </p>
                   ) : null}
                 </div>

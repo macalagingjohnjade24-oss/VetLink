@@ -95,16 +95,20 @@ export function parseCsv(text: string): CsvRecord[] {
   return records.filter((record) => record.cells.some((cell) => cell.trim() !== ''));
 }
 
-const COLUMN_ALIASES = {
-  name: ['servicename', 'service', 'name'],
-  category: ['category'],
-  description: ['description', 'details'],
-  price: ['price', 'fee'],
-  duration: ['durationminutes', 'duration', 'minutes', 'estimatedduration'],
-  availability: ['availability', 'status'],
-} as const;
+type ColumnKey = 'name' | 'category' | 'description' | 'price' | 'duration' | 'availability';
 
-type ColumnKey = keyof typeof COLUMN_ALIASES;
+/**
+ * Exactly the headers the template and the services export write, normalised.
+ * Columns in any order are read; any other column is ignored.
+ */
+const COLUMN_BY_HEADER: Record<string, ColumnKey> = {
+  servicename: 'name',
+  category: 'category',
+  description: 'description',
+  price: 'price',
+  durationminutes: 'duration',
+  availability: 'availability',
+};
 
 export type ServiceImportRow = {
   /** 1-based line in the uploaded file, so an issue points at the right row. */
@@ -121,7 +125,6 @@ export type ServiceImportRow = {
 export type ServiceImportPlan = {
   rows: ServiceImportRow[];
   ready: number;
-  problem: number;
   /** A problem with the file itself; when set, no row can be imported. */
   error: string | null;
 };
@@ -147,15 +150,14 @@ function parseDuration(value: string): number | null {
  */
 export function buildServiceImport(text: string, existingNames: string[]): ServiceImportPlan {
   const records = parseCsv(text);
-  const empty: ServiceImportPlan = { rows: [], ready: 0, problem: 0, error: null };
+  const empty: ServiceImportPlan = { rows: [], ready: 0, error: null };
 
   if (!records.length) return { ...empty, error: 'That file is empty.' };
 
-  const header = records[0].cells.map(normalizeHeader);
   const columns: Partial<Record<ColumnKey, number>> = {};
-  (Object.keys(COLUMN_ALIASES) as ColumnKey[]).forEach((key) => {
-    const at = header.findIndex((cell) => (COLUMN_ALIASES[key] as readonly string[]).includes(cell));
-    if (at >= 0) columns[key] = at;
+  records[0].cells.forEach((cell, index) => {
+    const key = COLUMN_BY_HEADER[normalizeHeader(cell)];
+    if (key && columns[key] === undefined) columns[key] = index;
   });
 
   if (columns.name === undefined) {
@@ -226,12 +228,7 @@ export function buildServiceImport(text: string, existingNames: string[]): Servi
     };
   });
 
-  return {
-    rows,
-    ready: rows.filter((row) => row.issues.length === 0).length,
-    problem: rows.filter((row) => row.issues.length > 0).length,
-    error: null,
-  };
+  return { rows, ready: rows.filter((row) => row.issues.length === 0).length, error: null };
 }
 
 /** Null while the row still has an issue; see `issues`. */
