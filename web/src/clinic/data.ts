@@ -275,3 +275,119 @@ export async function uploadClinicImage(
   const { data } = supabase.storage.from('clinic-logos').getPublicUrl(path);
   return data.publicUrl;
 }
+
+export type ServiceAvailability = 'available' | 'limited' | 'unavailable';
+
+export const SERVICE_AVAILABILITY: { value: ServiceAvailability; label: string }[] = [
+  { value: 'available', label: 'Available' },
+  { value: 'limited', label: 'Limited' },
+  { value: 'unavailable', label: 'Unavailable' },
+];
+
+export type ClinicService = {
+  id: string;
+  clinic_id: string;
+  service_name: string;
+  description: string | null;
+  category: string | null;
+  price: number;
+  estimated_duration: number;
+  availability: ServiceAvailability;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/** The columns CA-04/CA-05 write; clinic_id is added by the caller, never typed in. */
+export type ClinicServiceInput = {
+  service_name: string;
+  description: string | null;
+  category: string | null;
+  price: number;
+  estimated_duration: number;
+  availability: ServiceAvailability;
+};
+
+/** The unique index is on (clinic_id, lower(service_name)); say that in words. */
+function serviceFailure(error: { message: string; code?: string } | null) {
+  if (!error) return;
+  if (error.code === '23505') {
+    throw new Error('A service with that name already exists at this clinic. Choose another name.');
+  }
+  throw new Error(error.message);
+}
+
+export async function fetchClinicServices(clinicId: string): Promise<ClinicService[]> {
+  const { data, error } = await supabase
+    .from('clinic_services')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .order('service_name', { ascending: true });
+  failure(error);
+  return (data ?? []) as ClinicService[];
+}
+
+export async function fetchClinicService(
+  clinicId: string,
+  serviceId: string,
+): Promise<ClinicService | null> {
+  const { data, error } = await supabase
+    .from('clinic_services')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('id', serviceId)
+    .maybeSingle();
+  failure(error);
+  return (data ?? null) as ClinicService | null;
+}
+
+export async function createClinicService(
+  clinicId: string,
+  input: ClinicServiceInput,
+): Promise<ClinicService> {
+  const { data, error } = await supabase
+    .from('clinic_services')
+    .insert({ clinic_id: clinicId, ...input })
+    .select('*')
+    .single();
+  serviceFailure(error);
+  return data as ClinicService;
+}
+
+/** Zero rows means the service is not this clinic's (or the caller lost admin access). */
+export async function updateClinicService(
+  clinicId: string,
+  serviceId: string,
+  input: ClinicServiceInput,
+): Promise<ClinicService> {
+  const { data, error } = await supabase
+    .from('clinic_services')
+    .update(input)
+    .eq('clinic_id', clinicId)
+    .eq('id', serviceId)
+    .select('*')
+    .maybeSingle();
+  serviceFailure(error);
+  if (!data) {
+    throw new Error('The service was not updated. It may belong to another clinic, or your access was revoked.');
+  }
+  return data as ClinicService;
+}
+
+export async function setClinicServiceAvailability(
+  clinicId: string,
+  serviceId: string,
+  availability: ServiceAvailability,
+): Promise<ClinicService> {
+  const { data, error } = await supabase
+    .from('clinic_services')
+    .update({ availability })
+    .eq('clinic_id', clinicId)
+    .eq('id', serviceId)
+    .select('*')
+    .maybeSingle();
+  serviceFailure(error);
+  if (!data) {
+    throw new Error('The service was not updated. It may belong to another clinic, or your access was revoked.');
+  }
+  return data as ClinicService;
+}
