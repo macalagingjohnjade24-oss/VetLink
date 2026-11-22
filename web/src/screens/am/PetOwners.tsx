@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { fetchClinicOwners, type ClinicOwner } from '@/clinic/data';
+import { fetchClinicOwners, unregisterClinicOwner, type ClinicOwner } from '@/clinic/data';
 import { ClinicFooter, InvitationPending } from '@/clinic/components';
 import {
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   LoadingState,
+  Notice,
   PageHeader,
   Pager,
   Panel,
@@ -50,6 +52,9 @@ export function PetOwners() {
   const [pets, setPets] = useState('all');
   const [registeredFrom, setRegisteredFrom] = useState('');
   const [page, setPage] = useState(1);
+  const [pending, setPending] = useState<ClinicOwner | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   const state = useAsync(async () => {
     if (!clinicId) throw new Error('No clinic is attached to this account.');
@@ -58,6 +63,22 @@ export function PetOwners() {
     if (invited) return [] as ClinicOwner[];
     return fetchClinicOwners(clinicId);
   }, [clinicId, invited]);
+
+  const removeOwner = async () => {
+    if (!pending || !clinicId) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await unregisterClinicOwner(clinicId, pending.owner_id);
+      setNotice({ tone: 'success', text: `${pending.name} is off this clinic's register.` });
+      setPending(null);
+      state.reload();
+    } catch (error) {
+      setNotice({ tone: 'error', text: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (!clinicId) {
     return (
@@ -130,6 +151,8 @@ export function PetOwners() {
           </div>
         }
       />
+
+      {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
 
       <Panel
         title={`${rows.length} owner${rows.length === 1 ? '' : 's'}`}
@@ -211,15 +234,26 @@ export function PetOwners() {
                         {owner.registered_at ? formatDate(owner.registered_at) : '—'}
                       </td>
                       <td className="table__right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            navigate(`/appointments/management?owner=${owner.owner_id}`)
-                          }
-                        >
-                          View appointments
-                        </Button>
+                        <div className="toolbar__group" style={{ justifyContent: 'flex-end' }}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              navigate(`/appointments/management?owner=${owner.owner_id}`)
+                            }
+                          >
+                            View appointments
+                          </Button>
+                          {owner.on_register ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setPending(owner)}
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -256,6 +290,21 @@ export function PetOwners() {
           />
         )}
       </Panel>
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={pending ? `Remove ${pending.name} from this clinic?` : ''}
+        description={
+          pending
+            ? 'Their account and pets are untouched, and appointments they already made stay on file. If they have not booked here, they leave the owner list and the dashboard counts.'
+            : ''
+        }
+        confirmLabel="Remove"
+        confirmVariant="danger"
+        busy={busy}
+        onConfirm={() => void removeOwner()}
+        onClose={() => setPending(null)}
+      />
 
       <ClinicFooter
         left="Pet owners"

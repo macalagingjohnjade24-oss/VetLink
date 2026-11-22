@@ -256,8 +256,16 @@ Deno.serve(async (req) => {
 
   if (profileError) return json({ error: profileError.message }, 400);
 
+  // Registering an owner this clinic removed earlier files them again: the row
+  // is reused, so the removal markers have to be cleared with it.
   const { error: registerError } = await admin.from('clinic_owner_registrations').upsert(
-    { clinic_id: clinicId, owner_id: ownerId, registered_by: auth.user.id },
+    {
+      clinic_id: clinicId,
+      owner_id: ownerId,
+      registered_by: auth.user.id,
+      removed_at: null,
+      removed_by: null,
+    },
     { onConflict: 'clinic_id,owner_id' },
   );
 

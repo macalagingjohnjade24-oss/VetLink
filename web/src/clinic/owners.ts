@@ -22,6 +22,8 @@ export type ClinicOwner = {
   known_at: string | null;
   /** Which of those two came first. */
   source: 'booking' | 'registration';
+  /** Whether this clinic's live register still holds them (0021). */
+  on_register: boolean;
 };
 
 export type OwnerBookingRow = {
@@ -118,6 +120,7 @@ export function mergeClinicOwners({
         // only way to know an owner without one.
         known_at: registeredFirst ? registeredAt : (booking?.created_at ?? null),
         source: registeredFirst ? 'registration' : 'booking',
+        on_register: registeredOn.has(ownerId),
       };
     })
     .sort((a, b) => (b.registered_at ?? '').localeCompare(a.registered_at ?? ''));

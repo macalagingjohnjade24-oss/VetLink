@@ -107,6 +107,24 @@ test('profile details win, and a booking stands in when the profile is not reada
   assert.equal(bare.pet_name, null);
 });
 
+test('on_register marks only the owners whose registration is still live', async () => {
+  const owners = merge({
+    bookings: [book(), book({ owner_id: 'owen' })],
+    registrations: [register({ owner_id: 'mia' })],
+    profiles: [
+      profile({ id: 'bea' }),
+      profile({ id: 'owen', first_name: 'Owen' }),
+      profile({ id: 'mia', first_name: 'Mia' }),
+    ],
+  });
+
+  assert.deepEqual(
+    Object.fromEntries(owners.map((owner) => [owner.owner_id, owner.on_register])),
+    { bea: false, owen: false, mia: true },
+    'a booking is not a registration, so Remove is offered only where a live register row exists',
+  );
+});
+
 test('the owner list is newest registered account first', async () => {
   const owners = merge({
     bookings: [book({ owner_id: 'bea' }), book({ owner_id: 'owen', created_at: '2026-11-21T09:00:00.000Z' })],
@@ -157,6 +175,7 @@ test('the dashboard slice is newest first, one row per owner, and keeps each pet
     registered_at: '2026-11-22T09:00:00.000Z',
     known_at: '2026-11-20T09:00:00.000Z',
     source: 'booking',
+    on_register: true,
   });
 
   const mia = panel.find((row) => row.owner_id === 'mia');

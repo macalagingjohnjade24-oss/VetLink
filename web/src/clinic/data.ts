@@ -340,7 +340,8 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
     supabase
       .from('clinic_owner_registrations')
       .select('owner_id,created_at')
-      .eq('clinic_id', clinicId),
+      .eq('clinic_id', clinicId)
+      .is('removed_at', null),
   ]);
   failure(bookings.error);
   failure(registrations.error);
@@ -778,6 +779,22 @@ export async function createClinicAppointment(
   }
 
   return data as CreatedAppointment;
+}
+
+/**
+ * Takes an owner off this clinic's register (0021).
+ *
+ * The register row is kept and marked removed, so who filed it and who undid it
+ * stay on record; the account, its pets and any booking it made are untouched,
+ * which is why an owner with bookings here remains listed. The RPC re-checks the
+ * caller's active front-desk membership, so a forged clinic id cannot pass.
+ */
+export async function unregisterClinicOwner(clinicId: string, ownerId: string): Promise<void> {
+  const { error } = await supabase.rpc('unregister_clinic_owner', {
+    target_clinic: clinicId,
+    target_owner: ownerId,
+  });
+  failure(error);
 }
 
 /**
