@@ -6,8 +6,8 @@
   "description": "VetLink clinic staff and system administrator web console",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "node --test \"src/**/*.test.mjs\"",
     "preview": "vite preview"
   },
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/leaflet": "1.9",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.1",
     "@vitejs/plugin-react": "^5.0.4",
