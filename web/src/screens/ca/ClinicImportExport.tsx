@@ -420,7 +420,6 @@ export function ClinicImportExport() {
   }
 
   // Kept mounted while a reload runs, so an import's result notice is not lost.
-  // Kept mounted while a reload runs, so an import's result notice is not lost.
   if (state.loading && !state.data) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
