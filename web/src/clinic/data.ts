@@ -10,7 +10,11 @@ import {
   type OwnerRegistrationRow,
 } from './owners';
 
+import { mergeClinicPets, type ClinicPetEntry, type ClinicPetRow } from './pets';
+
 export type { ClinicOwner } from './owners';
+// The AM-11 list row; `ClinicPet` below is the owner-side profile shape.
+export type { ClinicPetEntry } from './pets';
 
 /**
  * Everything the Clinic Administrator console reads.
@@ -443,6 +447,34 @@ export async function fetchClinicOwnerDetail(
     pets: (pets.data ?? []) as unknown as OwnerPet[],
     visits: visits.count ?? 0,
   };
+}
+
+/**
+ * Every pet this clinic may read, for AM-11.
+ *
+ * The owner rows come first because the pet policies are stated in terms of the
+ * owner (booked here, or on the register), so the pet query only asks for the
+ * ids the list already proved readable — the two screens cannot disagree about
+ * which pets exist.
+ */
+export async function fetchClinicPets(clinicId: string): Promise<ClinicPetEntry[]> {
+  const owners = await fetchClinicOwners(clinicId);
+  if (!owners.length) return [];
+
+  const { data, error } = await supabase
+    .from('pets')
+    .select('id,owner_id,pet_name,species,breed,sex,profile_picture,created_at')
+    .in(
+      'owner_id',
+      owners.map((owner) => owner.owner_id),
+    )
+    .order('pet_name', { ascending: true });
+  failure(error);
+
+  return mergeClinicPets(
+    (data ?? []) as unknown as ClinicPetRow[],
+    owners.map((owner) => ({ owner_id: owner.owner_id, name: owner.name })),
+  );
 }
 
 /** What AM-10 sends to the register-pet-owner Edge Function. */
