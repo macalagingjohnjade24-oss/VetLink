@@ -332,6 +332,7 @@ type OwnerBookingRow = {
   owner_name: string | null;
   contact: string | null;
   created_at: string;
+  pets: { pet_name: string | null } | null;
 };
 
 type OwnerProfileRow = {
@@ -361,7 +362,7 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
   const [bookings, registrations] = await Promise.all([
     supabase
       .from('appointments')
-      .select('owner_id,owner_name,contact,created_at')
+      .select('owner_id,owner_name,contact,created_at,pets!appointments_pet_id_fkey(pet_name)')
       .eq('clinic_id', clinicId)
       .order('created_at', { ascending: true }),
     supabase
@@ -373,7 +374,7 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
   failure(registrations.error);
 
   const firstBooking = new Map<string, OwnerBookingRow>();
-  for (const row of (bookings.data ?? []) as OwnerBookingRow[]) {
+  for (const row of (bookings.data ?? []) as unknown as OwnerBookingRow[]) {
     if (!firstBooking.has(row.owner_id)) firstBooking.set(row.owner_id, row);
   }
 
@@ -418,6 +419,8 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
       const profileName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
       const registeredFirst =
         registeredAt !== null && (!booking || registeredAt < booking.created_at);
+      const bookedPet = booking?.pets?.pet_name ?? null;
+      const deskPet = firstPet.get(ownerId) ?? null;
 
       return {
         owner_id: ownerId,
@@ -425,7 +428,9 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
         email: profile?.email ?? null,
         contact: profile?.mobile_number || booking?.contact || null,
         pet_count: petCounts.get(ownerId) ?? 0,
-        pet_name: firstPet.get(ownerId) ?? null,
+        // The pet the clinic met them through: the one on their first booking,
+        // or the one filed at the desk for a registrant.
+        pet_name: registeredFirst ? (deskPet ?? bookedPet) : (bookedPet ?? deskPet),
         registered_at: registeredAt ?? profile?.created_at ?? booking?.created_at ?? null,
         known_at: registeredFirst ? registeredAt : (booking?.created_at ?? registeredAt),
         source: registeredFirst ? 'registration' : 'booking',
