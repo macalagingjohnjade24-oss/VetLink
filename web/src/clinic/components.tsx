@@ -1,4 +1,7 @@
-import { EmptyState, Notice, PageHeader, Panel, StatusBadge } from '@/sa/components';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ErrorState, EmptyState, LoadingState, Notice, PageHeader, Panel, StatusBadge } from '@/sa/components';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import type { ClinicProfile, OperatingHours } from './data';
 
@@ -191,8 +194,16 @@ export function InvitationPending({
   );
 }
 
-/** Shared shell for an administrator whose account has no clinic yet. */
-export function NoClinicAssigned({ title }: { title: string }) {
+/**
+ * Shared shell for an account with no clinic yet. The way out differs by role:
+ * an administrator waits for provisioning, a receptionist redeems an invitation.
+ */
+const NO_CLINIC_DESCRIPTION: Record<string, string> = {
+  receptionist:
+    'An Appointment Manager works inside one clinic. Ask your clinic administrator to send the staff invitation for this account.',
+};
+
+export function NoClinicAssigned({ title, role }: { title: string; role?: string }) {
   return (
     <div className="page">
       <PageHeader title={title} subtitle="No clinic assigned yet" />
@@ -200,10 +211,75 @@ export function NoClinicAssigned({ title }: { title: string }) {
         <EmptyState
           icon="map-pin"
           title="No clinic is attached to this account"
-          description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
+          description={
+            (role && NO_CLINIC_DESCRIPTION[role]) ??
+            'A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first.'
+          }
         />
       </Panel>
     </div>
+  );
+}
+
+/** The skeleton every clinic screen shows while its first read is in flight. */
+export function LoadingPage({ rows = 6 }: { rows?: number }) {
+  return (
+    <div className="page">
+      <LoadingState rows={rows} />
+    </div>
+  );
+}
+
+/** A failed read, with the retry every screen offers and any back action it owns. */
+export function FailedPage({
+  title,
+  message,
+  onRetry,
+  actions,
+}: {
+  title: string;
+  message: string | null;
+  onRetry: () => void;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="page">
+      <PageHeader title={title} actions={actions} />
+      <ErrorState message={message ?? 'Unknown error'} onRetry={onRetry} />
+    </div>
+  );
+}
+
+/**
+ * The panel a detail page shows when the row exists but the policies do not
+ * share it with this account — with the one link back to where the id came from.
+ */
+export function NotOnClinicRecords({
+  icon,
+  title,
+  description,
+  backTo,
+  backLabel,
+}: {
+  icon: 'users' | 'clipboard';
+  title: string;
+  description: string;
+  backTo: string;
+  backLabel: string;
+}) {
+  return (
+    <Panel>
+      <EmptyState
+        icon={icon}
+        title={title}
+        description={description}
+        action={
+          <Link to={backTo} style={{ display: 'inline-block', marginTop: 10 }}>
+            <Button size="sm">{backLabel}</Button>
+          </Link>
+        }
+      />
+    </Panel>
   );
 }
 

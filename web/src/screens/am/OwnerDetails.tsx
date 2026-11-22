@@ -3,15 +3,15 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicOwnerDetail } from '@/clinic/data';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
 import {
-  DetailRow,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  PageHeader,
-  Panel,
-} from '@/sa/components';
+  ClinicFooter,
+  FailedPage,
+  InvitationPending,
+  LoadingPage,
+  NoClinicAssigned,
+  NotOnClinicRecords,
+} from '@/clinic/components';
+import { DetailRow, EmptyState, PageHeader, Panel } from '@/sa/components';
 import { Button } from '@/ui/Button';
 
 /**
@@ -42,40 +42,13 @@ export function OwnerDetails() {
     </Link>
   );
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Pet owner" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="An Appointment Manager works inside one clinic. Ask your clinic administrator to send the staff invitation for this account."
-          />
-        </Panel>
-      </div>
-    );
-  }
-
+  if (!clinicId) return <NoClinicAssigned title="Pet owner" role={user?.role} />;
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
-
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
-
+  if (state.loading) return <LoadingPage rows={5} />;
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <PageHeader title="Pet owner" actions={back} />
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Pet owner" message={state.error} onRetry={state.reload} actions={back} />;
   }
 
   const { owner, pets, visits } = state.data;
@@ -84,18 +57,13 @@ export function OwnerDetails() {
     return (
       <div className="page">
         <PageHeader title="Pet owner" subtitle="Not readable on this account" actions={back} />
-        <Panel>
-          <EmptyState
-            icon="users"
-            title="This owner is not on your clinic's records"
-            description="The account may belong to another clinic, or its registration may have been removed. The owner list only shows owners your clinic registered or booked for."
-            action={
-              <Link to="/appointments/owners" style={{ display: 'inline-block', marginTop: 10 }}>
-                <Button size="sm">Back to pet owners</Button>
-              </Link>
-            }
-          />
-        </Panel>
+        <NotOnClinicRecords
+          icon="users"
+          title="This owner is not on your clinic's records"
+          description="The account may belong to another clinic, or its registration may have been removed. The owner list only shows owners your clinic registered or booked for."
+          backTo="/appointments/owners"
+          backLabel="Back to pet owners"
+        />
       </div>
     );
   }
@@ -152,7 +120,11 @@ export function OwnerDetails() {
               <tbody>
                 {pets.map((pet) => (
                   <tr key={pet.id}>
-                    <td className="table__primary">{pet.pet_name}</td>
+                    <td className="table__primary">
+                      <Link className="linkish" to={`/appointments/pets/${pet.id}`}>
+                        {pet.pet_name}
+                      </Link>
+                    </td>
                     <td>{pet.species}</td>
                     <td>{pet.breed ?? '—'}</td>
                     <td>{pet.sex ?? '—'}</td>

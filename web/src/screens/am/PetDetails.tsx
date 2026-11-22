@@ -3,15 +3,15 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicPetDetail } from '@/clinic/data';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
 import {
-  DetailRow,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  PageHeader,
-  Panel,
-} from '@/sa/components';
+  ClinicFooter,
+  FailedPage,
+  InvitationPending,
+  LoadingPage,
+  NoClinicAssigned,
+  NotOnClinicRecords,
+} from '@/clinic/components';
+import { DetailRow, EmptyState, PageHeader, Panel } from '@/sa/components';
 import { Button } from '@/ui/Button';
 
 /**
@@ -43,40 +43,13 @@ export function PetDetails() {
     </Link>
   );
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Pet" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="An Appointment Manager works inside one clinic. Ask your clinic administrator to send the staff invitation for this account."
-          />
-        </Panel>
-      </div>
-    );
-  }
-
+  if (!clinicId) return <NoClinicAssigned title="Pet" role={user?.role} />;
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
-
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
-
+  if (state.loading) return <LoadingPage rows={5} />;
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <PageHeader title="Pet" actions={back} />
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Pet" message={state.error} onRetry={state.reload} actions={back} />;
   }
 
   const { pet, owner, visits } = state.data;
@@ -85,18 +58,13 @@ export function PetDetails() {
     return (
       <div className="page">
         <PageHeader title="Pet" subtitle="Not readable on this account" actions={back} />
-        <Panel>
-          <EmptyState
-            icon="clipboard"
-            title="This pet is not on your clinic's records"
-            description="The pet may belong to an owner another clinic registered or booked, or its owner's registration may have been removed. The pet list only shows pets of owners this clinic knows."
-            action={
-              <Link to="/appointments/pets" style={{ display: 'inline-block', marginTop: 10 }}>
-                <Button size="sm">Back to pets</Button>
-              </Link>
-            }
-          />
-        </Panel>
+        <NotOnClinicRecords
+          icon="clipboard"
+          title="This pet is not on your clinic's records"
+          description="The pet may belong to an owner another clinic registered or booked, or its owner's registration may have been removed. The pet list only shows pets of owners this clinic knows."
+          backTo="/appointments/pets"
+          backLabel="Back to pets"
+        />
       </div>
     );
   }

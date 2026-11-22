@@ -4,11 +4,15 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicPets, type ClinicPetEntry } from '@/clinic/data';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
+import {
+  ClinicFooter,
+  FailedPage,
+  InvitationPending,
+  LoadingPage,
+  NoClinicAssigned,
+} from '@/clinic/components';
 import {
   EmptyState,
-  ErrorState,
-  LoadingState,
   PageHeader,
   Pager,
   Panel,
@@ -50,39 +54,13 @@ export function Pets() {
     return fetchClinicPets(clinicId);
   }, [clinicId, invited]);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Pets" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="An Appointment Manager works inside one clinic. Ask your clinic administrator to send the staff invitation for this account."
-          />
-        </Panel>
-      </div>
-    );
-  }
-
+  if (!clinicId) return <NoClinicAssigned title="Pets" role={user?.role} />;
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
-
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={6} />
-      </div>
-    );
-  }
-
+  if (state.loading) return <LoadingPage rows={6} />;
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Pets" message={state.error} onRetry={state.reload} />;
   }
 
   // Only the species actually present are offered, so the filter cannot be set
