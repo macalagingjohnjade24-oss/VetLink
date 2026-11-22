@@ -43,16 +43,7 @@ export const VET_STATUS_OPTIONS = [
 /** Bookings the clinic no longer expects to happen: listed, but not counted as work. */
 const INACTIVE_STATUSES = new Set(['cancelled', 'rejected']);
 
-export const isActiveVisit = (row: VetScheduleRow) => !INACTIVE_STATUSES.has(row.status);
-
-/**
- * The pet embed is null when the pets policy withholds the row, not when the
- * owner never named the pet — say which, rather than inventing a name.
- */
-export const vetPetName = (row: VetScheduleRow) =>
-  row.pets?.pet_name ?? 'Pet name unavailable';
-
-export type VetScheduleFilters = {
+type VetScheduleFilters = {
   /** Local `YYYY-MM-DD` for the day being worked. */
   today: string;
   scope: VetScope;
@@ -65,7 +56,7 @@ function matches(row: VetScheduleRow, term: string) {
   if (!term) return true;
   return [
     row.reference,
-    vetPetName(row),
+    row.pets?.pet_name,
     row.owner_name,
     row.contact,
     row.service_name,
@@ -113,9 +104,11 @@ export function filterVetSchedule(
  * tomorrow so it never double-counts today.
  */
 export function vetScheduleSummary(rows: VetScheduleRow[], today: string) {
+  const active = rows.filter((row) => !INACTIVE_STATUSES.has(row.status));
+
   return {
-    today: rows.filter((row) => row.appointment_date === today && isActiveVisit(row)).length,
-    upcoming: rows.filter((row) => row.appointment_date > today && isActiveVisit(row)).length,
+    today: active.filter((row) => row.appointment_date === today).length,
+    upcoming: active.filter((row) => row.appointment_date > today).length,
     completed: rows.filter((row) => row.status === 'completed').length,
     total: rows.length,
   };

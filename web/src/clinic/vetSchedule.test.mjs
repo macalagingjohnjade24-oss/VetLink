@@ -6,7 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { filterVetSchedule, isActiveVisit, vetPetName, vetScheduleSummary } from './vetSchedule.ts';
+import { filterVetSchedule, vetScheduleSummary } from './vetSchedule.ts';
 
 const TODAY = '2026-11-23';
 
@@ -129,10 +129,10 @@ test('the counts treat cancelled and rejected bookings as listed but not as work
   });
 });
 
-test('a row whose pet embed was withheld keeps its place and says the name is unavailable', () => {
-  const hidden = row({ pets: null });
+test('a row whose pet embed was withheld keeps its place and search still works', () => {
+  const hidden = row({ pets: null, owner_name: 'Bea Booked' });
 
-  assert.equal(vetPetName(hidden), 'Pet name unavailable');
-  assert.equal(isActiveVisit(row({ status: 'rejected' })), false);
   assert.deepEqual(ids(filterVetSchedule([hidden], filters())), ['appointment-1']);
+  assert.deepEqual(ids(filterVetSchedule([hidden], filters({ term: 'bea' }))), ['appointment-1']);
+  assert.deepEqual([...filterVetSchedule([hidden], filters({ term: 'biscuit' }))], []);
 });

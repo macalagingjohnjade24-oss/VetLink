@@ -9,12 +9,12 @@ import {
   InvitationPending,
   LoadingPage,
   NoClinicAssigned,
+  petName,
 } from '@/clinic/components';
 import {
   filterVetSchedule,
   VET_SCOPE_OPTIONS,
   VET_STATUS_OPTIONS,
-  vetPetName,
   vetScheduleSummary,
   type VetScope,
 } from '@/clinic/vetSchedule';
@@ -91,9 +91,9 @@ export function VetAppointments() {
     <div className="page">
       <PageHeader
         title="My appointments"
-        subtitle={`${user?.clinicName ?? 'Clinic'} · ${formatDate(today)} · ${
-          summary.today
-        } visit${summary.today === 1 ? '' : 's'} today`}
+        subtitle={`${user?.clinicName ?? 'Clinic'} · ${formatDate(today)} · ${summary.today} visit${
+          summary.today === 1 ? '' : 's'
+        } today`}
         actions={
           <Button variant="outline" onClick={state.reload}>
             Refresh
@@ -183,7 +183,7 @@ export function VetAppointments() {
                         ) : null}
                       </td>
                       <td className="table__mono">{formatClock(appointment.appointment_time)}</td>
-                      <td className="table__primary">{vetPetName(appointment)}</td>
+                      <td className="table__primary">{petName(appointment)}</td>
                       <td>
                         {appointment.owner_name ?? '—'}
                         {appointment.contact ? (
