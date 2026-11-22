@@ -374,6 +374,77 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
   });
 }
 
+/** One pet row as the owner page shows it; nothing clinical is selected here. */
+export type OwnerPet = {
+  id: string;
+  pet_name: string;
+  species: string;
+  breed: string | null;
+  sex: string | null;
+  date_of_birth: string | null;
+  weight: number | null;
+  color: string | null;
+  profile_picture: string | null;
+  created_at: string;
+};
+
+export type OwnerDetail = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  mobile_number: string | null;
+  address: string | null;
+  created_at: string;
+};
+
+export type ClinicOwnerDetail = {
+  /** Null when the policies do not let this caller read the account. */
+  owner: OwnerDetail | null;
+  pets: OwnerPet[];
+  /** Appointments this clinic has on file for the owner. */
+  visits: number;
+};
+
+/**
+ * One owner and their pets, for the page the pet count links to.
+ *
+ * Every row is read under the same policies as the list: the profile, its pets
+ * and the clinic's own appointments. An owner id from another clinic therefore
+ * comes back as an empty page rather than another clinic's data.
+ */
+export async function fetchClinicOwnerDetail(
+  clinicId: string,
+  ownerId: string,
+): Promise<ClinicOwnerDetail> {
+  const [profile, pets, visits] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id,first_name,last_name,email,mobile_number,address,created_at')
+      .eq('id', ownerId)
+      .maybeSingle(),
+    supabase
+      .from('pets')
+      .select('id,pet_name,species,breed,sex,date_of_birth,weight,color,profile_picture,created_at')
+      .eq('owner_id', ownerId)
+      .order('pet_name', { ascending: true }),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('clinic_id', clinicId)
+      .eq('owner_id', ownerId),
+  ]);
+  failure(profile.error);
+  failure(pets.error);
+  failure(visits.error);
+
+  return {
+    owner: (profile.data as unknown as OwnerDetail | null) ?? null,
+    pets: (pets.data ?? []) as unknown as OwnerPet[],
+    visits: visits.count ?? 0,
+  };
+}
+
 /** What AM-10 sends to the register-pet-owner Edge Function. */
 export type PetOwnerRegistrationInput = {
   first_name: string;

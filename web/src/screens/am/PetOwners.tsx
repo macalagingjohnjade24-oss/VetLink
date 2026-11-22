@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -228,7 +228,13 @@ export function PetOwners() {
                       <td>{owner.email ?? '—'}</td>
                       <td className="table__mono">{owner.contact ?? '—'}</td>
                       <td>
-                        {owner.pet_count} pet{owner.pet_count === 1 ? '' : 's'}
+                        <Link
+                          className="linkish"
+                          to={`/appointments/owners/${owner.owner_id}`}
+                          aria-label={`View ${owner.name}'s pets`}
+                        >
+                          {owner.pet_count} pet{owner.pet_count === 1 ? '' : 's'}
+                        </Link>
                       </td>
                       <td className="table__mono">
                         {owner.registered_at ? formatDate(owner.registered_at) : '—'}
