@@ -35,6 +35,8 @@ export const MIGRATIONS = [
   '0014_limited_staff_patient_reads.sql',
   '0015_limited_staff_schedule.sql',
   '0016_staff_appointment_insert.sql',
+  '0017_clinic_owner_registration.sql',
+  '0018_service_role_owner_registration.sql',
 ];
 
 const PRELUDE = `

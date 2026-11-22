@@ -336,26 +336,42 @@ type OwnerProfileRow = {
   created_at: string;
 };
 
+type OwnerRegistrationRow = { owner_id: string; created_at: string };
+
 /**
- * The owners behind this clinic's bookings, newest registered account first.
- * The clinic's own appointments decide who appears, so an owner who has never
- * booked here is not reported; the profile and pet policies still decide how
- * much of each account is readable. A profile the account may not read falls
- * back to the name and contact recorded on the booking.
+ * The owners this clinic knows: the ones it registered at the front desk (0017)
+ * and the ones behind its bookings, newest registered account first. An owner
+ * registered here is reported before their first booking, so the front desk can
+ * book for them; the profile and pet policies still decide how much of each
+ * account is readable, and a booking's own name and contact stand in when the
+ * profile is not readable.
  */
 export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]> {
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('owner_id,owner_name,contact,created_at')
-    .eq('clinic_id', clinicId)
-    .order('created_at', { ascending: true });
-  failure(error);
+  const [bookings, registrations] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select('owner_id,owner_name,contact,created_at')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('clinic_owner_registrations')
+      .select('owner_id,created_at')
+      .eq('clinic_id', clinicId),
+  ]);
+  failure(bookings.error);
+  failure(registrations.error);
 
   const firstBooking = new Map<string, OwnerBookingRow>();
-  for (const row of (data ?? []) as OwnerBookingRow[]) {
+  for (const row of (bookings.data ?? []) as OwnerBookingRow[]) {
     if (!firstBooking.has(row.owner_id)) firstBooking.set(row.owner_id, row);
   }
-  const ids = [...firstBooking.keys()];
+
+  const registeredOn = new Map<string, string>();
+  for (const row of (registrations.data ?? []) as OwnerRegistrationRow[]) {
+    registeredOn.set(row.owner_id, row.created_at);
+  }
+
+  const ids = [...new Set([...firstBooking.keys(), ...registeredOn.keys()])];
   if (!ids.length) return [];
 
   const [profiles, pets] = await Promise.all([
@@ -379,20 +395,79 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
 
   return ids
     .map((ownerId) => {
-      const booking = firstBooking.get(ownerId)!;
+      const booking = firstBooking.get(ownerId) ?? null;
       const profile = profilesById.get(ownerId) ?? null;
       const profileName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
 
       return {
         owner_id: ownerId,
-        name: profileName || booking.owner_name || 'Owner name not recorded',
+        name: profileName || booking?.owner_name || 'Owner name not recorded',
         email: profile?.email ?? null,
-        contact: profile?.mobile_number || booking.contact,
+        contact: profile?.mobile_number || booking?.contact || null,
         pet_count: petCounts.get(ownerId) ?? 0,
-        registered_at: profile?.created_at ?? booking.created_at,
+        registered_at: registeredOn.get(ownerId) ?? profile?.created_at ?? booking?.created_at ?? null,
       };
     })
     .sort((a, b) => (b.registered_at ?? '').localeCompare(a.registered_at ?? ''));
+}
+
+/** What AM-10 sends to the register-pet-owner Edge Function. */
+export type PetOwnerRegistrationInput = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile_number: string;
+  address: string;
+  pet: {
+    pet_name: string;
+    species: string;
+    breed: string;
+    sex: string;
+    date_of_birth: string;
+    weight: string;
+    color: string;
+    microchip: string;
+  } | null;
+};
+
+export type RegisteredPetOwner = {
+  status: 'invited' | 'linked';
+  owner_id: string;
+  pet_id: string | null;
+  email: string;
+  message: string;
+};
+
+/**
+ * Calls the register-pet-owner Edge Function. The function re-checks the
+ * caller's active front-desk membership, then creates or links the owner's
+ * account, writes the pet and files the clinic's register row with the service
+ * role, which never reaches the browser.
+ */
+export async function registerClinicPetOwner(
+  clinicId: string,
+  input: PetOwnerRegistrationInput,
+): Promise<RegisteredPetOwner> {
+  const { data, error } = await supabase.functions.invoke('register-pet-owner', {
+    body: { clinic_id: clinicId, ...input },
+  });
+
+  if (error) {
+    let text = error.message;
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const payload = (await context.json()) as { error?: string; hint?: string };
+        if (payload?.error) text = payload.hint ? `${payload.error} ${payload.hint}` : payload.error;
+      } catch {
+        /* keep the SDK message when the body is not JSON */
+      }
+    }
+    throw new Error(text);
+  }
+
+  if (!data) throw new Error('The registration function returned no result.');
+  return data as RegisteredPetOwner;
 }
 
 /** The service names this clinic's bookings actually carry, for the filter. */

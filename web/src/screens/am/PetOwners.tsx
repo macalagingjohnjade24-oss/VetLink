@@ -121,7 +121,14 @@ export function PetOwners() {
         subtitle={`${user?.clinicName ?? 'Clinic'} · ${state.data.length} owner${
           state.data.length === 1 ? '' : 's'
         } on record`}
-        actions={<Button onClick={state.reload}>Refresh</Button>}
+        actions={
+          <div className="toolbar__group">
+            <Button variant="outline" onClick={state.reload}>
+              Refresh
+            </Button>
+            <Button onClick={() => navigate('/appointments/owners/new')}>Register pet owner</Button>
+          </div>
+        }
       />
 
       <Panel
@@ -129,7 +136,7 @@ export function PetOwners() {
         subtitle={
           filtering
             ? `${state.data.length} on record · filtered by your search, pet count and registration date`
-            : 'Owners whose pet has a booking at this clinic, newest registered first'
+            : 'Owners registered at the front desk and owners with a booking here, newest first'
         }
         actions={
           <div className="toolbar__group">
@@ -236,7 +243,16 @@ export function PetOwners() {
           <EmptyState
             icon="users"
             title="No pet owners yet"
-            description="Owners appear here after their pet's first booking at this clinic."
+            description="Register an owner at the front desk and they appear here, ready to book, before their first visit."
+            action={
+              <Button
+                size="sm"
+                onClick={() => navigate('/appointments/owners/new')}
+                style={{ marginTop: 10 }}
+              >
+                Register pet owner
+              </Button>
+            }
           />
         )}
       </Panel>
