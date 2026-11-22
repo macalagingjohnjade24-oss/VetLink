@@ -123,7 +123,7 @@ test('the owner list is newest registered account first', async () => {
 test('the dashboard slice is newest first, one row per owner, and keeps each pet rule', async () => {
   const owners = merge({
     bookings: [
-      book({ owner_id: 'bea', pets: { pet_name: 'Zara' } }),
+      book(),
       book({ owner_id: 'owen', created_at: '2026-11-21T09:00:00.000Z', pets: { pet_name: 'Nala' } }),
     ],
     registrations: [
@@ -146,18 +146,21 @@ test('the dashboard slice is newest first, one row per owner, and keeps each pet
     'ordered by when the clinic first knew each owner, with Bea listed once',
   );
 
-  const bea = panel.find((row) => row.owner_id === 'bea');
-  assert.deepEqual(bea, {
+  // The panel returns the owner row itself, so the whole shape is pinned here.
+  assert.deepEqual(panel.find((row) => row.owner_id === 'bea'), {
     owner_id: 'bea',
-    owner_name: 'Bea Booked',
+    name: 'Bea Booked',
+    email: 'bea@vetlink.test',
     contact: '+63 917 555 0100',
+    pet_count: 2,
     pet_name: 'Zara',
-    registered_at: '2026-11-20T09:00:00.000Z',
+    registered_at: '2026-11-22T09:00:00.000Z',
+    known_at: '2026-11-20T09:00:00.000Z',
     source: 'booking',
   });
 
   const mia = panel.find((row) => row.owner_id === 'mia');
-  assert.equal(mia.owner_name, 'Mia Santos', 'a registrant is named from their account');
+  assert.equal(mia.name, 'Mia Santos', 'a registrant is named from their account');
   assert.equal(mia.pet_name, 'Ash', 'and shown with the first pet filed');
   assert.equal(recentOwnerRegistrations(owners, 2).length, 2, 'the limit is honoured');
 });

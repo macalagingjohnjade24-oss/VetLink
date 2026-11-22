@@ -277,7 +277,7 @@ export function AppointmentsDashboard() {
               {registrations.map((owner) => (
                 <div className="row row--between" key={owner.owner_id}>
                   <div>
-                    <p className="table__primary">{owner.owner_name ?? 'Owner name not recorded'}</p>
+                    <p className="table__primary">{owner.name}</p>
                     <p className="table__secondary">
                       {owner.pet_name ?? 'Pet name unavailable'}
                       {owner.contact ? ` · ${owner.contact}` : ''}
@@ -285,7 +285,7 @@ export function AppointmentsDashboard() {
                   </div>
                   <span className="table__secondary">
                     {owner.source === 'booking' ? 'First booking' : 'Registered'}{' '}
-                    {relativeTime(owner.registered_at)}
+                    {relativeTime(owner.known_at)}
                   </span>
                 </div>
               ))}

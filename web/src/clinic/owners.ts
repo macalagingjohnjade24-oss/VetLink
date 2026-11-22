@@ -24,15 +24,6 @@ export type ClinicOwner = {
   source: 'booking' | 'registration';
 };
 
-export type OwnerRegistration = {
-  owner_id: string;
-  owner_name: string;
-  contact: string | null;
-  pet_name: string | null;
-  registered_at: string;
-  source: 'booking' | 'registration';
-};
-
 export type OwnerBookingRow = {
   owner_id: string;
   owner_name: string | null;
@@ -123,7 +114,9 @@ export function mergeClinicOwners({
         pet_count: petCounts.get(ownerId) ?? 0,
         pet_name: registeredFirst ? (deskPet ?? bookedPet) : (bookedPet ?? deskPet),
         registered_at: registeredAt ?? profile?.created_at ?? booking?.created_at ?? null,
-        known_at: registeredFirst ? registeredAt : (booking?.created_at ?? registeredAt),
+        // A booking-sourced owner always has a booking; the register is the
+        // only way to know an owner without one.
+        known_at: registeredFirst ? registeredAt : (booking?.created_at ?? null),
         source: registeredFirst ? 'registration' : 'booking',
       };
     })
@@ -132,23 +125,12 @@ export function mergeClinicOwners({
 
 /**
  * The owners the clinic took on most recently, newest first, one row each — the
- * appointment dashboard's panel. It is a slice of the owner list, so the panel
- * and Pet owners can never disagree about who the clinic's owners are.
+ * appointment dashboard's panel. It is a slice of the owner list, not a second
+ * shape of it, so the panel and Pet owners can never disagree about who the
+ * clinic's owners are.
  */
-export function recentOwnerRegistrations(
-  owners: ClinicOwner[],
-  limit = 5,
-): OwnerRegistration[] {
-  return owners
-    .filter((owner): owner is ClinicOwner & { known_at: string } => Boolean(owner.known_at))
-    .sort((a, b) => b.known_at.localeCompare(a.known_at))
-    .slice(0, limit)
-    .map((owner) => ({
-      owner_id: owner.owner_id,
-      owner_name: owner.name,
-      contact: owner.contact,
-      pet_name: owner.pet_name,
-      registered_at: owner.known_at,
-      source: owner.source,
-    }));
+export function recentOwnerRegistrations(owners: ClinicOwner[], limit = 5): ClinicOwner[] {
+  return [...owners]
+    .sort((a, b) => (b.known_at ?? '').localeCompare(a.known_at ?? ''))
+    .slice(0, limit);
 }

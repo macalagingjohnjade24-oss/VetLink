@@ -7,11 +7,10 @@ import {
   type OwnerBookingRow,
   type OwnerPetRow,
   type OwnerProfileRow,
-  type OwnerRegistration,
   type OwnerRegistrationRow,
 } from './owners';
 
-export type { ClinicOwner, OwnerRegistration } from './owners';
+export type { ClinicOwner } from './owners';
 
 /**
  * Everything the Clinic Administrator console reads.
@@ -788,7 +787,7 @@ export async function createClinicAppointment(
 export async function fetchRecentOwnerRegistrations(
   clinicId: string,
   limit = 5,
-): Promise<OwnerRegistration[]> {
+): Promise<ClinicOwner[]> {
   return recentOwnerRegistrations(await fetchClinicOwners(clinicId), limit);
 }
 
