@@ -52,6 +52,7 @@ import { RegisterOwner } from '@/screens/am/RegisterOwner';
 import { RescheduleAppointment } from '@/screens/am/RescheduleAppointment';
 import { ScheduleCalendar } from '@/screens/am/ScheduleCalendar';
 import { VetAppointments } from '@/screens/vet/Appointments';
+import { VetPatients } from '@/screens/vet/Patients';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -191,9 +192,10 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 
-/** VET-01 – VET-12. Only the earliest screen of the workspace is built so far. */
+/** VET-01 – VET-12. The schedule and the patient list are built; the rest is phased. */
 const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/veterinarian/appointments', element: <VetAppointments /> },
+  { path: '/veterinarian/patients', element: <VetPatients /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */
