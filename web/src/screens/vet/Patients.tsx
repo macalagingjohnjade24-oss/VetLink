@@ -54,8 +54,8 @@ export function VetPatients() {
     // An invited veterinarian has no active membership, so the pet policies
     // would return nothing; that is the expected state, not a failed load.
     if (invited) return [] as ClinicPetEntry[];
-    return fetchVetPatients(user.id);
-  }, [clinicId, invited, user?.id]);
+    return fetchVetPatients(clinicId);
+  }, [clinicId, invited]);
 
   if (!clinicId) return <NoClinicAssigned title="Patients" role={user?.role} />;
   if (invited) {

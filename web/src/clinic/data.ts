@@ -351,41 +351,52 @@ export async function fetchVetAppointments(
   return (data ?? []) as unknown as VetScheduleRow[];
 }
 
+/** One row of clinic_vet_patients(): the pet and the owner's name. */
+type VetPatientRow = {
+  pet_id: string;
+  pet_name: string;
+  species: string;
+  breed: string | null;
+  sex: string | null;
+  owner_id: string;
+  owner_first_name: string | null;
+  owner_last_name: string | null;
+  created_at: string;
+};
+
 /**
  * VET-03 — the pets this clinic treats.
  *
- * No clinic argument on purpose: the policies that decide this set are stated per
- * caller, not per id. A veterinarian reads the pets of owners who booked at their
- * clinic (pets_clinician_read, 0014) and the pets of owners the clinic registered
- * at the front desk (pets_registered_clinician_read, 0017), so asking for every
- * pet lets those two policies answer — enumerating owners from appointments would
- * not work, because a veterinarian only reads the appointments assigned to them.
- *
- * The reader's own pets also come back, through pets_owner_read; they are removed
- * here because they sit on the vet's account rather than on the clinic's list.
+ * clinic_vet_patients() (0022) evaluates the pet policies' own predicates — booked
+ * at this clinic, or registered by it — for the clinic named on the screen. A
+ * plain pets select cannot: those policies are stated per caller, so a
+ * veterinarian with two active memberships would read both clinics' patients
+ * while the page reported one clinic.
  */
-export async function fetchVetPatients(viewerId: string): Promise<ClinicPetEntry[]> {
-  const { data, error } = await supabase
-    .from('pets')
-    .select('id,owner_id,pet_name,species,breed,sex,profile_picture,created_at')
-    .neq('owner_id', viewerId)
-    .order('pet_name', { ascending: true });
+export async function fetchVetPatients(clinicId: string): Promise<ClinicPetEntry[]> {
+  const { data, error } = await supabase.rpc('clinic_vet_patients', { target_clinic: clinicId });
   failure(error);
 
-  const pets = (data ?? []) as unknown as ClinicPetRow[];
-  if (!pets.length) return [];
-
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id,first_name,last_name')
-    .in('id', [...new Set(pets.map((pet) => pet.owner_id))]);
-  failure(profileError);
-
-  const owners = (profiles ?? []) as { id: string; first_name: string | null; last_name: string | null }[];
+  const rows = (data ?? []) as unknown as VetPatientRow[];
+  const owners = rows
+    .map((row) => ({
+      owner_id: row.owner_id,
+      name: fullName({ first_name: row.owner_first_name, last_name: row.owner_last_name }),
+    }))
+    .filter((owner) => owner.name);
 
   return mergeClinicPets(
-    pets,
-    owners.map((owner) => ({ owner_id: owner.id, name: fullName(owner) })),
+    rows.map((row) => ({
+      id: row.pet_id,
+      owner_id: row.owner_id,
+      pet_name: row.pet_name,
+      species: row.species,
+      breed: row.breed,
+      sex: row.sex,
+      profile_picture: null,
+      created_at: row.created_at,
+    })),
+    owners,
   );
 }
 
