@@ -46,6 +46,23 @@ export function vaccinationState(row: VetVaccinationRow, today: string): Vaccina
   return 'current';
 }
 
+export const VACCINATION_STATE_LABEL: Record<VaccinationState, string> = {
+  overdue: 'Overdue',
+  'due-soon': 'Due soon',
+  current: 'Current',
+  unscheduled: 'No due date',
+};
+
+export const VACCINATION_STATE_TONE: Record<
+  VaccinationState,
+  'success' | 'warning' | 'danger' | 'neutral'
+> = {
+  overdue: 'danger',
+  'due-soon': 'warning',
+  current: 'success',
+  unscheduled: 'neutral',
+};
+
 export const VACCINATION_STATUS_OPTIONS = [
   { value: 'all', label: 'Every due date' },
   { value: 'overdue', label: 'Overdue' },
@@ -55,23 +72,22 @@ export const VACCINATION_STATUS_OPTIONS = [
 ];
 
 /**
- * The VET-09 form's date checks, returned as the first problem or null.
- *
- * The table itself only guarantees next_due_date >= vaccination_date, so the two
- * rules the database cannot know — a required date, and nothing in the future —
- * live here.
+ * VET-10's history: the same patient's other vaccinations, most recently given
+ * first. A record with no date on file sorts last instead of disappearing, and
+ * the record the page is showing is left out — its own panel is that record.
  */
-export function vaccinationDateErrors(input: {
-  vaccinationDate: string;
-  nextDueDate: string | null;
-  today: string;
-}): string | null {
-  if (!input.vaccinationDate) return 'Enter the date the vaccination was given.';
-  if (input.vaccinationDate > input.today) return 'A vaccination cannot be given in the future.';
-  if (input.nextDueDate && input.nextDueDate < input.vaccinationDate) {
-    return 'The next due date cannot fall before the date it was given.';
-  }
-  return null;
+export function vaccinationHistory(
+  rows: VetVaccinationRow[],
+  record: VetVaccinationRow,
+): VetVaccinationRow[] {
+  return rows
+    .filter((row) => row.pet_id === record.pet_id && row.id !== record.id)
+    .sort((a, b) => {
+      const left = a.vaccination_date ?? '';
+      const right = b.vaccination_date ?? '';
+      if (left !== right) return left < right ? 1 : -1;
+      return a.vaccine_name.localeCompare(b.vaccine_name);
+    });
 }
 
 export type VaccinationFilters = {

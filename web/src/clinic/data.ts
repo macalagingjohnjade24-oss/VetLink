@@ -462,8 +462,9 @@ type VetVaccinationRpcRow = Omit<VetVaccinationRow, 'id'> & { vaccination_id: st
  * clinic_vet_vaccinations() (0023) returns each record with its pet's name. A
  * plain select cannot: the name lives on `pets`, and a vaccination for a pet the
  * veterinarian has no booking or registration for would render nameless.
- * Only a veterinarian writes vaccinations (0008), which is why this screen is
- * read-only until VET-09 exists.
+ *
+ * VET-08 and VET-10 both read this, so a record's page and the list it was
+ * opened from describe it the same way.
  */
 export async function fetchVetVaccinations(clinicId: string): Promise<VetVaccinationRow[]> {
   const { data, error } = await supabase.rpc('clinic_vet_vaccinations', {

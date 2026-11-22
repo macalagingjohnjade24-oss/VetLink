@@ -9,8 +9,8 @@ import { test } from 'node:test';
 import {
   DUE_SOON_DAYS,
   filterVetVaccinations,
+  vaccinationHistory,
   vaccinationPetName,
-  vaccinationDateErrors,
   vaccinationState,
   vetVaccinationSummary,
 } from './vaccinations.ts';
@@ -110,21 +110,17 @@ test('the counts split the records by patient and by due state', () => {
   });
 });
 
-test('the form refuses a missing or future date and a due date before the dose', () => {
-  const base = { vaccinationDate: TODAY, nextDueDate: null, today: TODAY };
+test("a record's history is the same patient's other vaccinations, newest first", () => {
+  const record = shot({ id: 'current', vaccination_date: '2026-11-23' });
+  const rows = [
+    record,
+    shot({ id: 'older', vaccination_date: '2025-11-20' }),
+    shot({ id: 'newer', vaccination_date: '2026-06-01' }),
+    shot({ id: 'undated', vaccination_date: null }),
+    shot({ id: 'other-pet', pet_id: 'pet-2', vaccination_date: '2026-01-01' }),
+  ];
 
-  assert.equal(vaccinationDateErrors(base), null);
-  assert.match(vaccinationDateErrors({ ...base, vaccinationDate: '' }) ?? '', /Enter the date/);
-  assert.match(
-    vaccinationDateErrors({ ...base, vaccinationDate: '2026-11-24' }) ?? '',
-    /cannot be given in the future/,
-  );
-  assert.match(
-    vaccinationDateErrors({ ...base, nextDueDate: '2026-11-22' }) ?? '',
-    /cannot fall before/,
-  );
-  // The same day for both is what a one-year booster entered on the anniversary looks like.
-  assert.equal(vaccinationDateErrors({ ...base, nextDueDate: TODAY }), null);
+  assert.deepEqual(ids(vaccinationHistory(rows, record)), ['newer', 'older', 'undated']);
 });
 
 test('a record whose pet could not be named still lists and says so', () => {

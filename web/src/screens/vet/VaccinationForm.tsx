@@ -9,7 +9,6 @@ import {
   todayIso,
   type ClinicPetEntry,
 } from '@/clinic/data';
-import { vaccinationDateErrors } from '@/clinic/vaccinations';
 import {
   FailedPage,
   InvitationPending,
@@ -74,12 +73,13 @@ export function VetVaccinationForm() {
     if (!chosen) next.pet = 'Choose the patient this vaccination belongs to.';
     if (!vaccine.trim()) next.vaccine = 'Name the vaccine, for example Rabies or DHPP.';
 
-    const dateError = vaccinationDateErrors({
-      vaccinationDate: given,
-      nextDueDate: nextDue || null,
-      today,
-    });
-    if (dateError) next.dates = dateError;
+    // The table already refuses a due date before the dose; these two rules are
+    // the form's own, and the same ones the medical record form applies to its dates.
+    if (!given) next.dates = 'Enter the date the vaccination was given.';
+    else if (given > today) next.dates = 'A vaccination cannot be given in the future.';
+    else if (nextDue && nextDue < given) {
+      next.dates = 'The next due date cannot fall before the date it was given.';
+    }
 
     return next;
   };
@@ -160,6 +160,7 @@ export function VetVaccinationForm() {
                   label: `${pet.pet_name} · ${pet.owner_name}`,
                 })),
               ]}
+              error={errors.pet}
             />
             <Input
               label="Date given"
@@ -183,7 +184,6 @@ export function VetVaccinationForm() {
               }}
               hint="Shown to the owner in the app, and what VET-08 counts as due."
             />
-            {errors.pet ? <p className="field__error">{errors.pet}</p> : null}
             {pets.length === 0 ? (
               <p className="field__hint" style={{ gridColumn: '1 / -1' }}>
                 This clinic has no patients on file yet. A patient appears once its owner books here

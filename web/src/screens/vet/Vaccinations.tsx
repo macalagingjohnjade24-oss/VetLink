@@ -6,11 +6,12 @@ import { useAsync } from '@/lib/useAsync';
 import { fetchVetVaccinations, todayIso } from '@/clinic/data';
 import {
   filterVetVaccinations,
+  VACCINATION_STATE_LABEL,
+  VACCINATION_STATE_TONE,
   VACCINATION_STATUS_OPTIONS,
   vaccinationPetName,
   vaccinationState,
   vetVaccinationSummary,
-  type VaccinationState,
 } from '@/clinic/vaccinations';
 import {
   ClinicFooter,
@@ -34,28 +35,14 @@ import { Button } from '@/ui/Button';
 
 const PAGE_SIZE = 10;
 
-const STATE_TONE: Record<VaccinationState, 'success' | 'warning' | 'danger' | 'neutral'> = {
-  overdue: 'danger',
-  'due-soon': 'warning',
-  current: 'success',
-  unscheduled: 'neutral',
-};
-
-const STATE_LABEL: Record<VaccinationState, string> = {
-  overdue: 'Overdue',
-  'due-soon': 'Due soon',
-  current: 'Current',
-  unscheduled: 'No due date',
-};
-
 /**
  * VET-08 — vaccination management for one clinic.
  *
  * Every record at the clinic, soonest due first, with the due state derived from
  * `next_due_date` rather than stored: overdue means the date has passed, due soon
  * means it falls within the next 30 days, and a record without a due date says
- * so instead of being guessed at. Read-only, because VET-09 (add) is a separate
- * screen and nothing in the console writes vaccinations yet.
+ * so instead of being guessed at. Each row opens its own record (VET-10), and
+ * writing happens on the form behind "Record vaccination" (VET-09).
  */
 export function VetVaccinations() {
   const { user } = useAuth();
@@ -176,6 +163,7 @@ export function VetVaccinations() {
                     <th>Next due</th>
                     <th>Status</th>
                     <th>Recorded by</th>
+                    <th className="table__right">Record</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -202,11 +190,18 @@ export function VetVaccinations() {
                           {vaccination.next_due_date ? formatDate(vaccination.next_due_date) : '—'}
                         </td>
                         <td>
-                          <StatusBadge status={dueState} tone={STATE_TONE[dueState]}>
-                            {STATE_LABEL[dueState]}
+                          <StatusBadge status={dueState} tone={VACCINATION_STATE_TONE[dueState]}>
+                            {VACCINATION_STATE_LABEL[dueState]}
                           </StatusBadge>
                         </td>
                         <td>{vaccination.veterinarian_name ?? 'Clinic veterinarian'}</td>
+                        <td className="table__right">
+                          <Link to={`/veterinarian/vaccinations/${vaccination.id}`}>
+                            <Button size="sm" variant="outline">
+                              Open
+                            </Button>
+                          </Link>
+                        </td>
                       </tr>
                     );
                   })}

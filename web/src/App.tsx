@@ -56,6 +56,7 @@ import { VetPatients } from '@/screens/vet/Patients';
 import { VetRecordForm } from '@/screens/vet/RecordForm';
 import { VetRecords } from '@/screens/vet/Records';
 import { VetVaccinations } from '@/screens/vet/Vaccinations';
+import { VetVaccinationDetails } from '@/screens/vet/VaccinationDetails';
 import { VetVaccinationForm } from '@/screens/vet/VaccinationForm';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
@@ -196,7 +197,7 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 
-/** VET-01 – VET-12. Schedule, patients, records and vaccinations are built. */
+/** VET-01 – VET-12. Schedule, patients, records and the vaccination screens are built. */
 const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/veterinarian/appointments', element: <VetAppointments /> },
   { path: '/veterinarian/patients', element: <VetPatients /> },
@@ -204,6 +205,7 @@ const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/veterinarian/records/new', element: <VetRecordForm /> },
   { path: '/veterinarian/vaccinations', element: <VetVaccinations /> },
   { path: '/veterinarian/vaccinations/new', element: <VetVaccinationForm /> },
+  { path: '/veterinarian/vaccinations/:id', element: <VetVaccinationDetails /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */

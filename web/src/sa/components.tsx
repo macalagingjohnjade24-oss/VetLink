@@ -143,11 +143,13 @@ export function SelectField({
   value,
   options,
   onChange,
+  error,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
     <div className="control">
@@ -158,6 +160,7 @@ export function SelectField({
         id={`select-${fieldLabel}`}
         className="control__select"
         value={value}
+        aria-invalid={error ? true : undefined}
         onChange={(event) => onChange(event.target.value)}
       >
         {options.map((option) => (
@@ -166,6 +169,7 @@ export function SelectField({
           </option>
         ))}
       </select>
+      {error ? <p className="field__error">{error}</p> : null}
     </div>
   );
 }

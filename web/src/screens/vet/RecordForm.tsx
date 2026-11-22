@@ -161,6 +161,7 @@ export function VetRecordForm() {
                   label: `${pet.pet_name} · ${pet.owner_name}`,
                 })),
               ]}
+              error={errors.pet}
             />
             <Input
               label="Visit date"
@@ -178,7 +179,6 @@ export function VetRecordForm() {
               onChange={(event) => setFollowUp(event.target.value)}
               hint="Leave empty when the visit needs no recheck."
             />
-            {errors.pet ? <p className="field__error">{errors.pet}</p> : null}
             {pets.length === 0 ? (
               <p className="field__hint" style={{ gridColumn: '1 / -1' }}>
                 This clinic has no patients on file yet. A patient appears once its owner books here
