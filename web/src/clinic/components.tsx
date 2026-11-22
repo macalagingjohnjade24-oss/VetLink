@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorState, EmptyState, LoadingState, Notice, PageHeader, Panel, StatusBadge } from '@/sa/components';
 import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
+import { Icon, type IconName } from '@/ui/Icon';
 import type { ClinicProfile, OperatingHours } from './data';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -261,7 +261,7 @@ export function NotOnClinicRecords({
   backTo,
   backLabel,
 }: {
-  icon: 'users' | 'clipboard';
+  icon: IconName;
   title: string;
   description: string;
   backTo: string;

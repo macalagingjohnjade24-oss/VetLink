@@ -530,6 +530,96 @@ export async function fetchClinicPets(clinicId: string): Promise<ClinicPetEntry[
   );
 }
 
+/** One inquiry row as AM-13 lists it: the pet and owner are snapshotted on it. */
+export type ClinicInquiry = {
+  id: string;
+  reference: string | null;
+  subject: string | null;
+  inquiry_type: string;
+  status: string;
+  owner_name: string | null;
+  contact: string | null;
+  pet_name: string | null;
+  pet_species: string | null;
+  details: string | null;
+  created_at: string;
+};
+
+export type InquiryMessage = {
+  id: string;
+  sender_type: string;
+  sender_id: string | null;
+  message: string;
+  created_at: string;
+};
+
+/**
+ * The inquiries sent to this clinic, newest first.
+ *
+ * Read under `inquiries_staff_read`, which is the clinic's active membership, so
+ * an id from another clinic returns no row rather than another clinic's inbox.
+ */
+export async function fetchClinicInquiries(clinicId: string): Promise<ClinicInquiry[]> {
+  const { data, error } = await supabase
+    .from('inquiries')
+    .select(
+      'id,reference,subject,inquiry_type,status,owner_name,contact,pet_name,pet_species,details,created_at',
+    )
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false });
+  failure(error);
+  return (data ?? []) as unknown as ClinicInquiry[];
+}
+
+/** One inquiry and its conversation, for the thread the list opens. */
+export async function fetchClinicInquiry(
+  clinicId: string,
+  inquiryId: string,
+): Promise<{ inquiry: ClinicInquiry | null; messages: InquiryMessage[] }> {
+  const { data: row, error: inquiryError } = await supabase
+    .from('inquiries')
+    .select(
+      'id,reference,subject,inquiry_type,status,owner_name,contact,pet_name,pet_species,details,created_at',
+    )
+    .eq('id', inquiryId)
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  failure(inquiryError);
+
+  const inquiry = (row as unknown as ClinicInquiry | null) ?? null;
+  if (!inquiry) return { inquiry: null, messages: [] };
+
+  const { data: messages, error: messageError } = await supabase
+    .from('inquiry_messages')
+    .select('id,sender_type,sender_id,message,created_at')
+    .eq('inquiry_id', inquiryId)
+    .order('created_at', { ascending: true });
+  failure(messageError);
+
+  return { inquiry, messages: (messages ?? []) as unknown as InquiryMessage[] };
+}
+
+/**
+ * Replies on an inquiry as clinic staff.
+ *
+ * The policy allows an insert with `sender_type = 'clinic_staff'` for an active
+ * member of the inquiry's clinic and nothing else — staff cannot rewrite the
+ * owner's message, change the status or delete the thread from the browser.
+ */
+export async function replyToInquiry(
+  inquiryId: string,
+  senderId: string,
+  message: string,
+): Promise<void> {
+  const { error } = await supabase.from('inquiry_messages').insert({
+    inquiry_id: inquiryId,
+    sender_id: senderId,
+    sender_type: 'clinic_staff',
+    message,
+  });
+  failure(error);
+}
+
 /** What AM-10 sends to the register-pet-owner Edge Function. */
 export type PetOwnerRegistrationInput = {
   first_name: string;

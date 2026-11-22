@@ -43,6 +43,8 @@ import { AppointmentRequests } from '@/screens/am/AppointmentRequests';
 import { AppointmentsDashboard } from '@/screens/am/AppointmentsDashboard';
 import { CreateAppointment } from '@/screens/am/CreateAppointment';
 import { PetOwners } from '@/screens/am/PetOwners';
+import { Inquiries } from '@/screens/am/Inquiries';
+import { InquiryDetails } from '@/screens/am/InquiryDetails';
 import { OwnerDetails } from '@/screens/am/OwnerDetails';
 import { PetDetails } from '@/screens/am/PetDetails';
 import { Pets } from '@/screens/am/Pets';
@@ -180,6 +182,8 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/owners/:id', element: <OwnerDetails /> },
   { path: '/appointments/pets', element: <Pets /> },
   { path: '/appointments/pets/:id', element: <PetDetails /> },
+  { path: '/appointments/inquiries', element: <Inquiries /> },
+  { path: '/appointments/inquiries/:id', element: <InquiryDetails /> },
   { path: '/appointments/new', element: <CreateAppointment /> },
   { path: '/appointments/:id/reschedule', element: <RescheduleAppointment /> },
   { path: '/appointments/:id/cancel', element: <CancelAppointment /> },
