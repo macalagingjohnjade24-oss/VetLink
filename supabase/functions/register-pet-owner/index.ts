@@ -11,6 +11,12 @@
  * activation screen. Either way the profile, the pet and the clinic's register
  * row are written with the service role, because no browser client may write
  * another person's profile or pets.
+ *
+ * A staff or platform account is refused: registering one would file an owner
+ * record and a pet against a staff profile, and overwrite the name and contact
+ * details the staff workspace reads. `profiles.role` and an active or invited
+ * clinic membership are both checked, because the console treats the
+ * membership table as the staff source of truth.
  */
 import {
   adminClient,
@@ -44,6 +50,26 @@ type Body = {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const text = (value?: string | null) => (value ?? '').trim();
+
+/** The names a staff account is called by, in the refusal the desk reads. */
+const ROLE_NAMES: Record<string, string> = {
+  clinic_administrator: 'Clinic Administrator',
+  receptionist: 'receptionist',
+  veterinarian: 'veterinarian',
+  clinic_staff: 'clinic staff',
+  system_administrator: 'System Administrator',
+};
+
+/**
+ * The refusal for an email that is already a staff or platform account, or null
+ * when the account may be treated as a pet owner. The account's role is named
+ * so the front desk can see which account they typed, not just that it is taken.
+ */
+function ownerRefusal(role: string | null | undefined): string | null {
+  if (!role || role === 'pet_owner') return null;
+  const name = ROLE_NAMES[role] ?? 'staff';
+  return `That email is already a ${name} account, so it cannot be registered as a pet owner. Use the owner's personal email address.`;
+}
 
 Deno.serve(async (req) => {
   const options = preflight(req);
@@ -122,14 +148,30 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (lookupError) return json({ error: lookupError.message }, 400);
-  if (existingProfile && existingProfile.role !== 'pet_owner') {
-    return json(
-      {
-        error:
-          'That email belongs to a clinic or platform account. Register the owner with their personal email address.',
-      },
-      409,
-    );
+
+  if (existingProfile) {
+    const refusal = ownerRefusal(existingProfile.role);
+    if (refusal) return json({ error: refusal }, 409);
+
+    const { data: staffMembership, error: staffError } = await admin
+      .from('clinic_memberships')
+      .select('staff_role')
+      .eq('user_id', existingProfile.id)
+      .in('status', ['active', 'invited'])
+      .limit(1)
+      .maybeSingle();
+
+    if (staffError) return json({ error: staffError.message }, 400);
+    if (staffMembership) {
+      return json(
+        {
+          error:
+            ownerRefusal(staffMembership.staff_role) ??
+            'That email belongs to a clinic staff account. Use the owner\'s personal email address.',
+        },
+        409,
+      );
+    }
   }
 
   let ownerId = existingProfile?.id ?? null;
@@ -141,6 +183,22 @@ Deno.serve(async (req) => {
     });
 
     if (inviteError) {
+      // The email has a sign-in but no profile this function can read as an
+      // owner, so it must not be silently attached to somebody else's account.
+      const taken =
+        (inviteError as { status?: number }).status === 422 ||
+        /already been registered|email_exists/i.test(inviteError.message);
+
+      if (taken) {
+        return json(
+          {
+            error:
+              'That email already has a VetLink sign-in with no pet owner profile. Use the owner\'s personal email address.',
+          },
+          409,
+        );
+      }
+
       return json(
         {
           error: inviteError.message,
