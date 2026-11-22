@@ -1,11 +1,13 @@
 /**
- * 0019 — clinic_dashboard() counts the owners and pets the front desk
- * registered, not only the ones that appear on a booking.
+ * 0019/0020 — clinic_dashboard() counts the owners and pets this clinic knows,
+ * the same set AM-09 lists.
  *
- * The fixtures keep the two sources separate on purpose: an owner with a pet
- * and no booking, registered at Alpha, and an owner whose pet has a booking.
- * The booked owner is then registered at Alpha as well, so a count that adds
- * the sources instead of unioning them would report three owners.
+ * The fixtures keep the two sources separate on purpose: an owner with two pets
+ * and no booking, registered at Alpha, and an owner whose pet Milo is booked
+ * here while a second pet, Nala, has never visited. The booked owner is also
+ * registered at Alpha, so a count that adds the sources instead of unioning
+ * them would report three owners, and a count built from bookings alone would
+ * miss Nala.
  */
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
@@ -56,6 +58,10 @@ before(async () => {
     [ids.users.owner, ids.clinics.alpha, milo],
   );
   await register(ids.clinics.alpha, ids.users.owner);
+
+  // Lives with an owner the clinic knows but has never been booked here; AM-09
+  // counts it against that owner, so the dashboard must too.
+  await addPet(ids.users.owner, 'Nala', 'Cat');
 });
 
 after(async () => {
@@ -71,10 +77,30 @@ test('the dashboard counts a registrant with no booking, and counts them once', 
     2,
     'the registrant and the booked owner, not the sum of both sources',
   );
+});
+
+test('the pet count is the total AM-09 lists for the same owners', async () => {
+  const payload = await dashboard(ids.clinics.alpha);
+
+  // Every pet of the two owners the clinic knows: Biscuit and Pepper from the
+  // desk, Milo who is booked, and Nala who has never visited.
   assert.equal(
     Number(payload.pets_registered),
-    3,
-    "the two pets filed at the desk plus the booked pet, with Milo counted once",
+    4,
+    'a pet that has never visited still counts, and Milo is counted once',
+  );
+
+  await asActor(db, ids.users.alphaAdmin);
+  const { rows } = await db.query(
+    `select count(*)::int as total
+       from public.pets
+      where owner_id in ($1, $2)`,
+    [ids.users.loner, ids.users.owner],
+  );
+  assert.equal(
+    Number(payload.pets_registered),
+    rows[0].total,
+    'the dashboard agrees with the per-owner pet totals the owner list sums',
   );
 });
 
@@ -91,11 +117,11 @@ test('a signed-in account with no membership of the clinic is refused', async ()
   );
 });
 
-test('re-applying 0019 keeps the same counts', async () => {
+test('re-applying 0020 keeps the same counts', async () => {
   await db.exec('reset role');
-  await applyMigration(db, '0019_dashboard_owner_counts.sql');
+  await applyMigration(db, '0020_dashboard_total_owner_pets.sql');
 
   const payload = await dashboard(ids.clinics.alpha);
   assert.equal(Number(payload.owners_registered), 2);
-  assert.equal(Number(payload.pets_registered), 3);
+  assert.equal(Number(payload.pets_registered), 4);
 });
