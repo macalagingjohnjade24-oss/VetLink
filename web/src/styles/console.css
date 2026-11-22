@@ -32,7 +32,7 @@
 }
 
 .grid--stats {
-  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
 }
 
 .grid--main {
@@ -303,6 +303,8 @@
 }
 
 .table__secondary {
+  /* Always its own line under the primary text, whether it is a <p> or a <span>. */
+  display: block;
   margin-top: 2px;
   font-size: 11px;
   color: var(--muted);
@@ -676,6 +678,10 @@
 }
 
 .clinic-cover__body {
+  /* Positioned so the logo, pulled up over the cover by the negative margin,
+     paints above the cover (itself positioned) instead of behind it. */
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1084,5 +1090,93 @@
 
   .detail dd {
     margin-bottom: 8px;
+  }
+}
+
+/* Phones. The 1180px rule above already stacks the two-column grids; this one
+   keeps panel toolbars, stats, dialogs and the pager inside a ~360px screen. */
+@media (max-width: 640px) {
+  .panel__head {
+    flex-wrap: wrap;
+    padding: 16px 16px 0;
+  }
+
+  .panel__head > :last-child:not(:first-child),
+  .toolbar__group {
+    width: 100%;
+  }
+
+  .toolbar__group > .control,
+  .toolbar__group > .field {
+    flex: 1 1 150px;
+    min-width: 0;
+  }
+
+  .panel__body {
+    padding: 14px 16px 16px;
+  }
+
+  .table th,
+  .table td {
+    padding-inline: 14px;
+  }
+
+  .grid--stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid--stats .stat__value {
+    font-size: 26px;
+  }
+
+  /* Inline label columns (CA-02, SA-15 …) stack like the shared .detail does. */
+  .detail[style] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .pager {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .dialog {
+    padding: 16px;
+    align-items: end;
+  }
+
+  .dialog__card {
+    padding: 20px;
+  }
+
+  .dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog__actions .btn {
+    width: 100%;
+  }
+
+  .page__actions {
+    width: 100%;
+  }
+
+  /* Some headers group their buttons in a .row; let that group wrap too. */
+  .page__actions > .row {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .page__actions > a,
+  .page__actions > .btn {
+    flex: 1 1 auto;
+  }
+
+  .page__actions > a .btn {
+    width: 100%;
   }
 }

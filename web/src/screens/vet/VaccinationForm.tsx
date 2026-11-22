@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -14,6 +14,7 @@ import {
   InvitationPending,
   LoadingPage,
   NoClinicAssigned,
+  TextArea,
 } from '@/clinic/components';
 import { Notice, PageHeader, Panel, SelectField } from '@/sa/components';
 import { Button } from '@/ui/Button';
@@ -32,6 +33,10 @@ const blank = (value: string) => (value.trim() ? value.trim() : null);
  * The next due date is optional on purpose. Not every vaccine has a schedule the
  * clinic wants to commit to, and inventing one would put a date in the owner's app
  * that no veterinarian chose — VET-08 shows such a row as "No due date".
+ *
+ * The note is free text on the same row (vaccinations.notes, 0001) and is read
+ * back on VET-10, which is why it is written here rather than in a side channel:
+ * a reaction, a reminder brand or a site detail belongs with the dose.
  */
 export function VetVaccinationForm() {
   const { user } = useAuth();
@@ -40,12 +45,15 @@ export function VetVaccinationForm() {
   const navigate = useNavigate();
   const today = todayIso();
 
-  const [petId, setPetId] = useState('');
+  // A patient page links here with ?pet=, so the form opens on that patient.
+  const [searchParams] = useSearchParams();
+  const [petId, setPetId] = useState(searchParams.get('pet') ?? '');
   const [vaccine, setVaccine] = useState('');
   const [given, setGiven] = useState(today);
   const [nextDue, setNextDue] = useState('');
   const [dosage, setDosage] = useState('');
   const [batch, setBatch] = useState('');
+  const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ pet?: string; vaccine?: string; dates?: string }>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -108,6 +116,7 @@ export function VetVaccinationForm() {
         next_due_date: nextDue || null,
         dosage: blank(dosage),
         batch_number: blank(batch),
+        notes: blank(notes),
         veterinarian_name: fullName({ first_name: user.firstName, last_name: user.lastName }) || null,
       });
       navigate('/veterinarian/vaccinations', {
@@ -220,6 +229,16 @@ export function VetVaccinationForm() {
               maxLength={60}
               hint="From the vial label — the first thing a recall asks for."
             />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <TextArea
+                label="Notes (optional)"
+                value={notes}
+                onChange={setNotes}
+                rows={3}
+                maxLength={2000}
+                hint="A reaction, the site it was given, or anything the next dose should account for."
+              />
+            </div>
           </div>
         </Panel>
       </form>

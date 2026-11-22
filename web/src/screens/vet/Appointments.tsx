@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatClock, formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -171,6 +172,7 @@ export function VetAppointments() {
                     <th>Service</th>
                     <th>Reason for visit</th>
                     <th>Status</th>
+                    <th className="table__right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -183,7 +185,9 @@ export function VetAppointments() {
                         ) : null}
                       </td>
                       <td className="table__mono">{formatClock(appointment.appointment_time)}</td>
-                      <td className="table__primary">{petName(appointment)}</td>
+                      <td className="table__primary">
+                        <Link to={`/veterinarian/patients/${appointment.pet_id}`}>{petName(appointment)}</Link>
+                      </td>
                       <td>
                         {appointment.owner_name ?? '—'}
                         {appointment.contact ? (
@@ -197,6 +201,21 @@ export function VetAppointments() {
                       </td>
                       <td>
                         <StatusBadge status={appointment.status} />
+                      </td>
+                      <td className="table__right">
+                        {appointment.status === 'completed' ? (
+                          <Link to={`/veterinarian/consultations/${appointment.id}`}>
+                            <Button size="sm" variant="outline">
+                              View
+                            </Button>
+                          </Link>
+                        ) : appointment.status === 'confirmed' && appointment.appointment_date <= today ? (
+                          <Link to={`/veterinarian/appointments/${appointment.id}/consult`}>
+                            <Button size="sm">Consult</Button>
+                          </Link>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

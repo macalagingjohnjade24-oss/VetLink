@@ -6,6 +6,7 @@
  * not a diff against the last run.
  */
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import { after, before, test } from 'node:test';
 import {
   MIGRATIONS,
@@ -128,29 +129,10 @@ test('0001-0007 apply in order and create the schema the console calls', async (
 });
 
 test('the migrations listed in the harness are the ones on disk', async () => {
-  assert.deepEqual(MIGRATIONS, [
-    '0001_schema.sql',
-    '0002_rls.sql',
-    '0003_storage.sql',
-    '0004_web_console.sql',
-    '0005_clinic_documents.sql',
-    '0006_platform_administration.sql',
-    '0007_platform_list_queries.sql',
-    '0008_clinic_staff_permissions.sql',
-    '0009_clinic_profile_guard.sql',
-    '0010_clinic_membership_role_guard.sql',
-    '0011_membership_profile_role_sync.sql',
-    '0012_service_role_function_grants.sql',
-    '0013_membership_insert_profile_role_sync.sql',
-    '0014_limited_staff_patient_reads.sql',
-    '0015_limited_staff_schedule.sql',
-    '0016_staff_appointment_insert.sql',
-    '0017_clinic_owner_registration.sql',
-    '0018_service_role_owner_registration.sql',
-    '0019_dashboard_owner_counts.sql',
-    '0020_dashboard_total_owner_pets.sql',
-    '0021_clinic_owner_unregister.sql',
-  ]);
+  const onDisk = (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((name) => /^\d{4}_.+\.sql$/.test(name))
+    .sort();
+  assert.deepEqual(MIGRATIONS, onDisk);
 });
 
 test('0012 lets the server-only service role run the Edge Functions', async () => {

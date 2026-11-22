@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -160,6 +161,7 @@ export function VetPatients() {
                     <th>Sex</th>
                     <th>Owner</th>
                     <th>On file since</th>
+                    <th className="table__right">Patient</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,6 +175,13 @@ export function VetPatients() {
                       <td>{pet.sex ?? '—'}</td>
                       <td>{pet.owner_name}</td>
                       <td className="table__mono">{formatDate(pet.created_at)}</td>
+                      <td className="table__right">
+                        <Link to={`/veterinarian/patients/${pet.id}`}>
+                          <Button size="sm" variant="outline">
+                            Open
+                          </Button>
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

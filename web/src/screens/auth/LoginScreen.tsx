@@ -120,6 +120,12 @@ export function LoginScreen() {
           After login, VetLink opens your assigned role&rsquo;s dashboard. Your access is limited to
           your clinic.
         </p>
+        <p className="auth__note-copy" style={{ marginTop: 8 }}>
+          New clinic?{' '}
+          <Link className="auth__link" to="/register">
+            Register your clinic
+          </Link>
+        </p>
       </div>
     </AuthLayout>
   );

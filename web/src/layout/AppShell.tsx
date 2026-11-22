@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ROLE_LABEL, scopeLabel } from '@/auth/roles';
 import { useAuth, type ConsoleUser } from '@/auth/AuthProvider';
-import { NAV, ROLE_NOTE } from '@/shell/nav';
+import { countUnreadNotifications } from '@/clinic/notifications';
+import { NAV, NOTIFICATIONS_PATH, ROLE_NOTE, WORKSPACE_LABEL } from '@/shell/nav';
 import { Icon } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
 
@@ -17,6 +18,10 @@ const initials = (user: ConsoleUser) =>
 /**
  * Sidebar + top header + content area, shared by every role. Widths come from
  * the Figma frames: 256px sidebar, 80px header, 1120px content column.
+ *
+ * Up to 1080px wide (tablets and phones) the sidebar becomes a drawer opened
+ * from the ☰ button in the top bar, so the page content starts at the top of
+ * the screen instead of below the whole navigation.
  */
 export function AppShell({ user, children }: Props) {
   const { signOut } = useAuth();
@@ -37,6 +42,50 @@ export function AppShell({ user, children }: Props) {
       ? (items.find((item) => item.path === `${root.path}/management`) ?? deepest)
       : deepest;
   const isSystemAdmin = user.role === 'system_administrator';
+  const [unread, setUnread] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const drawer = useRef<HTMLElement>(null);
+
+  // Choosing a page closes the drawer.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  // While open: Escape closes it, the page behind does not scroll, and focus
+  // moves into the drawer, returning to the ☰ button when it closes.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    drawer.current?.querySelector<HTMLElement>('.sidebar__close')?.focus();
+    const button = menuButton.current;
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+      button?.focus();
+    };
+  }, [menuOpen]);
+
+  // Re-counted on every navigation, so reading the inbox clears the dot.
+  useEffect(() => {
+    let live = true;
+    countUnreadNotifications()
+      .then((count) => {
+        if (live) setUnread(count);
+      })
+      .catch(() => {
+        if (live) setUnread(0);
+      });
+    return () => {
+      live = false;
+    };
+  }, [location.pathname, user.id]);
+
   const contextName = isSystemAdmin ? 'VetLink Control Center' : (user.clinicName ?? 'No clinic assigned');
   const contextMeta = isSystemAdmin
     ? 'All clinics · Restricted access'
@@ -45,9 +94,24 @@ export function AppShell({ user, children }: Props) {
         .join(' · ');
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <Logo className="sidebar__brand" />
+    <div className={`shell${menuOpen ? ' shell--menu-open' : ''}`}>
+      <aside
+        id="workspace-menu"
+        ref={drawer}
+        className={`sidebar${menuOpen ? ' sidebar--open' : ''}`}
+        aria-label="Workspace menu"
+      >
+        <div className="sidebar__top">
+          <Logo className="sidebar__brand" />
+          <button
+            type="button"
+            className="icon-button sidebar__close"
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          >
+            <Icon name="x" size={22} />
+          </button>
+        </div>
 
         <div className="sidebar__context">
           <p className="sidebar__context-label">
@@ -62,9 +126,10 @@ export function AppShell({ user, children }: Props) {
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) =>
-                `sidebar__item${isActive ? ' sidebar__item--active' : ''}`
-              }
+              // The section the page belongs to, not every prefix of it: the
+              // dashboard's path is the root of every other path in its role.
+              className={`sidebar__item${item.path === current.path ? ' sidebar__item--active' : ''}`}
+              aria-current={item.path === current.path ? 'page' : undefined}
             >
               <Icon name={item.icon} size={20} />
               <span>{item.label}</span>
@@ -103,11 +168,26 @@ export function AppShell({ user, children }: Props) {
         </div>
       </aside>
 
+      {menuOpen ? (
+        <div className="shell__backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />
+      ) : null}
+
       <div className="shell__main">
         <header className="topbar">
+          <button
+            ref={menuButton}
+            type="button"
+            className="icon-button topbar__menu"
+            aria-label="Open menu"
+            aria-controls="workspace-menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
+            <Icon name="menu" size={24} />
+          </button>
           <div className="topbar__titles">
             <p className="topbar__crumb">
-              {contextName} / {isSystemAdmin ? 'Platform administration' : 'Clinic administration'}
+              {contextName} / {WORKSPACE_LABEL[user.role]}
             </p>
             <p className="topbar__title">{current?.label ?? 'Dashboard'}</p>
           </div>
@@ -116,10 +196,14 @@ export function AppShell({ user, children }: Props) {
               <Icon name="shield" size={20} />
               {scopeLabel(user.role, user.mfaEnrolled)}
             </span>
-            <button type="button" className="icon-button" aria-label="Notifications" disabled>
+            <Link
+              to={NOTIFICATIONS_PATH[user.role]}
+              className="icon-button"
+              aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+            >
               <Icon name="bell" size={22} />
-              <span className="icon-button__dot" aria-hidden="true" />
-            </button>
+              {unread ? <span className="icon-button__dot" aria-hidden="true" /> : null}
+            </Link>
             <div className="topbar__user">
               <span className="avatar">
                 {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : initials(user)}

@@ -1,15 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useAsync } from '@/lib/useAsync';
-import { fullName, label, relativeTime } from '@/lib/format';
+import { fullName, label } from '@/lib/format';
 import { fetchClinicTeam } from '@/clinic/data';
-import {
-  fetchNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-  sendClinicNotification,
-  type ClinicNotification,
-} from '@/clinic/notifications';
+import { fetchNotifications, sendClinicNotification } from '@/clinic/notifications';
+import { NotificationInbox, notificationCounts } from '@/screens/shared/NotificationInbox';
 import {
   ClinicFooter,
   FailedPage,
@@ -20,31 +15,14 @@ import {
 } from '@/clinic/components';
 import {
   ConfirmDialog,
-  EmptyState,
   Metric,
   Notice,
   PageHeader,
   Panel,
   SelectField,
-  StatusBadge,
 } from '@/sa/components';
 import { Button } from '@/ui/Button';
 import { Input } from '@/ui/Input';
-
-const FILTERS = [
-  { value: 'all', label: 'All notifications' },
-  { value: 'unread', label: 'Unread only' },
-  { value: 'clinic', label: 'Clinic messages' },
-  { value: 'account', label: 'Account and system' },
-];
-
-/** The rows the selected filter keeps; every count below is computed from them. */
-function matchesFilter(notification: ClinicNotification, filter: string): boolean {
-  if (filter === 'unread') return !notification.is_read;
-  if (filter === 'clinic') return notification.clinic_id !== null;
-  if (filter === 'account') return notification.clinic_id === null;
-  return true;
-}
 
 /** CA-12 — the member's own notification list, plus clinic messages to the team. */
 export function ClinicNotifications() {
@@ -52,14 +30,11 @@ export function ClinicNotifications() {
   const clinicId = user?.clinicId ?? null;
   const invited = user?.membershipStatus === 'invited';
 
-  const [filter, setFilter] = useState('all');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [audience, setAudience] = useState('all');
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [marking, setMarking] = useState<string | null>(null);
-  const [markingAll, setMarkingAll] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -112,51 +87,9 @@ export function ClinicNotifications() {
     [recipients],
   );
 
-  const rows = useMemo(
-    () => inbox.filter((notification) => matchesFilter(notification, filter)),
-    [inbox, filter],
-  );
-
-  const counts = useMemo(
-    () => ({
-      total: inbox.length,
-      unread: inbox.filter((notification) => !notification.is_read).length,
-      clinic: inbox.filter((notification) => notification.clinic_id !== null).length,
-      account: inbox.filter((notification) => notification.clinic_id === null).length,
-    }),
-    [inbox],
-  );
+  const counts = useMemo(() => notificationCounts(inbox), [inbox]);
 
   const ready = title.trim().length >= 4 && body.trim().length >= 10 && targets.length > 0;
-
-  const markRead = async (id: string) => {
-    if (marking || markingAll) return;
-    setMarking(id);
-    setNotice(null);
-    try {
-      await markNotificationRead(id);
-      state.reload();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : String(error));
-    } finally {
-      setMarking(null);
-    }
-  };
-
-  const markAll = async () => {
-    if (marking || markingAll) return;
-    setMarkingAll(true);
-    setNotice(null);
-    try {
-      const changed = await markAllNotificationsRead();
-      setFlash(`${changed} notification${changed === 1 ? '' : 's'} marked as read.`);
-      state.reload();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : String(error));
-    } finally {
-      setMarkingAll(false);
-    }
-  };
 
   const send = async () => {
     if (!clinicId || busy) return;
@@ -200,8 +133,6 @@ export function ClinicNotifications() {
     return <FailedPage title="Notifications" message={state.error} onRetry={state.reload} />;
   }
 
-  const filterLabel = FILTERS.find((item) => item.value === filter)?.label.toLowerCase() ?? '';
-
   return (
     <div className="page">
       <PageHeader
@@ -225,97 +156,19 @@ export function ClinicNotifications() {
       </div>
 
       <div className="grid grid--detail">
-        <Panel
-          title="Your notifications"
-          subtitle={`${rows.length} shown · ${filterLabel} · scoped by the owner-read policy`}
-          actions={
-            <div className="toolbar__group">
-              <SelectField
-                label="Filter"
-                value={filter}
-                onChange={setFilter}
-                options={FILTERS}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void markAll()}
-                loading={markingAll}
-                disabled={!counts.unread || marking !== null}
-              >
-                Mark all read
-              </Button>
-            </div>
-          }
-          flush
-        >
-          {rows.length ? (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Notification</th>
-                    <th>Type</th>
-                    <th>Received</th>
-                    <th className="table__right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((notification) => (
-                    <tr key={notification.id}>
-                      <td>
-                        <p className="table__primary">{notification.title}</p>
-                        <p className="table__secondary">{notification.message}</p>
-                      </td>
-                      <td>
-                        <span className="table__secondary">
-                          {label(notification.notification_type)}
-                        </span>
-                        <span style={{ display: 'block', marginTop: 4 }}>
-                          {notification.is_read ? (
-                            <StatusBadge status="active" tone="neutral">
-                              Read
-                            </StatusBadge>
-                          ) : (
-                            <StatusBadge status="unread" tone="warning">
-                              Unread
-                            </StatusBadge>
-                          )}
-                        </span>
-                      </td>
-                      <td className="table__secondary">{relativeTime(notification.created_at)}</td>
-                      <td className="table__right">
-                        {notification.is_read ? (
-                          <span className="muted">—</span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            loading={marking === notification.id}
-                            disabled={marking !== null || markingAll}
-                            onClick={() => void markRead(notification.id)}
-                          >
-                            Mark read
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState
-              icon="bell"
-              title={filter === 'all' ? 'No notifications yet' : `Nothing matches “${filterLabel}”`}
-              description={
-                filter === 'all'
-                  ? 'Invitation, role and appointment notices arrive here as the clinic works. You can also send a message to your team.'
-                  : 'Choose “All notifications” to see everything in your list.'
-              }
-            />
-          )}
-        </Panel>
+        <NotificationInbox
+          inbox={inbox}
+          onChanged={state.reload}
+          onFlash={(message) => {
+            setNotice(null);
+            setFlash(message);
+          }}
+          onError={(message) => {
+            setFlash(null);
+            setNotice(message);
+          }}
+          emptyCopy="Invitation, role and appointment notices arrive here as the clinic works. You can also send a message to your team."
+        />
 
         <Panel
           title="Send a clinic notification"

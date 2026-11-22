@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { ROLE_HOME } from '@/auth/roles';
+import { ROLE_HOME, type ConsoleRole } from '@/auth/roles';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { AppShell } from '@/layout/AppShell';
 import { ActivateAccountScreen } from '@/screens/auth/ActivateAccountScreen';
@@ -36,6 +36,7 @@ import { ClinicStaff } from '@/screens/ca/ClinicStaff';
 import { ClinicStaffDetails } from '@/screens/ca/ClinicStaffDetails';
 import { ClinicStaffEdit } from '@/screens/ca/ClinicStaffEdit';
 import { ClinicStaffInvite } from '@/screens/ca/ClinicStaffInvite';
+import { ClinicTasks } from '@/screens/ca/ClinicTasks';
 import { AppointmentDetails } from '@/screens/am/AppointmentDetails';
 import { CancelAppointment } from '@/screens/am/CancelAppointment';
 import { AppointmentManagement } from '@/screens/am/AppointmentManagement';
@@ -52,15 +53,28 @@ import { RegisterOwner } from '@/screens/am/RegisterOwner';
 import { RescheduleAppointment } from '@/screens/am/RescheduleAppointment';
 import { ScheduleCalendar } from '@/screens/am/ScheduleCalendar';
 import { VetAppointments } from '@/screens/vet/Appointments';
+import { VetConsultationWorkspace } from '@/screens/vet/ConsultationWorkspace';
+import { VetDashboard } from '@/screens/vet/Dashboard';
+import { VetPatientDetails } from '@/screens/vet/PatientDetails';
+import { VetRecordDetails } from '@/screens/vet/RecordDetails';
+import { StaffAppointments } from '@/screens/cs/Appointments';
+import { StaffDashboard } from '@/screens/cs/Dashboard';
+import { StaffPets } from '@/screens/cs/Pets';
+import { StaffTasks } from '@/screens/cs/Tasks';
+import { MyNotifications } from '@/screens/shared/MyNotifications';
+import { StaffProfile } from '@/screens/shared/StaffProfile';
+import { VetConsultationDetails } from '@/screens/vet/ConsultationDetails';
+import { VetConsultations } from '@/screens/vet/Consultations';
 import { VetPatients } from '@/screens/vet/Patients';
 import { VetRecordForm } from '@/screens/vet/RecordForm';
 import { VetRecords } from '@/screens/vet/Records';
 import { VetVaccinations } from '@/screens/vet/Vaccinations';
 import { VetVaccinationDetails } from '@/screens/vet/VaccinationDetails';
 import { VetVaccinationForm } from '@/screens/vet/VaccinationForm';
-import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
-import { ALL_NAV_ITEMS } from '@/shell/nav';
+import { RegisterApply } from '@/screens/register/Apply';
+import { RegisterLanding } from '@/screens/register/Landing';
+import { RegisterStatus } from '@/screens/register/Status';
 
 /** Signed-in console users never see the login screen again. */
 function PublicOnly({ children }: { children: ReactNode }) {
@@ -103,21 +117,46 @@ function NotFound() {
   );
 }
 
+
+type GuardCopy = { title: string; copy: string };
+
 /**
- * Platform-wide screens are gated on the role as well as the route: hiding a
- * link is never the boundary, and the RLS policies behind each query assume a
- * system_administrator caller.
+ * Every workspace is gated on the role as well as the route: hiding a link is
+ * never the boundary, and the RLS policies behind each screen's queries assume
+ * a caller of that role.
  */
-function SystemAdministratorOnly({ children }: { children: ReactNode }) {
+const GUARDS: Record<ConsoleRole, GuardCopy> = {
+  system_administrator: {
+    title: 'System Administrator access only',
+    copy: 'This area manages the whole VetLink platform. Clinic accounts stay inside their own clinic, and pet-owner accounts use the mobile app.',
+  },
+  clinic_administrator: {
+    title: 'Clinic Administrator access only',
+    copy: "This workspace manages a clinic's profile, services, staff and reports. Other clinic roles keep their own workspace, and pet-owner accounts use the mobile app.",
+  },
+  receptionist: {
+    title: 'Appointment Manager access only',
+    copy: "This workspace manages one clinic's appointments, owners and pets. Other clinic roles keep their own workspace, and pet-owner accounts use the mobile app.",
+  },
+  veterinarian: {
+    title: 'Veterinarian access only',
+    copy: 'This workspace shows the appointments assigned to one veterinarian, with the patient history and clinical records they author. The front desk keeps the clinic-wide schedule, and pet-owner accounts use the mobile app.',
+  },
+  clinic_staff: {
+    title: 'Clinic Staff access only',
+    copy: "This workspace shows one staff member's assigned tasks and the limited schedule and pet details their role permits. Other clinic roles keep their own workspace.",
+  },
+};
+
+function RoleOnly({ role, children }: { role: ConsoleRole; children: ReactNode }) {
   const { user } = useAuth();
-  if (!user || user.role !== 'system_administrator') {
+  if (!user || user.role !== role) {
     return (
       <div className="page">
         <div className="card">
-          <h2>System Administrator access only</h2>
+          <h2>{GUARDS[role].title}</h2>
           <p className="muted" style={{ marginTop: 8 }}>
-            This area manages the whole VetLink platform. Clinic accounts stay inside their own
-            clinic, and pet-owner accounts use the mobile app.
+            {GUARDS[role].copy}
           </p>
           <a
             className="auth__link"
@@ -133,7 +172,7 @@ function SystemAdministratorOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** CA-01 – CA-13. */
+/** CA-01 – CA-14. */
 const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin', element: <ClinicDashboard /> },
   { path: '/clinic-admin/profile', element: <ClinicProfile /> },
@@ -145,6 +184,7 @@ const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin/staff/new', element: <ClinicStaffInvite /> },
   { path: '/clinic-admin/staff/:id', element: <ClinicStaffDetails /> },
   { path: '/clinic-admin/staff/:id/edit', element: <ClinicStaffEdit /> },
+  { path: '/clinic-admin/tasks', element: <ClinicTasks /> },
   { path: '/clinic-admin/permissions', element: <ClinicPermissions /> },
   { path: '/clinic-admin/reports', element: <ClinicReports /> },
   { path: '/clinic-admin/import-export', element: <ClinicImportExport /> },
@@ -152,31 +192,6 @@ const CLINIC_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/clinic-admin/settings', element: <ClinicSettings /> },
 ];
 
-/** A clinic workspace belongs to the clinic's administrator, not its staff. */
-function ClinicAdministratorOnly({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  if (!user || user.role !== 'clinic_administrator') {
-    return (
-      <div className="page">
-        <div className="card">
-          <h2>Clinic Administrator access only</h2>
-          <p className="muted" style={{ marginTop: 8 }}>
-            This workspace manages a clinic's profile, services, staff and reports. Other clinic
-            roles keep their own workspace, and pet-owner accounts use the mobile app.
-          </p>
-          <a
-            className="auth__link"
-            href={user ? ROLE_HOME[user.role] : '/login'}
-            style={{ display: 'inline-block', marginTop: 14 }}
-          >
-            Back to your dashboard
-          </a>
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
-}
 
 /** AM-01 – AM-14. */
 const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
@@ -191,75 +206,44 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/pets/:id', element: <PetDetails /> },
   { path: '/appointments/inquiries', element: <Inquiries /> },
   { path: '/appointments/inquiries/:id', element: <InquiryDetails /> },
+  { path: '/appointments/notifications', element: <MyNotifications /> },
+  { path: '/appointments/profile', element: <StaffProfile /> },
   { path: '/appointments/new', element: <CreateAppointment /> },
   { path: '/appointments/:id/reschedule', element: <RescheduleAppointment /> },
   { path: '/appointments/:id/cancel', element: <CancelAppointment /> },
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 
-/** VET-01 – VET-12. Schedule, patients, records and the vaccination screens are built. */
+/** VET-01 – VET-12, plus the inbox the topbar bell opens. */
 const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
+  { path: '/veterinarian', element: <VetDashboard /> },
   { path: '/veterinarian/appointments', element: <VetAppointments /> },
+  { path: '/veterinarian/appointments/:id/consult', element: <VetConsultationWorkspace /> },
   { path: '/veterinarian/patients', element: <VetPatients /> },
+  { path: '/veterinarian/patients/:id', element: <VetPatientDetails /> },
   { path: '/veterinarian/records', element: <VetRecords /> },
   { path: '/veterinarian/records/new', element: <VetRecordForm /> },
+  { path: '/veterinarian/records/:id', element: <VetRecordDetails /> },
   { path: '/veterinarian/vaccinations', element: <VetVaccinations /> },
   { path: '/veterinarian/vaccinations/new', element: <VetVaccinationForm /> },
   { path: '/veterinarian/vaccinations/:id', element: <VetVaccinationDetails /> },
+  { path: '/veterinarian/consultations', element: <VetConsultations /> },
+  { path: '/veterinarian/consultations/:id', element: <VetConsultationDetails /> },
+  { path: '/veterinarian/notifications', element: <MyNotifications /> },
+  { path: '/veterinarian/profile', element: <StaffProfile /> },
 ];
 
-/** A receptionist works inside their clinic's front desk, and nowhere else. */
-function ReceptionistOnly({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  if (!user || user.role !== 'receptionist') {
-    return (
-      <div className="page">
-        <div className="card">
-          <h2>Appointment Manager access only</h2>
-          <p className="muted" style={{ marginTop: 8 }}>
-            This workspace manages one clinic's appointments, owners and pets. Other clinic roles
-            keep their own workspace, and pet-owner accounts use the mobile app.
-          </p>
-          <a
-            className="auth__link"
-            href={user ? ROLE_HOME[user.role] : '/login'}
-            style={{ display: 'inline-block', marginTop: 14 }}
-          >
-            Back to your dashboard
-          </a>
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
-}
+/** CS-01 – CS-06. */
+const CLINIC_STAFF_ROUTES: { path: string; element: ReactNode }[] = [
+  { path: '/staff', element: <StaffDashboard /> },
+  { path: '/staff/tasks', element: <StaffTasks /> },
+  { path: '/staff/appointments', element: <StaffAppointments /> },
+  { path: '/staff/pets', element: <StaffPets /> },
+  { path: '/staff/notifications', element: <MyNotifications /> },
+  { path: '/staff/profile', element: <StaffProfile /> },
+];
 
-/** A veterinarian works the bookings assigned to them, not the front desk's schedule. */
-function VeterinarianOnly({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  if (!user || user.role !== 'veterinarian') {
-    return (
-      <div className="page">
-        <div className="card">
-          <h2>Veterinarian access only</h2>
-          <p className="muted" style={{ marginTop: 8 }}>
-            This workspace shows the appointments assigned to one veterinarian, with the patient
-            history and clinical records they author. The front desk keeps the clinic-wide schedule,
-            and pet-owner accounts use the mobile app.
-          </p>
-          <a
-            className="auth__link"
-            href={user ? ROLE_HOME[user.role] : '/login'}
-            style={{ display: 'inline-block', marginTop: 14 }}
-          >
-            Back to your dashboard
-          </a>
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
-}
+
 
 /** SA-01 – SA-16. Detail routes carry SA-04, SA-05, SA-07 and SA-09. */
 const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
@@ -280,11 +264,13 @@ const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/system-admin/profile', element: <AdminProfile /> },
 ];
 
-const DEFINED_PATHS = new Set(
-  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES, ...APPOINTMENT_ROUTES, ...VETERINARIAN_ROUTES].map(
-    (route) => route.path,
-  ),
-);
+const ROUTE_GROUPS: { role: ConsoleRole; routes: { path: string; element: ReactNode }[] }[] = [
+  { role: 'system_administrator', routes: SYSTEM_ADMIN_ROUTES },
+  { role: 'clinic_administrator', routes: CLINIC_ADMIN_ROUTES },
+  { role: 'receptionist', routes: APPOINTMENT_ROUTES },
+  { role: 'veterinarian', routes: VETERINARIAN_ROUTES },
+  { role: 'clinic_staff', routes: CLINIC_STAFF_ROUTES },
+];
 
 function AppRoutes() {
   const { status } = useAuth();
@@ -324,40 +310,22 @@ function AppRoutes() {
       <Route path="/activate" element={<ActivateAccountScreen />} />
       <Route path="/complete-profile" element={<CompleteProfileScreen />} />
       <Route path="/access-restricted" element={<AccessRestrictedScreen />} />
+      {/* REG-01 – REG-10: public, and usable by a signed-in pet-owner applicant. */}
+      <Route path="/register" element={<RegisterLanding />} />
+      <Route path="/register/apply" element={<RegisterApply />} />
+      <Route path="/register/status" element={<RegisterStatus />} />
 
       <Route element={<ProtectedLayout />}>
         <Route index element={<IndexRedirect />} />
-        {SYSTEM_ADMIN_ROUTES.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<SystemAdministratorOnly>{route.element}</SystemAdministratorOnly>}
-          />
-        ))}
-        {CLINIC_ADMIN_ROUTES.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<ClinicAdministratorOnly>{route.element}</ClinicAdministratorOnly>}
-          />
-        ))}
-        {APPOINTMENT_ROUTES.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<ReceptionistOnly>{route.element}</ReceptionistOnly>}
-          />
-        ))}
-        {VETERINARIAN_ROUTES.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<VeterinarianOnly>{route.element}</VeterinarianOnly>}
-          />
-        ))}
-        {ALL_NAV_ITEMS.filter((item) => !DEFINED_PATHS.has(item.path)).map((item) => (
-          <Route key={item.path} path={item.path} element={<SectionPage item={item} />} />
-        ))}
+        {ROUTE_GROUPS.flatMap(({ role, routes }) =>
+          routes.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={<RoleOnly role={role}>{route.element}</RoleOnly>}
+            />
+          )),
+        )}
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

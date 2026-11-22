@@ -305,7 +305,9 @@
 
 @media (max-width: 1080px) {
   .auth {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): a plain 1fr track grows to its content's min width,
+       which pushed the login form past a phone screen. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .auth__rail {

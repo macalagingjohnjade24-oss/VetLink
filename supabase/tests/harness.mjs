@@ -40,9 +40,13 @@ export const MIGRATIONS = [
   '0019_dashboard_owner_counts.sql',
   '0020_dashboard_total_owner_pets.sql',
   '0021_clinic_owner_unregister.sql',
+  '0022_clinic_vet_patients.sql',
+  '0023_clinic_vet_vaccinations.sql',
+  '0024_clinic_vet_vaccinations_notes.sql',
+  '0025_my_clinic_application.sql',
 ];
 
-const PRELUDE = `
+export const PRELUDE = `
 create role anon;
 create role authenticated;
 create role service_role;

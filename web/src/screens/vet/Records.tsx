@@ -161,6 +161,7 @@ export function VetRecords() {
                     <th>Treatment</th>
                     <th>Follow-up</th>
                     <th>Author</th>
+                    <th className="table__right">Record</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,6 +183,13 @@ export function VetRecords() {
                         ) : null}
                       </td>
                       <td>{record.veterinarian_name ?? 'Clinic veterinarian'}</td>
+                      <td className="table__right">
+                        <Link to={`/veterinarian/records/${record.id}`}>
+                          <Button size="sm" variant="outline">
+                            Open
+                          </Button>
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

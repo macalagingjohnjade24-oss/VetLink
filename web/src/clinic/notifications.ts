@@ -41,6 +41,16 @@ export async function fetchNotifications(): Promise<ClinicNotification[]> {
   return (data ?? []) as ClinicNotification[];
 }
 
+/** The caller's unread count, for the topbar bell. */
+export async function countUnreadNotifications(): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_read', false);
+  failure(error);
+  return count ?? 0;
+}
+
 /** Zero rows means the row is not the caller's (the owner policy filtered it). */
 export async function markNotificationRead(id: string): Promise<void> {
   const { data, error } = await supabase

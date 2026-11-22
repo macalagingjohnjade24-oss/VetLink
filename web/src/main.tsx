@@ -7,6 +7,7 @@ import './styles/ui.css';
 import './styles/auth.css';
 import './styles/shell.css';
 import './styles/console.css';
+import './styles/register.css';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Missing #root element.');

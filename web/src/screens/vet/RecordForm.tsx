@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -37,7 +37,9 @@ export function VetRecordForm() {
   const navigate = useNavigate();
   const today = todayIso();
 
-  const [petId, setPetId] = useState('');
+  // A patient page links here with ?pet=, so the form opens on that patient.
+  const [searchParams] = useSearchParams();
+  const [petId, setPetId] = useState(searchParams.get('pet') ?? '');
   const [recordDate, setRecordDate] = useState(today);
   const [diagnosis, setDiagnosis] = useState('');
   const [treatment, setTreatment] = useState('');

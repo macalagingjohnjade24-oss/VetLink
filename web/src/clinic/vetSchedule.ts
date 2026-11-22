@@ -10,6 +10,8 @@
 
 export type VetScheduleRow = {
   id: string;
+  pet_id: string;
+  owner_id: string;
   reference: string | null;
   appointment_date: string;
   appointment_time: string;

@@ -13,8 +13,7 @@ export type NavItem = {
 
 /**
  * Navigation is taken from the Figma sidebars (CA-01, AM-01, VET-01, CS-01,
- * SA-01). Routes that are not built yet render an honest "arriving in phase N"
- * panel rather than placeholder data.
+ * SA-01). Every item has a screen; App.tsx gates each one on its role.
  */
 export const NAV: Record<ConsoleRole, NavItem[]> = {
   clinic_administrator: [
@@ -22,6 +21,7 @@ export const NAV: Record<ConsoleRole, NavItem[]> = {
     { path: '/clinic-admin/profile', label: 'Clinic profile', icon: 'map-pin', code: 'CA-02', phase: 4 },
     { path: '/clinic-admin/services', label: 'Services', icon: 'stethoscope', code: 'CA-04', phase: 4 },
     { path: '/clinic-admin/staff', label: 'Staff management', icon: 'users', code: 'CA-06', phase: 4 },
+    { path: '/clinic-admin/tasks', label: 'Staff tasks', icon: 'clipboard', code: 'CA-14', phase: 7 },
     { path: '/clinic-admin/permissions', label: 'Permissions', icon: 'lock', code: 'CA-09', phase: 4 },
     { path: '/clinic-admin/reports', label: 'Reports', icon: 'chart', code: 'CA-10', phase: 4 },
     { path: '/clinic-admin/import-export', label: 'Import / export', icon: 'download', code: 'CA-11', phase: 4 },
@@ -72,9 +72,27 @@ export const NAV: Record<ConsoleRole, NavItem[]> = {
   ],
 };
 
-export const ALL_NAV_ITEMS: NavItem[] = Object.values(NAV)
-  .flat()
-  .filter((item, index, all) => all.findIndex((candidate) => candidate.path === item.path) === index);
+
+/** Second half of the topbar breadcrumb, as the Figma headers word it. */
+export const WORKSPACE_LABEL: Record<ConsoleRole, string> = {
+  clinic_administrator: 'Clinic administration',
+  receptionist: 'Front desk',
+  veterinarian: 'Clinical workspace',
+  clinic_staff: 'Staff workspace',
+  system_administrator: 'Platform administration',
+};
+
+/**
+ * Where the topbar bell leads. The veterinarian sidebar in Figma has no
+ * notifications item, so their inbox is reached from the bell alone.
+ */
+export const NOTIFICATIONS_PATH: Record<ConsoleRole, string> = {
+  clinic_administrator: '/clinic-admin/notifications',
+  receptionist: '/appointments/notifications',
+  veterinarian: '/veterinarian/notifications',
+  clinic_staff: '/staff/notifications',
+  system_administrator: '/system-admin/notifications',
+};
 
 /** Sidebar footer copy per role, taken from the Figma sidebars. */
 export const ROLE_NOTE: Record<ConsoleRole, { label: string; copy: string }> = {

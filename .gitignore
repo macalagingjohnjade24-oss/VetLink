@@ -47,3 +47,21 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Supabase CLI cache (linked project ref, pooler URL)
+supabase/.temp/
+
+# Planning and AI prompt notes — kept locally, not part of the project
+prompt.md
+clinic_prompt.md
+petowner_prompt.md
+clinicstaff.md
+sysAdmin.md
+vet.md
+temp.md
+backend.md
+clinic.md
+
+# Local tool folders
+.cloud-attachments/
+.freebuff/

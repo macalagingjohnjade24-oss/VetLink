@@ -308,54 +308,78 @@
   color: var(--muted);
 }
 
+/* Drawer controls exist only below 1080px. */
+.sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar__close,
+.topbar__menu,
+.shell__backdrop {
+  display: none;
+}
+
+.topbar__menu {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin-left: -8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar--open {
+    transition: none;
+  }
+}
+
 @media (max-width: 1080px) {
   .shell {
-    grid-template-columns: 1fr;
+    /* The sidebar is a fixed drawer here, so the content is the only track. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Navigation drawer: the full sidebar slides in from the left over the page. */
   .sidebar {
-    position: static;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    padding: 16px;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    width: min(300px, 86vw);
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 220ms ease, visibility 0s linear 220ms;
+    box-shadow: var(--shadow-raised);
   }
 
-  .sidebar__context,
-  .sidebar__account-note {
-    display: none;
+  .sidebar--open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 220ms ease;
   }
 
-  .sidebar__nav {
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    margin-top: 14px;
+  .sidebar__close,
+  .topbar__menu {
+    display: inline-grid;
+  }
+
+  .shell__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(31, 41, 55, 0.42);
   }
 
   .sidebar__item {
-    height: 38px;
-    white-space: nowrap;
-    padding: 0 12px;
-  }
-
-  .sidebar__account {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-  }
-
-  .sidebar__account-row {
-    margin: 0;
-    padding: 0;
-  }
-
-  .sidebar__logout {
-    margin: 0 0 0 auto;
-    padding: 0;
+    /* 44px: the minimum comfortable touch target. */
+    height: 44px;
   }
 
   .topbar {
@@ -388,5 +412,20 @@
     padding: 20px 16px;
     flex-direction: column;
     gap: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    min-height: 56px;
+  }
+
+  .page {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .page__title {
+    font-size: 22px;
   }
 }

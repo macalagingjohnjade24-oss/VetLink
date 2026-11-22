@@ -82,3 +82,74 @@ export function vetRecordSummary(
     mine: rows.filter((row) => row.author_user_id === options.viewerId).length,
   };
 }
+
+/**
+ * VET-04's vital signs, stored in medical_records.vitals (jsonb, 0004). Every
+ * field is optional: a skin consult may take a weight and nothing else.
+ */
+export type Vitals = {
+  weight_kg?: number;
+  temperature_c?: number;
+  heart_rate_bpm?: number;
+  respiratory_rate_bpm?: number;
+};
+
+export type VitalsDraft = {
+  weight: string;
+  temperature: string;
+  heartRate: string;
+  respiratoryRate: string;
+};
+
+export const EMPTY_VITALS: VitalsDraft = {
+  weight: '',
+  temperature: '',
+  heartRate: '',
+  respiratoryRate: '',
+};
+
+/**
+ * Plausible ranges for dogs, cats and small exotics. They catch a slipped
+ * decimal or a value typed into the wrong box, not borderline physiology.
+ */
+const RANGES: Record<keyof VitalsDraft, { key: keyof Vitals; min: number; max: number; name: string }> = {
+  weight: { key: 'weight_kg', min: 0.01, max: 200, name: 'Weight' },
+  temperature: { key: 'temperature_c', min: 30, max: 45, name: 'Temperature' },
+  heartRate: { key: 'heart_rate_bpm', min: 10, max: 400, name: 'Heart rate' },
+  respiratoryRate: { key: 'respiratory_rate_bpm', min: 4, max: 200, name: 'Respiratory rate' },
+};
+
+/**
+ * Turns the form's text boxes into the stored object. Empty boxes are left out;
+ * a box that is not a number in range is an error naming it. Returns null when
+ * nothing was taken, so an empty vitals column stays null rather than `{}`.
+ */
+export function parseVitals(draft: VitalsDraft): { vitals: Vitals | null; error: string | null } {
+  const vitals: Vitals = {};
+  for (const field of Object.keys(RANGES) as (keyof VitalsDraft)[]) {
+    const raw = draft[field].trim();
+    if (!raw) continue;
+    const range = RANGES[field];
+    const value = Number(raw.replace(',', '.'));
+    if (!Number.isFinite(value) || value < range.min || value > range.max) {
+      return {
+        vitals: null,
+        error: `${range.name} should be a number between ${range.min} and ${range.max}.`,
+      };
+    }
+    vitals[range.key] = value;
+  }
+  return { vitals: Object.keys(vitals).length ? vitals : null, error: null };
+}
+
+/** "28.4 kg · 38.6 °C · HR 88 · RR 24", or null when nothing was recorded. */
+export function formatVitals(vitals: Vitals | null | undefined): string | null {
+  if (!vitals) return null;
+  const parts = [
+    vitals.weight_kg != null ? `${vitals.weight_kg} kg` : null,
+    vitals.temperature_c != null ? `${vitals.temperature_c} °C` : null,
+    vitals.heart_rate_bpm != null ? `HR ${vitals.heart_rate_bpm}` : null,
+    vitals.respiratory_rate_bpm != null ? `RR ${vitals.respiratory_rate_bpm}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}

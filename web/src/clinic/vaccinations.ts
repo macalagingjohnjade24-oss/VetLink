@@ -16,6 +16,7 @@ export type VetVaccinationRow = {
   next_due_date: string | null;
   dosage: string | null;
   batch_number: string | null;
+  notes: string | null;
   veterinarian_name: string | null;
 };
 

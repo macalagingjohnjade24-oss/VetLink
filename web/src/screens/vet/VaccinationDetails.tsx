@@ -112,6 +112,7 @@ export function VetVaccinationDetails() {
           </DetailRow>
           <DetailRow term="Dose">{record.dosage ?? 'Not recorded'}</DetailRow>
           <DetailRow term="Batch number">{record.batch_number ?? 'Not recorded'}</DetailRow>
+          <DetailRow term="Notes">{record.notes ?? 'No notes on this record'}</DetailRow>
           <DetailRow term="Recorded by">{record.veterinarian_name ?? 'Clinic veterinarian'}</DetailRow>
           <DetailRow term="Clinic">{user.clinicName ?? 'This clinic'}</DetailRow>
         </dl>

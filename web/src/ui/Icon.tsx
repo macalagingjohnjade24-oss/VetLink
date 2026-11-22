@@ -37,6 +37,7 @@ const paths = {
   stethoscope: ['M6 4v5a4 4 0 0 0 8 0V4', 'M10 17a4 4 0 0 0 8 0v-4', 'M18 10.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
   'chevron-right': ['M9 6l6 6-6 6'],
   x: ['M6 6l12 12', 'M18 6L6 18'],
+  menu: ['M4 6.5h16', 'M4 12h16', 'M4 17.5h16'],
 } as const;
 
 export type IconName = keyof typeof paths;

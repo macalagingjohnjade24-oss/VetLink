@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchMyApplication, loadDraft } from '@/register/data';
 import { useAuth } from '@/auth/AuthProvider';
 import { AuthLayout } from '@/layout/AuthLayout';
 import { Button } from '@/ui/Button';
@@ -11,6 +13,22 @@ import { Icon } from '@/ui/Icon';
 export function AccessRestrictedScreen() {
   const { roleBlocked, signOut } = useAuth();
   const navigate = useNavigate();
+  const hasDraft = roleBlocked && Boolean(loadDraft());
+
+  // A clinic applicant is still a pet-owner account until approval, so signing
+  // in lands here. Send them to their application instead of a dead end.
+  useEffect(() => {
+    if (!roleBlocked) return;
+    let live = true;
+    fetchMyApplication()
+      .then((application) => {
+        if (live && application) navigate('/register/status', { replace: true });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [roleBlocked, navigate]);
 
   return (
     <AuthLayout code="AUTH-07" breadcrumb="Clinic personnel / Secure access" footerRight="VetLink support · support@vetlink.ph">
@@ -45,8 +63,15 @@ export function AccessRestrictedScreen() {
           </Link>
         </div>
 
+        {hasDraft ? (
+          <p className="auth__note-copy">
+            <Link className="auth__link" to="/register/apply">
+              Continue your clinic application
+            </Link>
+          </p>
+        ) : null}
         <p className="auth__note-copy">
-          Need clinic access? Ask your Clinic Administrator to invite your VetLink account.
+          Registering a new clinic? <Link className="auth__link" to="/register">Start here</Link>. Need clinic access? Ask your Clinic Administrator to invite your VetLink account.
         </p>
       </div>
     </AuthLayout>

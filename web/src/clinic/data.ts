@@ -11,7 +11,12 @@ import {
 } from './owners';
 
 import { mergeClinicPets, type ClinicPetEntry, type ClinicPetRow } from './pets';
-import type { VetRecordRow } from './records';
+import {
+  consultationRows,
+  type ConsultationAppointmentRow,
+  type ConsultationRow,
+} from './consultations';
+import type { VetRecordRow, Vitals } from './records';
 import type { VetVaccinationRow } from './vaccinations';
 import type { VetScheduleRow } from './vetSchedule';
 
@@ -326,7 +331,7 @@ export async function fetchClinicAppointmentList(
 }
 
 const VET_APPOINTMENT_COLUMNS =
-  'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,reason_for_visit,pets!appointments_pet_id_fkey(pet_name)' as const;
+  'id,pet_id,owner_id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,reason_for_visit,pets!appointments_pet_id_fkey(pet_name)' as const;
 
 /**
  * VET-02 — the bookings assigned to one veterinarian.
@@ -423,10 +428,14 @@ export async function fetchVetMedicalRecords(clinicId: string): Promise<VetRecor
   return (data ?? []) as unknown as VetRecordRow[];
 }
 
-/** What the VET-06 authoring form writes. */
+/** What the VET-05 form and the VET-04 workspace write. */
 export type MedicalRecordInput = {
   pet_id: string;
   owner_id: string;
+  /** The visit the record was written for (VET-04); null from the free-standing form. */
+  appointment_id?: string | null;
+  observations?: string | null;
+  vitals?: Vitals | null;
   record_date: string;
   diagnosis: string;
   treatment: string | null;
@@ -452,6 +461,164 @@ export async function createMedicalRecord(
     .from('medical_records')
     .insert({ clinic_id: clinicId, ...input });
   failure(error);
+}
+
+const VET_RECORD_DETAIL_COLUMNS =
+  'id,pet_id,owner_id,appointment_id,record_date,diagnosis,treatment,prescription,notes,observations,vitals,follow_up_date,veterinarian_name,author_user_id,attachment_url,created_at,updated_at,pets!medical_records_pet_id_fkey(pet_name,species,breed)' as const;
+
+export type VetRecordDetail = Omit<VetRecordRow, 'pets'> & {
+  observations: string | null;
+  vitals: Vitals | null;
+  attachment_url: string | null;
+  updated_at: string;
+  pets: { pet_name: string | null; species: string | null; breed: string | null } | null;
+};
+
+/**
+ * VET-07 — one record of this clinic. medical_records_staff_read decides
+ * visibility, and the clinic filter keeps a record from the caller's other
+ * clinic off a page that reports this one.
+ */
+export async function fetchVetRecord(clinicId: string, id: string): Promise<VetRecordDetail | null> {
+  const { data, error } = await supabase
+    .from('medical_records')
+    .select(VET_RECORD_DETAIL_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('id', id)
+    .maybeSingle();
+  failure(error);
+  return (data as unknown as VetRecordDetail | null) ?? null;
+}
+
+/** The fields an author may amend on VET-07. */
+export type MedicalRecordPatch = {
+  diagnosis: string;
+  treatment: string | null;
+  prescription: string | null;
+  notes: string | null;
+  follow_up_date: string | null;
+};
+
+/**
+ * medical_records_staff_update (0008) admits the author only, so a colleague's
+ * record comes back unchanged — zero rows — and is reported as refused.
+ */
+export async function updateMedicalRecord(id: string, patch: MedicalRecordPatch): Promise<void> {
+  const { data, error } = await supabase
+    .from('medical_records')
+    .update(patch)
+    .eq('id', id)
+    .select('id')
+    .maybeSingle();
+  failure(error);
+  if (!data) throw new Error('Only the veterinarian who wrote this record can change it.');
+}
+
+/** One of this veterinarian's assigned visits, for the VET-04 workspace. */
+export async function fetchVetAppointment(
+  clinicId: string,
+  vetId: string,
+  id: string,
+): Promise<VetScheduleRow | null> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(VET_APPOINTMENT_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('assigned_vet_user_id', vetId)
+    .eq('id', id)
+    .maybeSingle();
+  failure(error);
+  return (data as unknown as VetScheduleRow | null) ?? null;
+}
+
+/**
+ * confirmed → completed is the one transition a veterinarian may make, and only
+ * on their own assigned visit (enforce_appointment_status_transition, 0008).
+ */
+export async function completeVetAppointment(id: string): Promise<void> {
+  const { error } = await supabase.from('appointments').update({ status: 'completed' }).eq('id', id);
+  failure(error);
+}
+
+export type VetPatientDetail = ClinicPetDetail & {
+  records: VetRecordRow[];
+  vaccinations: VetVaccinationRow[];
+  assignedVisits: VetScheduleRow[];
+};
+
+/**
+ * VET-03 — one patient with its clinical file at this clinic. The pet and owner
+ * reads are the front desk's (fetchClinicPetDetail); the record, vaccination and
+ * visit reads are the veterinarian's own, filtered to this pet.
+ */
+export async function fetchVetPatientDetail(
+  clinicId: string,
+  vetId: string,
+  petId: string,
+): Promise<VetPatientDetail> {
+  const [detail, records, vaccinations, visits] = await Promise.all([
+    fetchClinicPetDetail(clinicId, petId),
+    supabase
+      .from('medical_records')
+      .select(VET_RECORD_COLUMNS)
+      .eq('clinic_id', clinicId)
+      .eq('pet_id', petId)
+      .order('record_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+    fetchVetVaccinations(clinicId),
+    supabase
+      .from('appointments')
+      .select(VET_APPOINTMENT_COLUMNS)
+      .eq('clinic_id', clinicId)
+      .eq('assigned_vet_user_id', vetId)
+      .eq('pet_id', petId)
+      .order('appointment_date', { ascending: false })
+      .order('appointment_time', { ascending: false }),
+  ]);
+  failure(records.error);
+  failure(visits.error);
+
+  return {
+    ...detail,
+    records: (records.data ?? []) as unknown as VetRecordRow[],
+    vaccinations: vaccinations.filter((row) => row.pet_id === petId),
+    assignedVisits: (visits.data ?? []) as unknown as VetScheduleRow[],
+  };
+}
+
+const CONSULTATION_APPOINTMENT_COLUMNS =
+  'id,pet_id,reference,appointment_date,appointment_time,owner_name,service_name,reason_for_visit,pets!appointments_pet_id_fkey(pet_name)' as const;
+
+/**
+ * VET-11 — the visits this veterinarian completed, each with the record filed
+ * under it.
+ *
+ * Completed visits only: a consultation is a visit that happened, so a pending,
+ * cancelled or rejected booking is not history. The appointments read is the
+ * same assigned-to-me one VET-02 uses — appointments_staff_read (0015) admits a
+ * veterinarian only their own assigned rows — and the records come from
+ * medical_records_staff_read, which shares the clinic's records with every
+ * veterinarian there, so a colleague's record for the visit is the one shown.
+ */
+export async function fetchVetConsultations(
+  clinicId: string,
+  vetId: string,
+): Promise<ConsultationRow[]> {
+  const [appointments, records] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select(CONSULTATION_APPOINTMENT_COLUMNS)
+      .eq('clinic_id', clinicId)
+      .eq('assigned_vet_user_id', vetId)
+      .eq('status', 'completed'),
+    fetchVetMedicalRecords(clinicId),
+  ]);
+  failure(appointments.error);
+
+  return consultationRows(
+    (appointments.data ?? []) as unknown as ConsultationAppointmentRow[],
+    records,
+  );
 }
 
 type VetVaccinationRpcRow = Omit<VetVaccinationRow, 'id'> & { vaccination_id: string };
@@ -485,6 +652,7 @@ export type VaccinationInput = {
   next_due_date: string | null;
   dosage: string | null;
   batch_number: string | null;
+  notes: string | null;
   veterinarian_name: string | null;
 };
 
