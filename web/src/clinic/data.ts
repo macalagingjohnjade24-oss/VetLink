@@ -11,6 +11,7 @@ import {
 } from './owners';
 
 import { mergeClinicPets, type ClinicPetEntry, type ClinicPetRow } from './pets';
+import type { VetRecordRow } from './records';
 import type { VetScheduleRow } from './vetSchedule';
 
 export type { ClinicOwner } from './owners';
@@ -398,6 +399,58 @@ export async function fetchVetPatients(clinicId: string): Promise<ClinicPetEntry
     })),
     owners,
   );
+}
+
+const VET_RECORD_COLUMNS =
+  'id,pet_id,owner_id,appointment_id,record_date,diagnosis,treatment,prescription,notes,follow_up_date,veterinarian_name,author_user_id,created_at,pets!medical_records_pet_id_fkey(pet_name)' as const;
+
+/**
+ * VET-06 — the clinical records written at this clinic, newest visit first.
+ *
+ * Read under medical_records_staff_read (0008), which admits an active
+ * veterinarian of the record's clinic to every record written there, not only
+ * their own — a colleague's history is part of the patient's file.
+ */
+export async function fetchVetMedicalRecords(clinicId: string): Promise<VetRecordRow[]> {
+  const { data, error } = await supabase
+    .from('medical_records')
+    .select(VET_RECORD_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .order('record_date', { ascending: false })
+    .order('created_at', { ascending: false });
+  failure(error);
+  return (data ?? []) as unknown as VetRecordRow[];
+}
+
+/** What the VET-06 authoring form writes. */
+export type MedicalRecordInput = {
+  pet_id: string;
+  owner_id: string;
+  record_date: string;
+  diagnosis: string;
+  treatment: string | null;
+  prescription: string | null;
+  notes: string | null;
+  follow_up_date: string | null;
+  veterinarian_name: string | null;
+  author_user_id: string;
+};
+
+/**
+ * Writes one record as its author.
+ *
+ * medical_records_staff_insert (0008) requires an active veterinarian of the
+ * record's clinic *and* author_user_id = auth.uid(), so a record can only be
+ * filed under the signed-in veterinarian's own name.
+ */
+export async function createMedicalRecord(
+  clinicId: string,
+  input: MedicalRecordInput,
+): Promise<void> {
+  const { error } = await supabase
+    .from('medical_records')
+    .insert({ clinic_id: clinicId, ...input });
+  failure(error);
 }
 
 /**
