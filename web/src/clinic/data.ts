@@ -387,7 +387,6 @@ export type OwnerPet = {
   sex: string | null;
   date_of_birth: string | null;
   weight: number | null;
-  color: string | null;
   profile_picture: string | null;
   created_at: string;
 };
@@ -429,7 +428,7 @@ export async function fetchClinicOwnerDetail(
       .maybeSingle(),
     supabase
       .from('pets')
-      .select('id,pet_name,species,breed,sex,date_of_birth,weight,color,profile_picture,created_at')
+      .select('id,pet_name,species,breed,sex,date_of_birth,weight,profile_picture,created_at')
       .eq('owner_id', ownerId)
       .order('pet_name', { ascending: true }),
     supabase
@@ -445,6 +444,60 @@ export async function fetchClinicOwnerDetail(
   return {
     owner: (profile.data as unknown as OwnerDetail | null) ?? null,
     pets: (pets.data ?? []) as unknown as OwnerPet[],
+    visits: visits.count ?? 0,
+  };
+}
+
+export type PetDetail = OwnerPet & { owner_id: string };
+
+export type ClinicPetDetail = {
+  /** Null when the policies do not let this caller read the pet. */
+  pet: PetDetail | null;
+  owner: OwnerDetail | null;
+  /** Appointments this clinic has on file for this pet. */
+  visits: number;
+};
+
+/**
+ * One pet and its owner, for AM-12.
+ *
+ * The pet read is scoped by the same policies as the list: an id from another
+ * clinic, or a pet whose owner this clinic never registered or booked, comes back
+ * as an empty page. No medical row is selected here — those stay with the
+ * veterinarian screens.
+ */
+export async function fetchClinicPetDetail(
+  clinicId: string,
+  petId: string,
+): Promise<ClinicPetDetail> {
+  const { data: petRow, error: petError } = await supabase
+    .from('pets')
+    .select('id,owner_id,pet_name,species,breed,sex,date_of_birth,weight,profile_picture,created_at')
+    .eq('id', petId)
+    .maybeSingle();
+  failure(petError);
+
+  const pet = (petRow as unknown as PetDetail | null) ?? null;
+  if (!pet) return { pet: null, owner: null, visits: 0 };
+
+  const [owner, visits] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id,first_name,last_name,email,mobile_number,address,created_at')
+      .eq('id', pet.owner_id)
+      .maybeSingle(),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('clinic_id', clinicId)
+      .eq('pet_id', pet.id),
+  ]);
+  failure(owner.error);
+  failure(visits.error);
+
+  return {
+    pet,
+    owner: (owner.data as unknown as OwnerDetail | null) ?? null,
     visits: visits.count ?? 0,
   };
 }

@@ -21,9 +21,9 @@ const PAGE_SIZE = 10;
 
 function matches(pet: ClinicPetEntry, term: string) {
   if (!term) return true;
-  return [pet.pet_name, pet.species, pet.breed, pet.owner_name]
-    .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(term));
+  return [pet.pet_name, pet.species, pet.breed ?? '', pet.owner_name].some((value) =>
+    value.toLowerCase().includes(term),
+  );
 }
 
 /**
@@ -87,7 +87,7 @@ export function Pets() {
 
   // Only the species actually present are offered, so the filter cannot be set
   // to something that would always be empty.
-  const speciesList = [...new Set(state.data.map((pet) => pet.species).filter((name) => name))].sort();
+  const speciesList = [...new Set(state.data.map((pet) => pet.species))].sort();
   const term = search.trim().toLowerCase();
   const rows = state.data.filter(
     (pet) => matches(pet, term) && (species === 'all' || pet.species === species),
@@ -191,7 +191,7 @@ export function Pets() {
                       <td>{pet.owner_name}</td>
                       <td className="table__mono">{formatDate(pet.created_at)}</td>
                       <td className="table__right">
-                        <Link to={`/appointments/owners/${pet.owner_id}`}>
+                        <Link to={`/appointments/pets/${pet.id}`}>
                           <Button size="sm" variant="outline">
                             View profile
                           </Button>
