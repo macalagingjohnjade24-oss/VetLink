@@ -37,6 +37,7 @@ export const MIGRATIONS = [
   '0016_staff_appointment_insert.sql',
   '0017_clinic_owner_registration.sql',
   '0018_service_role_owner_registration.sql',
+  '0019_dashboard_owner_counts.sql',
 ];
 
 const PRELUDE = `
