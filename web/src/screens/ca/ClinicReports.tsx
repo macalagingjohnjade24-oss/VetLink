@@ -7,12 +7,10 @@ import {
   fetchClinicDashboard,
   type ReportAppointment,
 } from '@/clinic/data';
-import { ClinicFooter, InvitationPending, NoClinicAssigned, StatusChart } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned, StatusChart } from '@/clinic/components';
 import {
   Bars,
   EmptyState,
-  ErrorState,
-  LoadingState,
   Metric,
   PageHeader,
   Pager,
@@ -172,20 +170,10 @@ export function ClinicReports() {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Clinic reports" message={state.error} onRetry={state.reload} />;
   }
 
   const { dashboard } = state.data;

@@ -20,10 +20,8 @@ import {
   toServiceInput,
   type ServiceImportPlan,
 } from '@/clinic/import';
-import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -422,20 +420,11 @@ export function ClinicImportExport() {
   }
 
   // Kept mounted while a reload runs, so an import's result notice is not lost.
-  if (state.loading && !state.data) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  // Kept mounted while a reload runs, so an import's result notice is not lost.
+  if (state.loading && !state.data) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Import / export" message={state.error} onRetry={state.reload} />;
   }
 
   return (

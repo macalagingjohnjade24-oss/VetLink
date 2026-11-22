@@ -3,12 +3,10 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate, formatDateTime, formatOperatingHours, fullName } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicDashboard, fetchClinicProfile, fetchClinicTeam } from '@/clinic/data';
-import { ClinicCover, ClinicFooter, InvitationPending, OperatingHoursList } from '@/clinic/components';
+import { ClinicCover, ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned, OperatingHoursList } from '@/clinic/components';
 import {
   DetailRow,
   EmptyState,
-  ErrorState,
-  LoadingState,
   Metric,
   PageHeader,
   Panel,
@@ -36,20 +34,7 @@ export function ClinicProfile() {
     return { clinic, dashboard, team };
   }, [clinicId, invited]);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Clinic profile" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Clinic profile" />;
 
   if (invited) {
     return (
@@ -57,20 +42,10 @@ export function ClinicProfile() {
     );
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Clinic profile" message={state.error} onRetry={state.reload} />;
   }
 
   const { clinic, dashboard, team } = state.data;

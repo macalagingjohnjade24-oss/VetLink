@@ -3,11 +3,9 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchClinicProfile, updateClinicSettings, type ClinicProfile } from '@/clinic/data';
-import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
   DetailRow,
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -170,20 +168,10 @@ export function ClinicSettings() {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Clinic settings" message={state.error} onRetry={state.reload} />;
   }
 
   return <SettingsForm key={state.data.id} clinic={state.data} clinicId={clinicId} />;

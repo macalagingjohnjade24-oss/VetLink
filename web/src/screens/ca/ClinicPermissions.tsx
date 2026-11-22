@@ -15,12 +15,10 @@ import {
   CLINIC_ROLES,
   type ClinicAccess,
 } from '@/clinic/roles';
-import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
   ConfirmDialog,
   EmptyState,
-  ErrorState,
-  LoadingState,
   Metric,
   Notice,
   PageHeader,
@@ -118,20 +116,10 @@ export function ClinicPermissions() {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Staff permissions" message={state.error} onRetry={state.reload} />;
   }
 
   return (

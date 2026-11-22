@@ -10,11 +10,9 @@ import {
   type EditableStaffRole,
 } from '@/clinic/staff';
 import { ADMINISTRATOR_MANAGED_NOTE, clinicRoleSummary } from '@/clinic/roles';
-import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
   DetailRow,
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -121,22 +119,20 @@ export function ClinicStaffEdit() {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={3} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={3} />;
 
   if (state.error || !state.data) {
     return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-        <Link className="linkish" to="/clinic-admin/staff">
-          Back to staff management
-        </Link>
-      </div>
+      <FailedPage
+        title="Edit staff"
+        message={state.error}
+        onRetry={state.reload}
+        actions={
+          <Link className="linkish" to="/clinic-admin/staff">
+            Back to staff management
+          </Link>
+        }
+      />
     );
   }
 

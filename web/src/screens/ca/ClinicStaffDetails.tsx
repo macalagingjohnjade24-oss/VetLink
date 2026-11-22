@@ -5,12 +5,10 @@ import { useAsync } from '@/lib/useAsync';
 import { formatDate, fullName, initials, label } from '@/lib/format';
 import { fetchClinicStaffMember, updateClinicStaffMembership } from '@/clinic/staff';
 import { clinicRoleSummary } from '@/clinic/roles';
-import { ClinicFooter, InvitationPending, NoClinicAssigned } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
   ConfirmDialog,
   DetailRow,
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -48,22 +46,20 @@ export function ClinicStaffDetails() {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={4} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={4} />;
 
   if (state.error || !state.data) {
     return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-        <Link className="linkish" to="/clinic-admin/staff">
-          Back to staff management
-        </Link>
-      </div>
+      <FailedPage
+        title="Staff details"
+        message={state.error}
+        onRetry={state.reload}
+        actions={
+          <Link className="linkish" to="/clinic-admin/staff">
+            Back to staff management
+          </Link>
+        }
+      />
     );
   }
 

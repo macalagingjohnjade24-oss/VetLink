@@ -11,11 +11,8 @@ import {
   type ClinicServiceInput,
   type ServiceAvailability,
 } from '@/clinic/data';
-import { InvitationPending, TextArea } from '@/clinic/components';
+import { FailedPage, InvitationPending, LoadingPage, NoClinicAssigned, TextArea } from '@/clinic/components';
 import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -238,41 +235,26 @@ export function ClinicServiceForm() {
     return { service };
   }, [clinicId, invited, id]);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Clinic services" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Clinic services" />;
 
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={4} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={4} />;
 
   if (state.error || !state.data) {
     return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-        <Link className="linkish" to="/clinic-admin/services">
-          Back to clinic services
-        </Link>
-      </div>
+      <FailedPage
+        title="Clinic services"
+        message={state.error}
+        onRetry={state.reload}
+        actions={
+          <Link className="linkish" to="/clinic-admin/services">
+            Back to clinic services
+          </Link>
+        }
+      />
     );
   }
 

@@ -14,15 +14,16 @@ import {
 import {
   ClinicCover,
   ClinicFooter,
+  FailedPage,
   InvitationPending,
-  StatusChart,
+  LoadingPage,
+  NoClinicAssigned,
   petName,
+  StatusChart,
 } from '@/clinic/components';
 import {
   Bars,
   EmptyState,
-  ErrorState,
-  LoadingState,
   PageHeader,
   Panel,
   Stat,
@@ -68,20 +69,7 @@ export function ClinicDashboard() {
     return { clinic, dashboard, schedule, requests, activity, team };
   }, [clinicId, invited, today]);
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Clinic Administrator Dashboard" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator sees one clinic. Ask a VetLink System Administrator to provision the clinic account, or accept the invitation sent to your email."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Clinic Administrator Dashboard" />;
 
   if (invited) {
     return (
@@ -89,20 +77,10 @@ export function ClinicDashboard() {
     );
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Clinic Administrator Dashboard" message={state.error} onRetry={state.reload} />;
   }
 
   const { clinic, dashboard, schedule, requests, activity, team } = state.data;

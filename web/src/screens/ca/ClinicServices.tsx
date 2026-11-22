@@ -9,12 +9,10 @@ import {
   type ClinicService,
   type ServiceAvailability,
 } from '@/clinic/data';
-import { ClinicFooter, InvitationPending } from '@/clinic/components';
+import { ClinicFooter, FailedPage, InvitationPending, LoadingPage, NoClinicAssigned } from '@/clinic/components';
 import {
   ConfirmDialog,
   EmptyState,
-  ErrorState,
-  LoadingState,
   Notice,
   PageHeader,
   Panel,
@@ -98,39 +96,16 @@ export function ClinicServices() {
     }
   };
 
-  if (!clinicId) {
-    return (
-      <div className="page">
-        <PageHeader title="Clinic services" subtitle="No clinic assigned yet" />
-        <Panel>
-          <EmptyState
-            icon="map-pin"
-            title="No clinic is attached to this account"
-            description="A Clinic Administrator manages one clinic. Ask a VetLink System Administrator to provision the clinic account first."
-          />
-        </Panel>
-      </div>
-    );
-  }
+  if (!clinicId) return <NoClinicAssigned title="Clinic services" />;
 
   if (invited) {
     return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
   }
 
-  if (state.loading) {
-    return (
-      <div className="page">
-        <LoadingState rows={5} />
-      </div>
-    );
-  }
+  if (state.loading) return <LoadingPage rows={5} />;
 
   if (state.error || !state.data) {
-    return (
-      <div className="page">
-        <ErrorState message={state.error ?? 'Unknown error'} onRetry={state.reload} />
-      </div>
-    );
+    return <FailedPage title="Clinic services" message={state.error} onRetry={state.reload} />;
   }
 
   return (
