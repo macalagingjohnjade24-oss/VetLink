@@ -51,6 +51,7 @@ import { Pets } from '@/screens/am/Pets';
 import { RegisterOwner } from '@/screens/am/RegisterOwner';
 import { RescheduleAppointment } from '@/screens/am/RescheduleAppointment';
 import { ScheduleCalendar } from '@/screens/am/ScheduleCalendar';
+import { VetAppointments } from '@/screens/vet/Appointments';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -190,6 +191,11 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 
+/** VET-01 – VET-12. Only the earliest screen of the workspace is built so far. */
+const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
+  { path: '/veterinarian/appointments', element: <VetAppointments /> },
+];
+
 /** A receptionist works inside their clinic's front desk, and nowhere else. */
 function ReceptionistOnly({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -201,6 +207,33 @@ function ReceptionistOnly({ children }: { children: ReactNode }) {
           <p className="muted" style={{ marginTop: 8 }}>
             This workspace manages one clinic's appointments, owners and pets. Other clinic roles
             keep their own workspace, and pet-owner accounts use the mobile app.
+          </p>
+          <a
+            className="auth__link"
+            href={user ? ROLE_HOME[user.role] : '/login'}
+            style={{ display: 'inline-block', marginTop: 14 }}
+          >
+            Back to your dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
+/** A veterinarian works the bookings assigned to them, not the front desk's schedule. */
+function VeterinarianOnly({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user || user.role !== 'veterinarian') {
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Veterinarian access only</h2>
+          <p className="muted" style={{ marginTop: 8 }}>
+            This workspace shows the appointments assigned to one veterinarian, with the patient
+            history and clinical records they author. The front desk keeps the clinic-wide schedule,
+            and pet-owner accounts use the mobile app.
           </p>
           <a
             className="auth__link"
@@ -236,7 +269,7 @@ const SYSTEM_ADMIN_ROUTES: { path: string; element: ReactNode }[] = [
 ];
 
 const DEFINED_PATHS = new Set(
-  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES, ...APPOINTMENT_ROUTES].map(
+  [...SYSTEM_ADMIN_ROUTES, ...CLINIC_ADMIN_ROUTES, ...APPOINTMENT_ROUTES, ...VETERINARIAN_ROUTES].map(
     (route) => route.path,
   ),
 );
@@ -301,6 +334,13 @@ function AppRoutes() {
             key={route.path}
             path={route.path}
             element={<ReceptionistOnly>{route.element}</ReceptionistOnly>}
+          />
+        ))}
+        {VETERINARIAN_ROUTES.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<VeterinarianOnly>{route.element}</VeterinarianOnly>}
           />
         ))}
         {ALL_NAV_ITEMS.filter((item) => !DEFINED_PATHS.has(item.path)).map((item) => (

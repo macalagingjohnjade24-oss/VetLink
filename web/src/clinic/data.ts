@@ -11,6 +11,7 @@ import {
 } from './owners';
 
 import { mergeClinicPets, type ClinicPetEntry, type ClinicPetRow } from './pets';
+import type { VetScheduleRow } from './vetSchedule';
 
 export type { ClinicOwner } from './owners';
 // The AM-11 list row; `ClinicPet` below is the owner-side profile shape.
@@ -320,6 +321,34 @@ export async function fetchClinicAppointmentList(
     .order('appointment_time', { ascending: false });
   failure(error);
   return (data ?? []) as unknown as ManagedAppointment[];
+}
+
+const VET_APPOINTMENT_COLUMNS =
+  'id,reference,appointment_date,appointment_time,status,owner_name,contact,service_name,reason_for_visit,pets!appointments_pet_id_fkey(pet_name)' as const;
+
+/**
+ * VET-02 — the bookings assigned to one veterinarian.
+ *
+ * The filter states the scope and the policy enforces it: appointments_staff_read
+ * admits a veterinarian only the rows whose assigned_vet_user_id is their own
+ * (0015), so the clinic-wide schedule is not readable from here even with a
+ * hand-made request. `veterinarian_id` is the vet an owner asked for at booking
+ * time and is deliberately not part of this query — assignment, which the front
+ * desk sets, is what gives a veterinarian a booking.
+ */
+export async function fetchVetAppointments(
+  clinicId: string,
+  vetId: string,
+): Promise<VetScheduleRow[]> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(VET_APPOINTMENT_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('assigned_vet_user_id', vetId)
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true });
+  failure(error);
+  return (data ?? []) as unknown as VetScheduleRow[];
 }
 
 /**
