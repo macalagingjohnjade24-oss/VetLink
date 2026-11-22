@@ -54,21 +54,24 @@ export function VetRecordForm() {
     return fetchVetPatients(clinicId);
   }, [clinicId, invited, user?.id]);
 
-  if (!clinicId) return <NoClinicAssigned title="New medical record" role={user?.role} />;
+  if (!clinicId || !user) return <NoClinicAssigned title="New medical record" role={user?.role} />;
   if (invited) {
-    return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
+    return <InvitationPending clinicName={user.clinicName} email={user.email} />;
   }
   if (state.loading) return <LoadingPage rows={4} />;
-
-  if (state.error || !state.data || !user) {
+  if (state.error || !state.data) {
     return <FailedPage title="New medical record" message={state.error} onRetry={state.reload} />;
   }
 
   const pets = state.data;
 
+  // The chosen pet is looked up once, and the lookup is what the pet error
+  // reports: a select value with no matching row is the same mistake as none.
+  const chosen = pets.find((entry) => entry.id === petId) ?? null;
+
   const validate = () => {
     const next: typeof errors = {};
-    if (!petId) next.pet = 'Choose the patient this record belongs to.';
+    if (!chosen) next.pet = 'Choose the patient this record belongs to.';
     if (!diagnosis.trim()) next.diagnosis = 'Record at least the diagnosis.';
 
     if (!recordDate) next.dates = 'Enter the date of the visit.';
@@ -91,18 +94,14 @@ export function VetRecordForm() {
       return;
     }
 
-    const pet = pets.find((entry) => entry.id === petId);
-    if (!pet) {
-      setErrors({ pet: 'Choose the patient this record belongs to.' });
-      return;
-    }
+    if (!chosen) return;
 
     setSaving(true);
     setNotice(null);
     try {
       await createMedicalRecord(clinicId, {
-        pet_id: pet.id,
-        owner_id: pet.owner_id,
+        pet_id: chosen.id,
+        owner_id: chosen.owner_id,
         record_date: recordDate,
         diagnosis: diagnosis.trim(),
         treatment: blank(treatment),
@@ -114,7 +113,7 @@ export function VetRecordForm() {
       });
       navigate('/veterinarian/records', {
         replace: true,
-        state: { flash: `Record saved for ${pet.pet_name}.` },
+        state: { flash: `Record saved for ${chosen.pet_name}.` },
       });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
@@ -245,7 +244,7 @@ export function VetRecordForm() {
         <Link to="/veterinarian/records">
           <Button variant="ghost">Cancel</Button>
         </Link>
-        <Button type="submit" form="vet-record-form" loading={saving} disabled={!pets.length}>
+        <Button type="submit" form="vet-record-form" loading={saving}>
           Save record
         </Button>
       </div>

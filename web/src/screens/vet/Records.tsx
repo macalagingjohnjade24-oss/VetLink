@@ -4,11 +4,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { fetchVetMedicalRecords, todayIso } from '@/clinic/data';
-import {
-  filterVetRecords,
-  recordPetName,
-  vetRecordSummary,
-} from '@/clinic/records';
+import { filterVetRecords, recordPetName, vetRecordSummary } from '@/clinic/records';
 import {
   ClinicFooter,
   FailedPage,
@@ -59,13 +55,12 @@ export function VetRecords() {
     return fetchVetMedicalRecords(clinicId);
   }, [clinicId, invited]);
 
-  if (!clinicId) return <NoClinicAssigned title="Medical records" role={user?.role} />;
+  if (!clinicId || !user) return <NoClinicAssigned title="Medical records" role={user?.role} />;
   if (invited) {
-    return <InvitationPending clinicName={user?.clinicName ?? null} email={user?.email ?? ''} />;
+    return <InvitationPending clinicName={user.clinicName} email={user.email} />;
   }
   if (state.loading) return <LoadingPage rows={6} />;
-
-  if (state.error || !state.data || !user) {
+  if (state.error || !state.data) {
     return <FailedPage title="Medical records" message={state.error} onRetry={state.reload} />;
   }
 
