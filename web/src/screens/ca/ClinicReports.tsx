@@ -316,8 +316,9 @@ export function ClinicReports() {
             <Metric label="Services available" value={`${dashboard.services_active}/${dashboard.services_total}`} />
           </div>
           <p className="stat__note" style={{ marginTop: 14 }}>
-            Registration figures count owners and pets with a booking at this clinic. The range
-            filter above applies only to the appointment reports.
+            Registration figures count every owner and pet this clinic knows: the ones behind its
+            bookings and the ones the front desk registered. The range filter above applies only to
+            the appointment reports.
           </p>
         </Panel>
       </div>

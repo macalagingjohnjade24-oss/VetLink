@@ -308,8 +308,8 @@ export async function fetchClinicAppointmentList(
 }
 
 /**
- * One owner the clinic has treated: the account details its staff may read,
- * the number of pets registered to the account, and when the account was made.
+ * One owner the clinic knows: the account details its staff may read, the pets on
+ * the account, and when it joined the clinic's records.
  */
 export type ClinicOwner = {
   owner_id: string;
@@ -317,7 +317,14 @@ export type ClinicOwner = {
   email: string | null;
   contact: string | null;
   pet_count: number;
+  /** The first pet on the account, for the lists that name one. */
+  pet_name: string | null;
+  /** When the account joined this clinic's records, for the owner list. */
   registered_at: string | null;
+  /** The moment this clinic first knew them: its first booking or the register. */
+  known_at: string | null;
+  /** Which of those two came first. */
+  source: 'booking' | 'registration';
 };
 
 type OwnerBookingRow = {
@@ -345,6 +352,10 @@ type OwnerRegistrationRow = { owner_id: string; created_at: string };
  * book for them; the profile and pet policies still decide how much of each
  * account is readable, and a booking's own name and contact stand in when the
  * profile is not readable.
+ *
+ * Every console owner list reads this, so the owner list and the appointment
+ * dashboard cannot disagree about who the clinic's owners are or how many pets
+ * they keep.
  */
 export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]> {
   const [bookings, registrations] = await Promise.all([
@@ -379,7 +390,11 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
       .from('profiles')
       .select('id,first_name,last_name,email,mobile_number,created_at')
       .in('id', ids),
-    supabase.from('pets').select('owner_id').in('owner_id', ids),
+    supabase
+      .from('pets')
+      .select('owner_id,pet_name')
+      .in('owner_id', ids)
+      .order('pet_name', { ascending: true }),
   ]);
   failure(profiles.error);
   failure(pets.error);
@@ -389,15 +404,20 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
   );
 
   const petCounts = new Map<string, number>();
-  for (const pet of (pets.data ?? []) as { owner_id: string }[]) {
+  const firstPet = new Map<string, string>();
+  for (const pet of (pets.data ?? []) as { owner_id: string; pet_name: string | null }[]) {
     petCounts.set(pet.owner_id, (petCounts.get(pet.owner_id) ?? 0) + 1);
+    if (pet.pet_name && !firstPet.has(pet.owner_id)) firstPet.set(pet.owner_id, pet.pet_name);
   }
 
   return ids
-    .map((ownerId) => {
+    .map((ownerId): ClinicOwner => {
       const booking = firstBooking.get(ownerId) ?? null;
+      const registeredAt = registeredOn.get(ownerId) ?? null;
       const profile = profilesById.get(ownerId) ?? null;
       const profileName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
+      const registeredFirst =
+        registeredAt !== null && (!booking || registeredAt < booking.created_at);
 
       return {
         owner_id: ownerId,
@@ -405,7 +425,10 @@ export async function fetchClinicOwners(clinicId: string): Promise<ClinicOwner[]
         email: profile?.email ?? null,
         contact: profile?.mobile_number || booking?.contact || null,
         pet_count: petCounts.get(ownerId) ?? 0,
-        registered_at: registeredOn.get(ownerId) ?? profile?.created_at ?? booking?.created_at ?? null,
+        pet_name: firstPet.get(ownerId) ?? null,
+        registered_at: registeredAt ?? profile?.created_at ?? booking?.created_at ?? null,
+        known_at: registeredFirst ? registeredAt : (booking?.created_at ?? registeredAt),
+        source: registeredFirst ? 'registration' : 'booking',
       };
     })
     .sort((a, b) => (b.registered_at ?? '').localeCompare(a.registered_at ?? ''));
@@ -820,7 +843,7 @@ export async function createClinicAppointment(
 
 export type OwnerRegistration = {
   owner_id: string;
-  owner_name: string | null;
+  owner_name: string;
   contact: string | null;
   pet_name: string | null;
   registered_at: string;
@@ -828,120 +851,32 @@ export type OwnerRegistration = {
   source: 'booking' | 'registration';
 };
 
-type RegistrationRow = {
-  owner_id: string;
-  owner_name: string | null;
-  contact: string | null;
-  created_at: string;
-  pets: { pet_name: string | null } | null;
-};
-
-type RegisterRow = { owner_id: string; created_at: string };
-
-type RegisteredProfileRow = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  mobile_number: string | null;
-};
-
 /**
  * The owners this clinic took on most recently, newest first and one row each.
  *
- * Both ways of joining the clinic count: a first booking, and a registration the
- * front desk filed (0017), so an owner enrolled at the desk is listed before
- * their first visit. The date is the moment the clinic first knew them, which is
- * the earlier of the two. A booking carries its own name, contact and pet; a
- * registrant's name and contact come from the account this clinic may read, and
- * the pet is the first one filed with them.
+ * A slice of the same owner list AM-09 reads, so the two cannot disagree about
+ * who the clinic's owners are. The date is the moment the clinic first knew each
+ * one — their first booking or the front desk's registration — and `source` says
+ * which of the two it was.
  */
 export async function fetchRecentOwnerRegistrations(
   clinicId: string,
   limit = 5,
 ): Promise<OwnerRegistration[]> {
-  const [bookings, registrations] = await Promise.all([
-    supabase
-      .from('appointments')
-      .select('owner_id,owner_name,contact,created_at,pets!appointments_pet_id_fkey(pet_name)')
-      .eq('clinic_id', clinicId)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('clinic_owner_registrations')
-      .select('owner_id,created_at')
-      .eq('clinic_id', clinicId),
-  ]);
-  failure(bookings.error);
-  failure(registrations.error);
+  const owners = await fetchClinicOwners(clinicId);
 
-  const firstBooking = new Map<string, OwnerRegistration>();
-  for (const row of (bookings.data ?? []) as unknown as RegistrationRow[]) {
-    if (firstBooking.has(row.owner_id)) continue;
-    firstBooking.set(row.owner_id, {
-      owner_id: row.owner_id,
-      owner_name: row.owner_name,
-      contact: row.contact,
-      pet_name: row.pets?.pet_name ?? null,
-      registered_at: row.created_at,
-      source: 'booking',
-    });
-  }
-
-  const known = new Map(firstBooking);
-  for (const row of (registrations.data ?? []) as RegisterRow[]) {
-    const booking = firstBooking.get(row.owner_id);
-    if (booking && booking.registered_at <= row.created_at) continue;
-    known.set(row.owner_id, {
-      owner_id: row.owner_id,
-      owner_name: booking?.owner_name ?? null,
-      contact: booking?.contact ?? null,
-      pet_name: booking?.pet_name ?? null,
-      registered_at: row.created_at,
-      source: 'registration',
-    });
-  }
-
-  const owners = [...known.values()]
-    .sort((a, b) => b.registered_at.localeCompare(a.registered_at))
-    .slice(0, limit);
-
-  const registrantIds = owners
-    .filter((owner) => owner.source === 'registration')
-    .map((owner) => owner.owner_id);
-  if (!registrantIds.length) return owners;
-
-  const [profiles, pets] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id,first_name,last_name,mobile_number')
-      .in('id', registrantIds),
-    supabase
-      .from('pets')
-      .select('owner_id,pet_name')
-      .in('owner_id', registrantIds)
-      .order('pet_name', { ascending: true }),
-  ]);
-  failure(profiles.error);
-  failure(pets.error);
-
-  const profilesById = new Map(
-    ((profiles.data ?? []) as RegisteredProfileRow[]).map((profile) => [profile.id, profile]),
-  );
-  const firstPet = new Map<string, string>();
-  for (const pet of (pets.data ?? []) as { owner_id: string; pet_name: string | null }[]) {
-    if (pet.pet_name && !firstPet.has(pet.owner_id)) firstPet.set(pet.owner_id, pet.pet_name);
-  }
-
-  return owners.map((owner) => {
-    if (owner.source !== 'registration') return owner;
-    const profile = profilesById.get(owner.owner_id) ?? null;
-    const name = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim();
-    return {
-      ...owner,
-      owner_name: name || owner.owner_name,
-      contact: profile?.mobile_number || owner.contact,
-      pet_name: firstPet.get(owner.owner_id) ?? owner.pet_name,
-    };
-  });
+  return owners
+    .filter((owner): owner is ClinicOwner & { known_at: string } => Boolean(owner.known_at))
+    .sort((a, b) => b.known_at.localeCompare(a.known_at))
+    .slice(0, limit)
+    .map((owner) => ({
+      owner_id: owner.owner_id,
+      owner_name: owner.name,
+      contact: owner.contact,
+      pet_name: owner.pet_name,
+      registered_at: owner.known_at,
+      source: owner.source,
+    }));
 }
 
 /**

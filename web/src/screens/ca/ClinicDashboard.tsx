@@ -160,12 +160,12 @@ export function ClinicDashboard() {
         <Stat
           label="Registered pet owners"
           value={dashboard.owners_registered}
-          note="Owners with a booking at this clinic"
+          note="Registered at the desk or booked with the clinic"
         />
         <Stat
           label="Registered pets"
           value={dashboard.pets_registered}
-          note="Patients with a booking at this clinic"
+          note="Pets on those owners' accounts"
         />
         <Stat
           label="Active veterinary staff"
