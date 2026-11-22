@@ -35,6 +35,8 @@ import { Button } from '@/ui/Button';
 import { Checkbox } from '@/ui/Checkbox';
 import { Input } from '@/ui/Input';
 import { RegisterLayout } from './RegisterLayout';
+import { LocationPicker } from '@/ui/LocationPicker';
+import { toPoint } from '@/lib/geocode';
 
 const ASIDE: Record<string, { title: string; copy: string }> = {
   account: {
@@ -398,6 +400,16 @@ export function RegisterApply() {
         <div />
         {field('latitude', 'Latitude', { inputMode: 'decimal', placeholder: '14.5547' })}
         {field('longitude', 'Longitude', { inputMode: 'decimal', placeholder: '121.0144' })}
+        <div className="reg-grid__full">
+          <LocationPicker
+            value={toPoint(draft.latitude, draft.longitude)}
+            address={[draft.address, draft.area, draft.city, draft.province].filter((part) => part.trim()).join(', ')}
+            onChange={(point) => {
+              set('latitude', String(point.lat));
+              set('longitude', String(point.lng));
+            }}
+          />
+        </div>
       </div>
     );
   } else if (key === 'services') {

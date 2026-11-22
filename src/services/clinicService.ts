@@ -1,7 +1,9 @@
 import { CLINICS, type Clinic, type ClinicService } from '../data/mockClinics';
 import { requireSupabase } from '../lib/supabase';
 import { offlineMode } from '../offline/offlineBackend';
-import { mapClinic, mapClinicService, withMapCoordinates, type ClinicRow, type ClinicServiceRow } from '../types/backend';
+import { mapClinic, mapClinicService, type ClinicRow, type ClinicServiceRow } from '../types/backend';
+import { withDistances } from '../lib/geo';
+import { locationService } from './locationService';
 
 export type ServiceWithClinic = ClinicService & { clinicId: string; clinicName: string };
 
@@ -81,7 +83,9 @@ async function loadCatalogue(): Promise<Clinic[]> {
   const rows = (clinicRows ?? []) as ClinicRow[];
   const services = (serviceRows ?? []) as ClinicServiceRow[];
   const mapped = rows.map((row) => mapClinic(row, services));
-  return publish(withMapCoordinates(mapped, rows));
+  // Real distances from the owner when their position is known; otherwise the
+  // distance stored on each clinic row stands.
+  return publish(withDistances(mapped, locationService.current() ?? (await locationService.quiet())));
 }
 
 export const clinicService = {
@@ -91,7 +95,7 @@ export const clinicService = {
   },
 
   async discover(filters: ClinicFilters): Promise<Clinic[]> {
-    if (offlineMode.isActive()) return applyFilters(CLINICS, filters);
+    if (offlineMode.isActive()) return applyFilters(withDistances(CLINICS, locationService.current()), filters);
     return applyFilters(await loadCatalogue(), filters);
   },
 

@@ -39,7 +39,8 @@ The whole system runs on one Supabase project. **Every permission is enforced by
 
 ### 📱 Pet owner mobile app (Expo / React Native)
 
-- **Clinic locator**: search, filters, a map, clinic details, services and contact details
+- **Clinic locator**: search, filters, clinic details, services and contact details
+- **Real map, free**: OpenStreetMap with a pin per clinic, **Locate me** (GPS) for true distances and nearest-first sorting, and **Get Directions** into Google Maps. No API key, no billing
 - **Appointment booking**: choose the pet, service, date and time, review, then confirm
 - **Appointment management**: status tracking, reschedule and cancel requests, history
 - **Pet profiles** with photos, plus **medical records** and **vaccination records** with upcoming reminders
@@ -49,7 +50,7 @@ The whole system runs on one Supabase project. **Every permission is enforced by
 
 ### 🖥️ Clinic and platform web workspace (React + Vite)
 
-Each role gets its own sidebar, routes and route guard:
+Each role gets its own navigation (a slide-out ☰ menu on phones and tablets), routes and route guard. Clinics apply through a public **6-step registration** (`/register`) and place their location on a map picker with OpenStreetMap address search.
 
 | Role | Screens | Highlights |
 | --- | --- | --- |
@@ -66,7 +67,7 @@ Each role gets its own sidebar, routes and route guard:
 
 ### 🔐 Backend (Supabase)
 
-- 24 ordered SQL migrations: schema, RLS policies, storage buckets and security-definer RPCs
+- 25 ordered SQL migrations: schema, RLS policies, storage buckets and security-definer RPCs
 - Role helpers (`is_clinic_veterinarian`, `is_clinic_receptionist`, …) shared by all policies
 - Clinic Staff get **limited RPCs** that return only names, species and times, never owner contacts or clinical data
 - Appointment status changes go through a trigger that only allows each role its own transitions
@@ -77,11 +78,13 @@ Each role gets its own sidebar, routes and route guard:
 
 | Layer | Technology |
 | --- | --- |
-| Mobile | Expo 58, React Native 0.88, React Navigation 7, Inter |
+| Mobile | Expo 58, React Native 0.88, React Navigation 7, `expo-location`, `react-native-webview` |
 | Web | React 19, React Router 7, Vite 7, hand-built design system matching Figma |
+| Maps | Leaflet + OpenStreetMap tiles, Nominatim address search (free, no key) |
+| Hosting | Vercel (web), Expo EAS (Android APK), Supabase (backend) |
 | Backend | Supabase: Postgres, Auth, Storage, Row Level Security, Edge Functions (Deno) |
 | Language | TypeScript throughout |
-| Tests | `node:test` for web logic, PGlite (Postgres in WASM) for migrations and RLS |
+| Tests | `node:test` for app logic, PGlite (Postgres in WASM) for migrations and RLS |
 
 ## Project structure
 
@@ -92,16 +95,20 @@ VetLink/
 │   ├── screens/             #   auth, home, clinics, bookings, pets, profile, …
 │   ├── navigation/          #   tab + stack navigators
 │   ├── context/             #   auth, booking, pet and app state
-│   └── lib/supabase.ts      #   Supabase client
+│   ├── components/MapCanvas #   clinic map (WebView / iframe + Leaflet)
+│   └── lib/                 #   Supabase client, distance + map helpers
+├── eas.json                 # Expo EAS build profiles (Android APK)
 ├── web/                     # Clinic + platform web workspace
+│   ├── vercel.json          #   Vercel build + page-refresh rewrite
 │   └── src/
-│       ├── screens/         #   sa/ ca/ am/ vet/ cs/ shared/ auth/
+│       ├── screens/         #   sa/ ca/ am/ vet/ cs/ register/ shared/ auth/
 │       ├── clinic/          #   data access + pure, tested list logic
 │       ├── sa/              #   platform admin data + shared UI pieces
 │       ├── layout/, shell/  #   app shell, sidebar navigation per role
 │       └── styles/          #   design tokens and component CSS
 └── supabase/
-    ├── migrations/          # 0001 – 0024, applied in order
+    ├── migrations/          # 0001 – 0025, applied in order
+    ├── setup/               # paste-ready schema + demo seed for a new project
     ├── functions/           # Edge Functions
     ├── tests/               # PGlite migration + RLS test suite
     └── qa/                  # Live-project QA scripts
@@ -171,7 +178,10 @@ Invitation and approval emails are sent by the Edge Functions, so deploy them an
 ## Testing
 
 ```bash
-# Web: list, filter, scheduling and form logic
+# Mobile: distance and map helpers
+npm test
+
+# Web: list, filter, scheduling, form and address-search logic
 cd web && npm test
 
 # Database: replays every migration on a throwaway Postgres and checks the RLS rules
@@ -192,6 +202,17 @@ The database suite needs no Docker. It runs Postgres in WebAssembly via PGlite, 
 - **Clinic Staff** see today's times, pet names and species through limited RPCs, and can only update their own tasks.
 - **System Administrators** manage the platform. Clinical records stay clinic-scoped even for them.
 - Roles are written only by the service role and membership triggers. A browser session can't promote itself.
+
+## Deployment
+
+Everything runs on free plans:
+
+1. **Supabase**: create a project, paste `supabase/setup/01_schema.sql` into the SQL Editor, deploy the three Edge Functions, and set `CONSOLE_ORIGIN` to your website address (`npx supabase secrets set CONSOLE_ORIGIN=https://your-site.vercel.app`).
+2. **Website on Vercel**: import the repository, set **Root Directory** to `web`, and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. `web/vercel.json` handles the build and page refreshes.
+3. **Android app with Expo EAS**: `eas init`, store `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` with `eas env:create`, then `eas build -p android --profile preview` for an installable APK.
+4. **Auth redirects**: add `<site>/activate`, `<site>/reset-password`, `<site>/register/apply`, `vetlink://auth-callback` and `vetlink://reset-password` under Supabase → Authentication → URL Configuration.
+
+The map tiles and address search use OpenStreetMap's free services under their fair-use policies. For heavy traffic, switch the tile URL in `src/lib/leafletHtml.ts` and `web/src/ui/LocationPicker.tsx` to a provider such as MapTiler (free key).
 
 ## Design
 

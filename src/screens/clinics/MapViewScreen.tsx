@@ -11,22 +11,47 @@ import { Screen } from '../../components/Screen';
 import { LoadingState } from '../../components/States';
 import type { Clinic } from '../../data/mockClinics';
 import { clinicService, emptyFilters } from '../../services/clinicService';
+import { locationService } from '../../services/locationService';
+import type { LatLng } from '../../lib/geo';
 import { colors, radii, spacing } from '../../theme';
 import type { ClinicsScreenProps } from '../../navigation/types';
 
-/** PO-17 Map View — stylised map canvas, no API key required. */
+/**
+ * PO-17 Map View — a real OpenStreetMap map (free, no API key) with a pin per
+ * clinic. "Locate me" asks for the owner's position once, then distances and
+ * the nearest-first order use it.
+ */
 export function MapViewScreen({ navigation, route }: ClinicsScreenProps<'MapView'>) {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selected, setSelected] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [zoom, setZoom] = useState(1);
+  const [user, setUser] = useState<LatLng | null>(locationService.current());
+  const [locating, setLocating] = useState(false);
+  const [locateNote, setLocateNote] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
 
   const load = useCallback(async () => {
     const found = await clinicService.discover(route.params?.filters ?? emptyFilters);
     setClinics(found);
-    setSelected(found[0] ?? null);
+    setSelected((current) => found.find((clinic) => clinic.id === current?.id) ?? found[0] ?? null);
     setLoading(false);
   }, [route.params?.filters]);
+
+  const locate = async () => {
+    setLocating(true);
+    setLocateNote(null);
+    const position = await locationService.locate();
+    setLocating(false);
+    if (!position) {
+      setLocateNote('Location is off or was not allowed. Distances use each clinic’s listed area instead.');
+      return;
+    }
+    setUser(position);
+    await load();
+    setFitKey((key) => key + 1);
+  };
+
+  const unmapped = clinics.filter((clinic) => !clinic.location).length;
 
   useEffect(() => {
     void load();
@@ -39,7 +64,7 @@ export function MapViewScreen({ navigation, route }: ClinicsScreenProps<'MapView
       <AppText variant="label">Find nearby clinics</AppText>
       <View style={styles.locationField}>
         <Ionicons name="location-outline" size={18} color={colors.text.secondary} />
-        <AppText variant="body">Makati City, Metro Manila</AppText>
+        <AppText variant="body">{user ? 'Near your current location' : 'Metro Manila · tap Locate me for distances from you'}</AppText>
       </View>
 
       {loading ? <LoadingState label="Loading map…" /> : null}
@@ -47,28 +72,31 @@ export function MapViewScreen({ navigation, route }: ClinicsScreenProps<'MapView
       {!loading ? (
         <>
           <View style={styles.mapWrap}>
-            <View style={[styles.mapScale, { transform: [{ scale: zoom }] }]}>
-              <MapCanvas clinics={clinics} selectedId={selected?.id ?? null} onSelect={setSelected} height={360} />
-            </View>
+            <MapCanvas
+              clinics={clinics}
+              selectedId={selected?.id ?? null}
+              onSelect={setSelected}
+              height={380}
+              user={user}
+              fitKey={fitKey}
+            />
           </View>
-
-          <AppText variant="small">© OpenStreetMap contributors · Sample clinic pins</AppText>
 
           <View style={styles.controls}>
             <LinkButton
-              label="Zoom in"
-              icon="add-outline"
+              label={locating ? 'Locating…' : 'Locate me'}
+              icon="locate-outline"
               fullWidth={false}
-              onPress={() => setZoom((z) => Math.min(1.4, +(z + 0.1).toFixed(2)))}
+              onPress={() => void locate()}
             />
             <LinkButton
-              label="Zoom out"
-              icon="remove-outline"
+              label="Show all clinics"
+              icon="expand-outline"
               fullWidth={false}
-              onPress={() => setZoom((z) => Math.max(0.8, +(z - 0.1).toFixed(2)))}
+              onPress={() => setFitKey((key) => key + 1)}
             />
-            <LinkButton label="Locate" icon="locate-outline" fullWidth={false} onPress={() => setSelected(clinics[0] ?? null)} />
           </View>
+          {locateNote ? <AppText variant="small">{locateNote}</AppText> : null}
 
           {selected ? (
             <Pressable
@@ -98,10 +126,12 @@ export function MapViewScreen({ navigation, route }: ClinicsScreenProps<'MapView
             }
           />
 
-          <HelpNote title="Map preview">
-            This build draws an approximate street map with sample pins so it runs in Expo Go without a Google Maps API
-            key. Add a provider key and swap in a native map later — the rest of the locator works unchanged.
-          </HelpNote>
+          {unmapped ? (
+            <HelpNote title="Some clinics are not on the map yet">
+              {unmapped} clinic{unmapped === 1 ? ' has' : 's have'} not set a map location. They still appear in the list
+              view.
+            </HelpNote>
+          ) : null}
         </>
       ) : null}
     </Screen>
@@ -122,7 +152,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   mapWrap: { borderRadius: radii.card, overflow: 'hidden', marginTop: spacing.xs },
-  mapScale: { width: '100%' },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',

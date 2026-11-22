@@ -18,6 +18,8 @@ import {
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Input } from '@/ui/Input';
+import { LocationPicker } from '@/ui/LocationPicker';
+import { toPoint } from '@/lib/geocode';
 
 const DAYS = [
   { value: 1, short: 'Mon' },
@@ -336,9 +338,19 @@ function ClinicProfileForm({ clinic, clinicId }: { clinic: ClinicProfile; clinic
               inputMode="decimal"
               placeholder="121.0244"
             />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <LocationPicker
+                value={toPoint(latitude, longitude)}
+                address={[address, city, province].filter((part) => part.trim()).join(', ')}
+                onChange={(point) => {
+                  setLatitude(String(point.lat));
+                  setLongitude(String(point.lng));
+                }}
+              />
+            </div>
             <p className="field__hint" style={{ gridColumn: '1 / -1' }}>
-              Leave the coordinates empty if you do not know them; the address still appears on the
-              clinic profile.
+              The pin is where pet owners see the clinic on the app's map. Without it the clinic still
+              appears in the list, but not on the map.
             </p>
           </div>
         </Panel>

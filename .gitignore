@@ -65,3 +65,6 @@ clinic.md
 # Local tool folders
 .cloud-attachments/
 .freebuff/
+
+# Local deployment guide — not pushed
+guide.html

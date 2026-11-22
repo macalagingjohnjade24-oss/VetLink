@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { LatLng } from '../lib/geo';
 
 /** Mock veterinary clinics for the multi-clinic VetLink platform. */
 export type ClinicService = {
@@ -26,8 +27,8 @@ export type Clinic = {
   description: string;
   services: ClinicService[];
   photo: ImageSourcePropType;
-  /** Relative position (0–1) used by the mock map canvas. */
-  coordinates: { x: number; y: number };
+  /** Where the clinic is on the map; null when the clinic has not set it. */
+  location: LatLng | null;
   featured: boolean;
   hasAvailability: boolean;
 };
@@ -50,7 +51,7 @@ export const CLINICS: Clinic[] = [
     description:
       'A welcoming neighborhood clinic offering preventive care and consultations for dogs and cats. Speak with the clinic team about care options and availability.',
     photo: require('../../assets/onboarding/clinic.png'),
-    coordinates: { x: 0.36, y: 0.42 },
+    location: { lat: 14.5547, lng: 121.0177 },
     featured: false,
     hasAvailability: true,
     services: [
@@ -101,7 +102,7 @@ export const CLINICS: Clinic[] = [
     description:
       'A calm, modern practice with wellness plans, grooming and preventive care for companion animals.',
     photo: require('../../assets/onboarding/vet.png'),
-    coordinates: { x: 0.62, y: 0.3 },
+    location: { lat: 14.5592, lng: 121.0181 },
     featured: true,
     hasAvailability: true,
     services: [
@@ -144,7 +145,7 @@ export const CLINICS: Clinic[] = [
     email: 'care@citypaws.example',
     description: 'A compact city clinic focused on consultations, vaccinations and dental assessments.',
     photo: require('../../assets/onboarding/dog.png'),
-    coordinates: { x: 0.74, y: 0.58 },
+    location: { lat: 14.5605, lng: 121.0237 },
     featured: true,
     hasAvailability: false,
     services: [
@@ -180,7 +181,7 @@ export const CLINICS: Clinic[] = [
     email: 'hello@happytails.example',
     description: 'Friendly community practice focused on preventive care and vaccinations.',
     photo: require('../../assets/onboarding/vet.png'),
-    coordinates: { x: 0.2, y: 0.68 },
+    location: { lat: 14.6386, lng: 121.0745 },
     featured: false,
     hasAvailability: true,
     services: [
@@ -216,7 +217,7 @@ export const CLINICS: Clinic[] = [
     email: 'front@northsidevet.example',
     description: 'An established veterinary centre with surgical and diagnostic services.',
     photo: require('../../assets/onboarding/clinic.png'),
-    coordinates: { x: 0.84, y: 0.2 },
+    location: { lat: 14.5869, lng: 121.0614 },
     featured: false,
     hasAvailability: false,
     services: [

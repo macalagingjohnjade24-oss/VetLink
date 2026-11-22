@@ -349,3 +349,37 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* Clinic location picker (Leaflet + OpenStreetMap) */
+.location-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.location-picker__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.location-picker__map {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
+  overflow: hidden;
+  background: var(--surface-muted);
+  /* Leaflet's panes use z-index up to 1000; keep them under dialogs and the drawer. */
+  isolation: isolate;
+  z-index: 0;
+}
+
+.map-pin {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--brand);
+  border: 3px solid var(--white);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: rotate(-45deg);
+}

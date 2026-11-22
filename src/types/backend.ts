@@ -6,6 +6,7 @@ import type { PetGender, PetSpecies, Pet } from '../data/mockPets';
 import type { UserAccount } from '../data/mockUsers';
 import type { Vaccination, VaccinationStatus } from '../data/mockVaccinations';
 import { ageLabelFrom, formatISODate, formatTimeLabel } from '../utils/petFormat';
+import { toLatLng } from '../lib/geo';
 
 /**
  * Row shapes returned by the VetLink Supabase schema (see supabase/migrations).
@@ -243,35 +244,10 @@ export function mapClinic(row: ClinicRow, services: ClinicServiceRow[] = []): Cl
     description: row.description ?? '',
     services: services.filter((service) => service.clinic_id === row.id).map(mapClinicService),
     photo: toPhoto(row.logo_url, FALLBACK_CLINIC_PHOTO) as Clinic['photo'],
-    coordinates: { x: 0.5, y: 0.5 },
+    location: toLatLng(row.latitude, row.longitude),
     featured: Boolean(row.featured),
     hasAvailability: Boolean(row.has_availability),
   };
-}
-
-/** Map lat/lng into the mock map canvas' 0–1 space (the canvas is a stylised map). */
-export function withMapCoordinates(clinics: Clinic[], rows: ClinicRow[]): Clinic[] {
-  const points = rows
-    .map((row) => ({ id: row.id, lat: row.latitude, lng: row.longitude }))
-    .filter((point): point is { id: string; lat: number; lng: number } => point.lat !== null && point.lng !== null);
-  if (!points.length) return clinics;
-  const lats = points.map((point) => point.lat);
-  const lngs = points.map((point) => point.lng);
-  const [minLat, maxLat] = [Math.min(...lats), Math.max(...lats)];
-  const [minLng, maxLng] = [Math.min(...lngs), Math.max(...lngs)];
-  const spanLat = maxLat - minLat || 1;
-  const spanLng = maxLng - minLng || 1;
-  return clinics.map((clinic) => {
-    const point = points.find((item) => item.id === clinic.id);
-    if (!point) return clinic;
-    return {
-      ...clinic,
-      coordinates: {
-        x: 0.15 + ((point.lng - minLng) / spanLng) * 0.7,
-        y: 0.15 + (1 - (point.lat - minLat) / spanLat) * 0.7,
-      },
-    };
-  });
 }
 
 export function mapPet(row: PetRow): Pet {

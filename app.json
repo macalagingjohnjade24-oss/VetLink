@@ -45,7 +45,13 @@
           "photosPermission": "VetLink needs access to your photos so you can add a photo for your pet."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "VetLink uses your location to show nearby veterinary clinics and how far away they are."
+        }
+      ]
     ]
   }
 }

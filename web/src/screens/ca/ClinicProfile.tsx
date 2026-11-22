@@ -14,6 +14,8 @@ import {
 } from '@/sa/components';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
+import { LocationPicker } from '@/ui/LocationPicker';
+import { toPoint } from '@/lib/geocode';
 
 /** CA-02 — the clinic's own profile, exactly as pet owners will see it. */
 export function ClinicProfile() {
@@ -199,6 +201,13 @@ export function ClinicProfile() {
           <dl className="detail">
             <DetailRow term="Latitude">{clinic.latitude ?? '—'}</DetailRow>
             <DetailRow term="Longitude">{clinic.longitude ?? '—'}</DetailRow>
+            <DetailRow term="Map">
+              <LocationPicker
+                readOnly
+                height={200}
+                value={toPoint(clinic.latitude, clinic.longitude)}
+              />
+            </DetailRow>
             <DetailRow term="Discovery">
               {clinic.status === 'approved'
                 ? 'Listed for pet owners'

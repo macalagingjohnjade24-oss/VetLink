@@ -12,6 +12,7 @@ import { LoadingState } from '../../components/States';
 import { useBooking } from '../../context/BookingContext';
 import type { Clinic } from '../../data/mockClinics';
 import { clinicService } from '../../services/clinicService';
+import { directionsUrl } from '../../lib/geo';
 import { colors, radii, spacing } from '../../theme';
 import type { ClinicsScreenProps, TabParamList } from '../../navigation/types';
 
@@ -108,8 +109,18 @@ export function ClinicContactScreen({ navigation, route }: ClinicsScreenProps<'C
         {clinic.hoursNote}
       </HelpNote>
 
-      <MapCanvas clinics={[clinic]} selectedId={clinic.id} onSelect={() => undefined} height={210} />
-      <AppText variant="small">© OpenStreetMap contributors · Sample clinic pins</AppText>
+      {clinic.location ? (
+        <>
+          <MapCanvas clinics={[clinic]} selectedId={clinic.id} onSelect={() => undefined} height={210} />
+          <Button
+            label="Get Directions"
+            variant="secondary"
+            onPress={() => void Linking.openURL(directionsUrl(clinic.location!))}
+          />
+        </>
+      ) : (
+        <HelpNote title="Map location">This clinic has not set its location on the map yet.</HelpNote>
+      )}
 
       <Button
         label="Book an Appointment"
