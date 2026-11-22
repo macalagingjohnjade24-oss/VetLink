@@ -271,7 +271,7 @@ export function AppointmentsDashboard() {
       </div>
 
       <div className="grid grid--two">
-        <Panel title="Recent registrations" subtitle="Pet owners whose first booking here is recent">
+        <Panel title="Recent registrations" subtitle="The owners this clinic took on most recently">
           {registrations.length ? (
             <div className="stack--sm">
               {registrations.map((owner) => (
@@ -283,7 +283,10 @@ export function AppointmentsDashboard() {
                       {owner.contact ? ` · ${owner.contact}` : ''}
                     </p>
                   </div>
-                  <span className="table__secondary">First booking {relativeTime(owner.first_booked_at)}</span>
+                  <span className="table__secondary">
+                    {owner.source === 'booking' ? 'First booking' : 'Registered'}{' '}
+                    {relativeTime(owner.registered_at)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -291,7 +294,7 @@ export function AppointmentsDashboard() {
             <EmptyState
               icon="users"
               title="No pet owners yet"
-              description="Owners appear here after their first booking at this clinic."
+              description="Owners appear here after their first booking, or as soon as the front desk registers them."
             />
           )}
         </Panel>
