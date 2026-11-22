@@ -23,21 +23,19 @@ export function AppShell({ user, children }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const items = NAV[user.role];
-  // The deepest section that contains the current path, so a detail route such as
-  // /appointments/owners/123 keeps its own section instead of falling back to the
-  // dashboard. Routes that sit directly under the console root — an appointment,
-  // a new booking — belong to the management screen they are opened from.
+  // The deepest section that contains this page, so /appointments/owners/123 keeps
+  // saying "Pet owners". A page directly under the console root — an appointment,
+  // a new booking — names the management screen it is opened from instead.
   const root = items[0];
-  const section =
-    [...items]
-      .sort((a, b) => b.path.length - a.path.length)
-      .find(
-        (item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`),
-      ) ?? root;
+  const deepest = items
+    .filter(
+      (item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`),
+    )
+    .reduce((best, item) => (item.path.length > best.path.length ? item : best), root);
   const current =
-    section.path === root.path && location.pathname !== root.path
-      ? (items.find((item) => item.path === `${root.path}/management`) ?? section)
-      : section;
+    deepest.path === root.path && location.pathname !== root.path
+      ? (items.find((item) => item.path === `${root.path}/management`) ?? deepest)
+      : deepest;
   const isSystemAdmin = user.role === 'system_administrator';
   const contextName = isSystemAdmin ? 'VetLink Control Center' : (user.clinicName ?? 'No clinic assigned');
   const contextMeta = isSystemAdmin
