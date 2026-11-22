@@ -475,6 +475,33 @@ export async function fetchVetVaccinations(clinicId: string): Promise<VetVaccina
   return rows.map(({ vaccination_id, ...rest }) => ({ id: vaccination_id, ...rest }));
 }
 
+/** What the VET-09 form writes. */
+export type VaccinationInput = {
+  pet_id: string;
+  owner_id: string;
+  vaccine_name: string;
+  vaccination_date: string;
+  next_due_date: string | null;
+  dosage: string | null;
+  batch_number: string | null;
+  veterinarian_name: string | null;
+};
+
+/**
+ * Writes one vaccination at the clinic.
+ *
+ * vaccinations_staff_insert (0008) requires an active veterinarian of the
+ * clinic, so a receptionist calling this directly is refused by the database, not
+ * by the fact that the screen is hidden.
+ */
+export async function createVaccination(
+  clinicId: string,
+  input: VaccinationInput,
+): Promise<void> {
+  const { error } = await supabase.from('vaccinations').insert({ clinic_id: clinicId, ...input });
+  failure(error);
+}
+
 /**
  * The owners this clinic knows: the ones it registered at the front desk (0017)
  * and the ones behind its bookings, newest registered account first. An owner

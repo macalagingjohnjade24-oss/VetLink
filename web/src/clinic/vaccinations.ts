@@ -54,6 +54,26 @@ export const VACCINATION_STATUS_OPTIONS = [
   { value: 'unscheduled', label: 'No due date' },
 ];
 
+/**
+ * The VET-09 form's date checks, returned as the first problem or null.
+ *
+ * The table itself only guarantees next_due_date >= vaccination_date, so the two
+ * rules the database cannot know — a required date, and nothing in the future —
+ * live here.
+ */
+export function vaccinationDateErrors(input: {
+  vaccinationDate: string;
+  nextDueDate: string | null;
+  today: string;
+}): string | null {
+  if (!input.vaccinationDate) return 'Enter the date the vaccination was given.';
+  if (input.vaccinationDate > input.today) return 'A vaccination cannot be given in the future.';
+  if (input.nextDueDate && input.nextDueDate < input.vaccinationDate) {
+    return 'The next due date cannot fall before the date it was given.';
+  }
+  return null;
+}
+
 export type VaccinationFilters = {
   term: string;
   /** One of the status options, or 'all'. */

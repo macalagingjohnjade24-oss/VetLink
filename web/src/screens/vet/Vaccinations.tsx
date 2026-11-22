@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -21,6 +22,7 @@ import {
 import {
   EmptyState,
   Metric,
+  Notice,
   PageHeader,
   Pager,
   Panel,
@@ -60,6 +62,8 @@ export function VetVaccinations() {
   const clinicId = user?.clinicId ?? null;
   const invited = user?.membershipStatus === 'invited';
   const today = todayIso();
+  const location = useLocation();
+  const flash = (location.state as { flash?: string } | null)?.flash ?? null;
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -104,11 +108,18 @@ export function VetVaccinations() {
           summary.total === 1 ? '' : 's'
         } · ${summary.overdue} overdue`}
         actions={
-          <Button variant="outline" onClick={state.reload}>
-            Refresh
-          </Button>
+          <>
+            <Button variant="outline" onClick={state.reload}>
+              Refresh
+            </Button>
+            <Link to="/veterinarian/vaccinations/new">
+              <Button>Record vaccination</Button>
+            </Link>
+          </>
         }
       />
+
+      {flash ? <Notice tone="success">{flash}</Notice> : null}
 
       <div className="metrics">
         <Metric label="Records" value={summary.total} />
@@ -225,6 +236,13 @@ export function VetVaccinations() {
             icon="shield"
             title="No vaccinations recorded at this clinic yet"
             description="The list fills with the vaccinations recorded for this clinic's patients, with the next due date on each one."
+            action={
+              <Link to="/veterinarian/vaccinations/new">
+                <Button size="sm" style={{ marginTop: 10 }}>
+                  Record the first vaccination
+                </Button>
+              </Link>
+            }
           />
         )}
       </Panel>

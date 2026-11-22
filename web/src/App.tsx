@@ -56,6 +56,7 @@ import { VetPatients } from '@/screens/vet/Patients';
 import { VetRecordForm } from '@/screens/vet/RecordForm';
 import { VetRecords } from '@/screens/vet/Records';
 import { VetVaccinations } from '@/screens/vet/Vaccinations';
+import { VetVaccinationForm } from '@/screens/vet/VaccinationForm';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -202,6 +203,7 @@ const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/veterinarian/records', element: <VetRecords /> },
   { path: '/veterinarian/records/new', element: <VetRecordForm /> },
   { path: '/veterinarian/vaccinations', element: <VetVaccinations /> },
+  { path: '/veterinarian/vaccinations/new', element: <VetVaccinationForm /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */
