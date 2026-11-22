@@ -55,6 +55,7 @@ import { VetAppointments } from '@/screens/vet/Appointments';
 import { VetPatients } from '@/screens/vet/Patients';
 import { VetRecordForm } from '@/screens/vet/RecordForm';
 import { VetRecords } from '@/screens/vet/Records';
+import { VetVaccinations } from '@/screens/vet/Vaccinations';
 import { SectionPage } from '@/screens/SectionPage';
 import { SetupNotice } from '@/screens/SetupNotice';
 import { ALL_NAV_ITEMS } from '@/shell/nav';
@@ -194,12 +195,13 @@ const APPOINTMENT_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/appointments/:id', element: <AppointmentDetails /> },
 ];
 
-/** VET-01 – VET-12. Schedule, patients and records are built; the rest is phased. */
+/** VET-01 – VET-12. Schedule, patients, records and vaccinations are built. */
 const VETERINARIAN_ROUTES: { path: string; element: ReactNode }[] = [
   { path: '/veterinarian/appointments', element: <VetAppointments /> },
   { path: '/veterinarian/patients', element: <VetPatients /> },
   { path: '/veterinarian/records', element: <VetRecords /> },
   { path: '/veterinarian/records/new', element: <VetRecordForm /> },
+  { path: '/veterinarian/vaccinations', element: <VetVaccinations /> },
 ];
 
 /** A receptionist works inside their clinic's front desk, and nowhere else. */

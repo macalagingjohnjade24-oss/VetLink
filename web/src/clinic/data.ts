@@ -12,6 +12,7 @@ import {
 
 import { mergeClinicPets, type ClinicPetEntry, type ClinicPetRow } from './pets';
 import type { VetRecordRow } from './records';
+import type { VetVaccinationRow } from './vaccinations';
 import type { VetScheduleRow } from './vetSchedule';
 
 export type { ClinicOwner } from './owners';
@@ -451,6 +452,27 @@ export async function createMedicalRecord(
     .from('medical_records')
     .insert({ clinic_id: clinicId, ...input });
   failure(error);
+}
+
+type VetVaccinationRpcRow = Omit<VetVaccinationRow, 'id'> & { vaccination_id: string };
+
+/**
+ * VET-08 — the vaccinations recorded at this clinic.
+ *
+ * clinic_vet_vaccinations() (0023) returns each record with its pet's name. A
+ * plain select cannot: the name lives on `pets`, and a vaccination for a pet the
+ * veterinarian has no booking or registration for would render nameless.
+ * Only a veterinarian writes vaccinations (0008), which is why this screen is
+ * read-only until VET-09 exists.
+ */
+export async function fetchVetVaccinations(clinicId: string): Promise<VetVaccinationRow[]> {
+  const { data, error } = await supabase.rpc('clinic_vet_vaccinations', {
+    target_clinic: clinicId,
+  });
+  failure(error);
+
+  const rows = (data ?? []) as unknown as VetVaccinationRpcRow[];
+  return rows.map(({ vaccination_id, ...rest }) => ({ id: vaccination_id, ...rest }));
 }
 
 /**
