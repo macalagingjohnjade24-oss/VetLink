@@ -2,6 +2,10 @@ import { createElement, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { DEFAULT_CENTER } from '../lib/geo';
 import { leafletHtml, type MapState } from '../lib/leafletHtml';
+import { mapTiles } from '../lib/mapTiles';
+
+/** MapTiler when EXPO_PUBLIC_MAPTILER_KEY is set, OpenStreetMap otherwise. */
+const TILES = mapTiles(process.env.EXPO_PUBLIC_MAPTILER_KEY);
 import { colors, radii } from '../theme';
 import { mapPins, type MapCanvasProps } from './mapPins';
 
@@ -12,7 +16,7 @@ export function MapCanvas({ clinics, selectedId, onSelect, height = 360, user = 
   const frame = useRef<HTMLIFrameElement | null>(null);
   const ready = useRef(false);
   const lastFit = useRef(-1);
-  const html = useMemo(() => leafletHtml(clinics[0]?.location ?? user ?? DEFAULT_CENTER, colors.brand.primary), []);
+  const html = useMemo(() => leafletHtml(clinics[0]?.location ?? user ?? DEFAULT_CENTER, colors.brand.primary, TILES), []);
   const latest = useRef({ clinics, onSelect });
   latest.current = { clinics, onSelect };
 

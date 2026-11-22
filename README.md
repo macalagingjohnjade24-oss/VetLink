@@ -40,7 +40,7 @@ The whole system runs on one Supabase project. **Every permission is enforced by
 ### 📱 Pet owner mobile app (Expo / React Native)
 
 - **Clinic locator**: search, filters, clinic details, services and contact details
-- **Real map, free**: OpenStreetMap with a pin per clinic, **Locate me** (GPS) for true distances and nearest-first sorting, and **Get Directions** into Google Maps. No API key, no billing
+- **Real map, free**: OpenStreetMap with a pin per clinic, **Locate me** (GPS) for true distances and nearest-first sorting, and **Get Directions** into Google Maps. Works with no API key; add a free MapTiler key for MapTiler tiles and address search
 - **Appointment booking**: choose the pet, service, date and time, review, then confirm
 - **Appointment management**: status tracking, reschedule and cancel requests, history
 - **Pet profiles** with photos, plus **medical records** and **vaccination records** with upcoming reminders
@@ -80,7 +80,7 @@ Each role gets its own navigation (a slide-out ☰ menu on phones and tablets), 
 | --- | --- |
 | Mobile | Expo 58, React Native 0.88, React Navigation 7, `expo-location`, `react-native-webview` |
 | Web | React 19, React Router 7, Vite 7, hand-built design system matching Figma |
-| Maps | Leaflet + OpenStreetMap tiles, Nominatim address search (free, no key) |
+| Maps | Leaflet with MapTiler (optional free key) or OpenStreetMap tiles; MapTiler Geocoding or Nominatim address search |
 | Hosting | Vercel (web), Expo EAS (Android APK), Supabase (backend) |
 | Backend | Supabase: Postgres, Auth, Storage, Row Level Security, Edge Functions (Deno) |
 | Language | TypeScript throughout |
@@ -146,7 +146,8 @@ For development only, `supabase/seed.dev.sql` adds sample clinics and `supabase/
 ### 2. Run the mobile app
 
 ```bash
-cp .env.example .env        # set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
+cp .env.example .env        # set EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+                            # optional: EXPO_PUBLIC_MAPTILER_KEY
 npm install
 npm start                   # then press a (Android), i (iOS) or w (web)
 ```
@@ -155,7 +156,8 @@ npm start                   # then press a (Android), i (iOS) or w (web)
 
 ```bash
 cd web
-cp .env.example .env        # set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+cp .env.example .env        # set VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+                            # optional: VITE_MAPTILER_KEY
 npm install
 npm run dev                 # http://localhost:5173
 ```
@@ -212,7 +214,16 @@ Everything runs on free plans:
 3. **Android app with Expo EAS**: `eas init`, store `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` with `eas env:create`, then `eas build -p android --profile preview` for an installable APK.
 4. **Auth redirects**: add `<site>/activate`, `<site>/reset-password`, `<site>/register/apply`, `vetlink://auth-callback` and `vetlink://reset-password` under Supabase → Authentication → URL Configuration.
 
-The map tiles and address search use OpenStreetMap's free services under their fair-use policies. For heavy traffic, switch the tile URL in `src/lib/leafletHtml.ts` and `web/src/ui/LocationPicker.tsx` to a provider such as MapTiler (free key).
+### Maps
+
+The maps work with no key, using OpenStreetMap's free tiles and Nominatim search under their fair-use policies. For better tiles, address search and a real quota, create a free key at [MapTiler](https://cloud.maptiler.com/account/keys/) (100,000 map loads a month, no credit card) and set it as:
+
+| Where | Variable |
+| --- | --- |
+| Mobile app (`.env`, EAS `eas env:create`) | `EXPO_PUBLIC_MAPTILER_KEY` |
+| Website (`web/.env`, Vercel environment variables) | `VITE_MAPTILER_KEY` |
+
+A map key is public by design, so restrict it to your domains under the key's **Allowed HTTP origins** in MapTiler. Without a key, or with a mistyped one, VetLink falls back to OpenStreetMap automatically.
 
 ## Design
 

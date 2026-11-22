@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DEFAULT_CENTER, geocodeAddress, roundCoord, type GeoPoint } from '@/lib/geocode';
+import { mapTiles } from '@/lib/mapTiles';
 import { Button } from './Button';
 
 const pinIcon = L.divIcon({
@@ -11,11 +12,13 @@ const pinIcon = L.divIcon({
   iconAnchor: [15, 30],
 });
 
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+/** MapTiler when VITE_MAPTILER_KEY is set, OpenStreetMap otherwise. */
+const MAP_KEY = import.meta.env.VITE_MAPTILER_KEY;
+const TILES = mapTiles(MAP_KEY);
 
 /**
- * Pick a clinic's location on an OpenStreetMap map (Leaflet — free, no key).
+ * Pick a clinic's location on a map (Leaflet; MapTiler tiles when
+ * VITE_MAPTILER_KEY is set, free OpenStreetMap tiles otherwise).
  * Click the map or drag the pin, search the address, or use this device's
  * location. With `readOnly` it just shows where the clinic is.
  */
@@ -61,7 +64,7 @@ export function LocationPicker({
     if (!box.current || map.current) return;
     const start = value ?? DEFAULT_CENTER;
     const instance = L.map(box.current, { scrollWheelZoom: false }).setView([start.lat, start.lng], value ? 16 : 11);
-    L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(instance);
+    L.tileLayer(TILES.url, { maxZoom: TILES.maxZoom, attribution: TILES.attribution }).addTo(instance);
     if (!readOnly) {
       instance.on('click', (event: L.LeafletMouseEvent) => {
         changed.current?.({ lat: roundCoord(event.latlng.lat), lng: roundCoord(event.latlng.lng) });
@@ -93,7 +96,7 @@ export function LocationPicker({
     setBusy('search');
     setMessage(null);
     try {
-      const hit = await geocodeAddress(address);
+      const hit = await geocodeAddress(address, MAP_KEY);
       if (!hit) {
         setMessage('That address was not found. Click the map where the clinic is instead.');
         return;

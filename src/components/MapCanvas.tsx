@@ -3,6 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { DEFAULT_CENTER } from '../lib/geo';
 import { leafletHtml, type MapState } from '../lib/leafletHtml';
+import { mapTiles } from '../lib/mapTiles';
+
+/** MapTiler when EXPO_PUBLIC_MAPTILER_KEY is set, OpenStreetMap otherwise. */
+const TILES = mapTiles(process.env.EXPO_PUBLIC_MAPTILER_KEY);
 import { mapPins, type MapCanvasProps } from './mapPins';
 import { colors, radii } from '../theme';
 
@@ -20,7 +24,7 @@ export function MapCanvas({ clinics, selectedId, onSelect, height = 360, user = 
   const lastFit = useRef(-1);
   // The page is built once; data changes are pushed into it, so the map does
   // not reload (and lose its zoom) every time a pin is selected.
-  const html = useMemo(() => leafletHtml(clinics[0]?.location ?? user ?? DEFAULT_CENTER, colors.brand.primary), []);
+  const html = useMemo(() => leafletHtml(clinics[0]?.location ?? user ?? DEFAULT_CENTER, colors.brand.primary, TILES), []);
 
   const push = () => {
     if (!ready.current) return;

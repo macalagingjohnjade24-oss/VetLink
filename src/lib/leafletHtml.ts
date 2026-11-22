@@ -1,9 +1,11 @@
 import type { LatLng } from './geo';
+import type { TileConfig } from './mapTiles';
 
 /**
  * The clinic map page, shared by the native WebView and the web iframe.
  *
- * Leaflet + OpenStreetMap tiles: free, no API key, no billing account. The
+ * Leaflet with MapTiler tiles (EXPO_PUBLIC_MAPTILER_KEY) or, without a key,
+ * OpenStreetMap's free tiles. The
  * page talks to the app with JSON messages:
  *   in:  window.vlSet({ pins, selectedId, user, fit })
  *   out: { type: 'select', id }   — a pin was tapped
@@ -22,7 +24,7 @@ export type MapState = {
 
 const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
 
-export function leafletHtml(center: LatLng, brand: string): string {
+export function leafletHtml(center: LatLng, brand: string, tiles: TileConfig): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -55,9 +57,9 @@ export function leafletHtml(center: LatLng, brand: string): string {
 
   var map = L.map('map', { zoomControl: true, attributionControl: true })
     .setView([${center.lat}, ${center.lng}], 12);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  L.tileLayer(${JSON.stringify(tiles.url)}, {
+    maxZoom: ${tiles.maxZoom},
+    attribution: ${JSON.stringify(tiles.attribution)}
   }).addTo(map);
 
   var markers = {};

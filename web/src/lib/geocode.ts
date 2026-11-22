@@ -1,3 +1,5 @@
+import { cleanMapKey, maptilerGeocodeUrl, parseMaptilerGeocode } from './mapTiles.ts';
+
 /**
  * Address search for the clinic location picker, using OpenStreetMap's free
  * Nominatim service (no API key). Its usage policy allows light, interactive
@@ -37,11 +39,19 @@ export function parseNominatim(body: unknown): GeocodeResult | null {
 /** Six decimals is ~10 cm — plenty for a clinic door, and keeps the fields tidy. */
 export const roundCoord = (value: number) => Math.round(value * 1e6) / 1e6;
 
-export async function geocodeAddress(query: string): Promise<GeocodeResult | null> {
+/**
+ * Finds an address: MapTiler Geocoding when a MapTiler key is configured,
+ * otherwise OpenStreetMap's Nominatim. Both are limited to the Philippines.
+ */
+export async function geocodeAddress(query: string, mapKey?: string | null): Promise<GeocodeResult | null> {
   if (!query.trim()) return null;
-  const response = await fetch(nominatimUrl(query), { headers: { Accept: 'application/json' } });
+  const key = cleanMapKey(mapKey);
+  const response = await fetch(key ? maptilerGeocodeUrl(query, key) : nominatimUrl(query), {
+    headers: { Accept: 'application/json' },
+  });
   if (!response.ok) throw new Error('The address search is unavailable right now. Place the pin on the map instead.');
-  return parseNominatim(await response.json());
+  const body = await response.json();
+  return key ? parseMaptilerGeocode(body) : parseNominatim(body);
 }
 
 /** Form values (text or numbers) as a point, or null while either is missing or invalid. */
