@@ -60,6 +60,9 @@ export function MapCanvas({ clinics, selectedId, onSelect, height = 360, user = 
         onMessage={onMessage}
         javaScriptEnabled
         domStorageEnabled
+        // Appended to the WebView's User-Agent so a MapTiler key can be locked
+        // to this app ("Allowed User-Agent header: VetLinkApp").
+        applicationNameForUserAgent="VetLinkApp"
         setSupportMultipleWindows={false}
         style={styles.web}
       />

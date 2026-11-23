@@ -223,7 +223,7 @@ The maps work with no key, using OpenStreetMap's free tiles and Nominatim search
 | Mobile app (`.env`, EAS `eas env:create`) | `EXPO_PUBLIC_MAPTILER_KEY` |
 | Website (`web/.env`, Vercel environment variables) | `VITE_MAPTILER_KEY` |
 
-A map key is public by design, so restrict it to your domains under the key's **Allowed HTTP origins** in MapTiler. Without a key, or with a mistyped one, VetLink falls back to OpenStreetMap automatically.
+A map key is public by design. To lock it, use two keys: the website key gets **Allowed HTTP Origins** with plain host names (`your-site.vercel.app`, no `https://` or port), and the app key gets **Allowed User-Agent header** `VetLinkApp`, which the app's map sends with every request. Without a key, or with a mistyped one, VetLink falls back to OpenStreetMap automatically.
 
 ## Design
 
