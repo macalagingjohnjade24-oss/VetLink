@@ -34,7 +34,7 @@ export function EditProfileScreen({ navigation }: ProfileScreenProps<'EditProfil
     );
   }
 
-  const photo = avatarUri ? { uri: avatarUri } : require('../../../assets/profile/owner.png');
+  const photo = avatarUri ? { uri: avatarUri } : require('../../../assets/profile/owner.jpg');
 
   const changePhoto = async () => {
     setPhotoError(null);

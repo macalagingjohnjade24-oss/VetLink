@@ -24,7 +24,12 @@
         "foregroundImage": "./assets/paw.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -52,6 +57,11 @@
           "locationWhenInUsePermission": "VetLink uses your location to show nearby veterinary clinics and how far away they are."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "490de4db-96df-4cf5-a013-f3a8eb4f764f"
+      }
+    }
   }
 }

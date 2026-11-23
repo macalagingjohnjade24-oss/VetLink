@@ -31,7 +31,7 @@ export function MyProfileScreen({ navigation }: ProfileScreenProps<'MyProfile'>)
   }
 
   const familyLine = pets.length === 0 ? 'Your pet parent profile' : `Pet parent to ${joinNames(pets.map((pet) => pet.name))}`;
-  const photo = user.avatarUri ? { uri: user.avatarUri } : require('../../../assets/profile/owner.png');
+  const photo = user.avatarUri ? { uri: user.avatarUri } : require('../../../assets/profile/owner.jpg');
 
   return (
     <Screen contentStyle={styles.content}>
