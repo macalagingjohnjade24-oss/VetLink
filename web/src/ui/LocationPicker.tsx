@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DEFAULT_CENTER, geocodeAddress, roundCoord, type GeoPoint } from '@/lib/geocode';
-import { mapTiles } from '@/lib/mapTiles';
+import { mapTiles, type TileConfig } from '@/lib/mapTiles';
 import { Button } from './Button';
 
 const pinIcon = L.divIcon({
@@ -15,6 +15,21 @@ const pinIcon = L.divIcon({
 /** MapTiler when VITE_MAPTILER_KEY is set, OpenStreetMap otherwise. */
 const MAP_KEY = import.meta.env.VITE_MAPTILER_KEY;
 const TILES = mapTiles(MAP_KEY);
+
+/**
+ * MapTiler answers a refused key (locked to the mobile app, invalid, over
+ * quota) with a 403 *image* reading "Invalid key", which the browser draws
+ * instead of reporting an error. So try one tile first and use
+ * OpenStreetMap's tiles unless MapTiler accepts this site. Checked once.
+ */
+let tilesCheck: Promise<TileConfig> | null = null;
+function usableTiles(): Promise<TileConfig> {
+  if (TILES.provider !== 'maptiler') return Promise.resolve(TILES);
+  tilesCheck ??= fetch(TILES.url.replace('{z}/{x}/{y}', '0/0/0'))
+    .then((response) => (response.ok ? TILES : mapTiles(null)))
+    .catch(() => mapTiles(null));
+  return tilesCheck;
+}
 
 /**
  * Pick a clinic's location on a map (Leaflet; MapTiler tiles when
@@ -64,17 +79,10 @@ export function LocationPicker({
     if (!box.current || map.current) return;
     const start = value ?? DEFAULT_CENTER;
     const instance = L.map(box.current, { scrollWheelZoom: false }).setView([start.lat, start.lng], value ? 16 : 11);
-    const tiles = L.tileLayer(TILES.url, { maxZoom: TILES.maxZoom, attribution: TILES.attribution }).addTo(instance);
-    // A MapTiler key locked to the mobile app (or over quota) refuses browser
-    // requests with a 403, which leaves a blank grey box. Fall back to
-    // OpenStreetMap's tiles so the map always shows.
-    if (TILES.provider === 'maptiler') {
-      tiles.once('tileerror', () => {
-        const osm = mapTiles(null);
-        tiles.remove();
-        L.tileLayer(osm.url, { maxZoom: osm.maxZoom, attribution: osm.attribution }).addTo(instance);
-      });
-    }
+    void usableTiles().then((tiles) => {
+      if (map.current !== instance) return;
+      L.tileLayer(tiles.url, { maxZoom: tiles.maxZoom, attribution: tiles.attribution }).addTo(instance);
+    });
     if (!readOnly) {
       instance.on('click', (event: L.LeafletMouseEvent) => {
         changed.current?.({ lat: roundCoord(event.latlng.lat), lng: roundCoord(event.latlng.lng) });
