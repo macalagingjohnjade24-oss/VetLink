@@ -7,9 +7,12 @@
  */
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
+// Any origin may call: the functions authenticate with the caller's bearer JWT,
+// never cookies, so a wildcard does not widen who can act. Pinning this to one
+// origin broke the deployed console whenever CONSOLE_ORIGIN was unset or stale.
 export const corsHeaders: Record<string, string> = {
-  'Access-Control-Allow-Origin': Deno.env.get('CONSOLE_ORIGIN') ?? 'http://localhost:5173',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-region',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -22,6 +25,25 @@ export function json(body: unknown, status = 200): Response {
 
 export function preflight(req: Request): Response | null {
   return req.method === 'OPTIONS' ? new Response('ok', { headers: corsHeaders }) : null;
+}
+
+/**
+ * Deno.serve with CORS preflight handled and every uncaught error returned as
+ * JSON *with* CORS headers. Without that, a throw (a missing secret, a network
+ * blip) reaches the browser as an opaque CORS failure and supabase-js reports
+ * only "Failed to send a request to the Edge Function".
+ */
+export function serve(handler: (req: Request) => Promise<Response>): void {
+  Deno.serve(async (req) => {
+    const options = preflight(req);
+    if (options) return options;
+    try {
+      return await handler(req);
+    } catch (err) {
+      console.error(err);
+      return json({ error: err instanceof Error ? err.message : 'Unexpected server error.' }, 500);
+    }
+  });
 }
 
 export function adminClient(): SupabaseClient {

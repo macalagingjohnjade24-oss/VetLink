@@ -19,6 +19,7 @@
  * membership table as the staff source of truth.
  */
 import {
+  serve,
   adminClient,
   callerClient,
   consoleOrigin,
@@ -71,7 +72,7 @@ function ownerRefusal(role: string | null | undefined): string | null {
   return `That email is already a ${name} account, so it cannot be registered as a pet owner. Use the owner's personal email address.`;
 }
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   const options = preflight(req);
   if (options) return options;
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);

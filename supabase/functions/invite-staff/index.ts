@@ -10,6 +10,7 @@
  * Supabase invitation email that returns to the console's /activate screen.
  */
 import {
+  serve,
   adminClient,
   callerClient,
   consoleOrigin,
@@ -29,7 +30,7 @@ type Body = {
   staff_role?: string;
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   const options = preflight(req);
   if (options) return options;
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);

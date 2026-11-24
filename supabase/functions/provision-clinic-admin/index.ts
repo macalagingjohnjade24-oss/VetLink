@@ -7,6 +7,7 @@
  * deliberately not client-writable (see protect_profile_role in 0001).
  */
 import {
+  serve,
   adminClient,
   callerClient,
   consoleOrigin,
@@ -25,7 +26,7 @@ type Body = {
   notes?: string;
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   const options = preflight(req);
   if (options) return options;
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
