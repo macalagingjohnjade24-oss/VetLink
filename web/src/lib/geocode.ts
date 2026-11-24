@@ -46,12 +46,16 @@ export const roundCoord = (value: number) => Math.round(value * 1e6) / 1e6;
 export async function geocodeAddress(query: string, mapKey?: string | null): Promise<GeocodeResult | null> {
   if (!query.trim()) return null;
   const key = cleanMapKey(mapKey);
-  const response = await fetch(key ? maptilerGeocodeUrl(query, key) : nominatimUrl(query), {
-    headers: { Accept: 'application/json' },
-  });
+  if (key) {
+    // A key locked to the mobile app refuses browser requests; use Nominatim then.
+    const response = await fetch(maptilerGeocodeUrl(query, key), { headers: { Accept: 'application/json' } }).catch(
+      () => null,
+    );
+    if (response?.ok) return parseMaptilerGeocode(await response.json());
+  }
+  const response = await fetch(nominatimUrl(query), { headers: { Accept: 'application/json' } });
   if (!response.ok) throw new Error('The address search is unavailable right now. Place the pin on the map instead.');
-  const body = await response.json();
-  return key ? parseMaptilerGeocode(body) : parseNominatim(body);
+  return parseNominatim(await response.json());
 }
 
 /** Form values (text or numbers) as a point, or null while either is missing or invalid. */

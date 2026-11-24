@@ -64,7 +64,17 @@ export function LocationPicker({
     if (!box.current || map.current) return;
     const start = value ?? DEFAULT_CENTER;
     const instance = L.map(box.current, { scrollWheelZoom: false }).setView([start.lat, start.lng], value ? 16 : 11);
-    L.tileLayer(TILES.url, { maxZoom: TILES.maxZoom, attribution: TILES.attribution }).addTo(instance);
+    const tiles = L.tileLayer(TILES.url, { maxZoom: TILES.maxZoom, attribution: TILES.attribution }).addTo(instance);
+    // A MapTiler key locked to the mobile app (or over quota) refuses browser
+    // requests with a 403, which leaves a blank grey box. Fall back to
+    // OpenStreetMap's tiles so the map always shows.
+    if (TILES.provider === 'maptiler') {
+      tiles.once('tileerror', () => {
+        const osm = mapTiles(null);
+        tiles.remove();
+        L.tileLayer(osm.url, { maxZoom: osm.maxZoom, attribution: osm.attribution }).addTo(instance);
+      });
+    }
     if (!readOnly) {
       instance.on('click', (event: L.LeafletMouseEvent) => {
         changed.current?.({ lat: roundCoord(event.latlng.lat), lng: roundCoord(event.latlng.lng) });
