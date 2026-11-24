@@ -430,9 +430,11 @@ export function ClinicDetails() {
           {documents.length ? (
             <div className="stack--sm">
               {documents.map((document) => (
-                <div className="row row--between" key={document.id}>
-                  <div>
-                    <p className="table__primary">{document.name}</p>
+                <div className="row row--between doc-row" key={document.id}>
+                  <div className="doc-row__name">
+                    <p className="table__primary" title={document.name}>
+                      {document.name}
+                    </p>
                     <p className="table__secondary">
                       {document.kind ?? 'Document'} · {formatDate(document.uploaded_at)}
                     </p>
