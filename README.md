@@ -72,7 +72,7 @@ Each role gets its own navigation (a slide-out ☰ menu on phones and tablets), 
 - Clinic Staff get **limited RPCs** that return only names, species and times, never owner contacts or clinical data
 - Appointment status changes go through a trigger that only allows each role its own transitions
 - Medical records and vaccinations can't be deleted, and records can only be amended by their author
-- Edge Functions: `invite-staff`, `provision-clinic-admin`, `register-pet-owner`
+- Edge Functions: `invite-staff`, `provision-clinic-admin`, `register-pet-owner`, `register-clinic-applicant`
 
 ## Tech stack
 
@@ -139,6 +139,7 @@ You can also paste them into the Supabase SQL editor one at a time. Then deploy 
 supabase functions deploy invite-staff
 supabase functions deploy provision-clinic-admin
 supabase functions deploy register-pet-owner
+supabase functions deploy register-clinic-applicant
 ```
 
 For development only, `supabase/seed.dev.sql` adds sample clinics and `supabase/seed.dev.system-admin.sql` creates a System Administrator login. **Don't run either one on production.** See [`supabase/README.md`](supabase/README.md) for auth redirect URLs, storage and the other dashboard settings.

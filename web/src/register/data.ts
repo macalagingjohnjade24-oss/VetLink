@@ -27,32 +27,40 @@ export async function currentUserId(): Promise<string | null> {
 }
 
 /**
- * Creates the applicant's account. With "Confirm email" on, Supabase returns no
- * session until the link is followed; the link brings them back to the wizard.
+ * Creates the applicant's account and signs them in. The
+ * register-clinic-applicant Edge Function creates it with the email already
+ * confirmed, so the applicant goes straight to step 2 with no confirmation
+ * email ("Confirm email" stays on for the mobile app's sign-ups).
  */
 export async function signUpApplicant(
   draft: Pick<ApplicationDraft, 'email' | 'firstName' | 'lastName' | 'mobile'>,
   password: string,
-): Promise<{ signedIn: boolean }> {
-  const { data, error } = await supabase.auth.signUp({
-    email: draft.email.trim(),
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/register/apply`,
-      data: {
-        first_name: draft.firstName.trim(),
-        last_name: draft.lastName.trim(),
-        mobile_number: draft.mobile.trim(),
-      },
+): Promise<void> {
+  const email = draft.email.trim();
+  const { error } = await supabase.functions.invoke('register-clinic-applicant', {
+    body: {
+      email,
+      password,
+      first_name: draft.firstName.trim(),
+      last_name: draft.lastName.trim(),
+      mobile_number: draft.mobile.trim(),
     },
   });
-  failure(error);
-  // Supabase answers a sign-up for an existing email with a user that has no
-  // identities, instead of an error, so the address cannot be probed.
-  if (data.user && (data.user.identities ?? []).length === 0) {
-    throw new Error('An account already uses this email. Sign in first, then continue your application.');
+  if (error) {
+    let text = error.message;
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const payload = (await context.json()) as { error?: string };
+        if (payload?.error) text = payload.error;
+      } catch {
+        /* keep the SDK message when the body is not JSON */
+      }
+    }
+    throw new Error(text);
   }
-  return { signedIn: Boolean(data.session) };
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  failure(signInError);
 }
 
 /** The signed-in applicant's own name and contact, kept in step with step 1. */
@@ -132,7 +140,7 @@ export async function fetchMyApplication(): Promise<MyApplication | null> {
 }
 
 /**
- * The wizard's draft survives a reload and the email-confirmation round trip.
+ * The wizard's draft survives a reload.
  * It lives in this browser only and never holds the password.
  */
 const DRAFT_KEY = 'vetlink.clinic-application';

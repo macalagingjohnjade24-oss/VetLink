@@ -82,7 +82,6 @@ export function RegisterApply() {
   const [userId, setUserId] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
   const [blockedRole, setBlockedRole] = useState<string | null>(null);
-  const [awaitingEmail, setAwaitingEmail] = useState(false);
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -90,7 +89,7 @@ export function RegisterApply() {
 
   const [docKind, setDocKind] = useState<string>(DOCUMENT_KINDS[0].value);
 
-  // Track the session, including the one the email-confirmation link brings back.
+  // Track the session, including the one created when step 1 signs the applicant in.
   useEffect(() => {
     let live = true;
     const resolve = async (id: string | null) => {
@@ -121,7 +120,6 @@ export function RegisterApply() {
             mobile: current.mobile || profile.mobile_number || '',
           }));
         }
-        setAwaitingEmail(false);
       } catch (error) {
         setNotice({ tone: 'error', text: error instanceof Error ? error.message : String(error) });
       } finally {
@@ -182,14 +180,10 @@ export function RegisterApply() {
           await updateApplicantProfile(userId, draft);
           go(1);
         } else {
-          const { signedIn } = await signUpApplicant(draft, password);
+          await signUpApplicant(draft, password);
           setPassword('');
           setConfirm('');
-          if (signedIn) go(1);
-          else {
-            saveDraft(draft, 1);
-            setAwaitingEmail(true);
-          }
+          go(1);
         }
       } catch (error) {
         setNotice({ tone: 'error', text: error instanceof Error ? error.message : String(error) });
@@ -294,25 +288,6 @@ export function RegisterApply() {
               <Button>Go to sign in</Button>
             </Link>
           </div>
-        </div>
-      </RegisterLayout>
-    );
-  }
-
-  if (awaitingEmail) {
-    return (
-      <RegisterLayout>
-        <div className="reg-form" style={{ maxWidth: 560, margin: '0 auto' }}>
-          <p className="reg__eyebrow">Step 1 complete</p>
-          <h1 className="reg__title">Confirm your email to continue</h1>
-          <p className="reg__lead">
-            We sent a confirmation link to <strong>{draft.email}</strong>. Open it on this device and you’ll
-            come straight back here to add your clinic details. Your answers so far are saved in this browser.
-          </p>
-          <p className="stat__note">
-            Didn’t get it? Check spam, or <Link to="/login">sign in</Link> once confirmed and return to{' '}
-            <Link to="/register/apply">this page</Link>.
-          </p>
         </div>
       </RegisterLayout>
     );

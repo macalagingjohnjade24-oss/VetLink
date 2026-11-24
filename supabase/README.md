@@ -365,6 +365,7 @@ Two functions carry the only operations that need `service_role`:
 | --- | --- | --- |
 | `invite-staff` | an active Clinic Administrator of the clinic | invites (or links) a receptionist, veterinarian or clinic staff member and writes the membership row |
 | `provision-clinic-admin` | a System Administrator | approves a clinic and invites (or links) its Clinic Administrator |
+| `register-clinic-applicant` | anyone (step 1 of clinic registration) | creates the applicant's pet-owner sign-in with the email already confirmed, so the wizard skips the confirmation email |
 
 Both verify the caller's JWT with the anon key first, then use the service role
 only inside the function. Set the console origin and deploy:
@@ -374,6 +375,7 @@ supabase link --project-ref <project-ref>
 supabase secrets set CONSOLE_ORIGIN=http://localhost:5173
 supabase functions deploy invite-staff
 supabase functions deploy provision-clinic-admin
+supabase functions deploy register-clinic-applicant
 ```
 
 `CONSOLE_ORIGIN` is both the CORS allow-list origin and the base of the
